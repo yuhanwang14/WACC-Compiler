@@ -20,5 +20,5 @@ test:
   dependencies:
     - compile
   script:
-    - sudo docker pull "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA"
+    - docker pull "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA"
     - docker run --rm "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA" scala test .
