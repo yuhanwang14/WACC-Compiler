@@ -1,0 +1,15 @@
+stages:
+  - compile
+  - test
+
+compile:
+  stage: compile
+  script:
+    - make
+
+test:
+  stage: test
+  dependencies:
+    - compile
+  script:
+    - scala-cli test .
