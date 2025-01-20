@@ -3,13 +3,13 @@ package wacc
 import parsley.Parsley
 import parsley.genericbridges.*
 
-object Program extends ParserBridge2[Func, Stmt, ???]
+object Program extends ParserBridge2[List[Func], Stmt, Program]
 
-// object Func:
+object Func extends ParserBridge4[Type, Ident, Option[ParamList], Stmt, Func]
 
-// object ParamList:Parsley
+object ParamList extends ParserBridge1[List[Param], ParamList]
 
-// object Param:
+object Param extends ParserBridge2[Type, Ident, Param]
 
 enum Stmt:
     case Skip
@@ -39,5 +39,25 @@ object Stmt:
     object If extends ParserBridge3[Expr, Stmt, Stmt, Stmt]
     object While extends ParserBridge2[Expr, Stmt, Stmt]
     object Begin extends ParserBridge1[Stmt, Stmt]
-    object Delimeter extends ParserBridge2[Stmt, Stmt, Stmt]
+    object Deliobject Lvalue:
+    object eter extends ParserBridge2[Stmt, Stmt, Stmt]
 
+enum Rvalue:
+    case Expr
+    case ArrayLitter
+    case Newpair(e1: Expr, e2: Expr)
+    case PairElem
+    case Call(i: Ident, argList: Option[ArgList])
+    // TODO
+
+object ArgList extends ParserBridge2[List[Expr], ArgList]
+
+enum PairElem:
+    case Fst(l: Lvalue)
+    case Snd(l: Lvalue)
+
+object PairElem:
+    object Fst extends ParserBridge1[Lvalue]
+    object Snd extends ParserBridge1[Lvalue]
+
+object ArrayLiter extends ParserBridge1[Option[ArgList], ArrayLiter]
