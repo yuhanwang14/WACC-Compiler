@@ -9,8 +9,8 @@ compile:
     - docker:dind
   script:
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
-    - sudo docker build -t "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA" .
-    - sudo docker push "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA"
+    -  docker build -t "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA" .
+    -  docker push "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA"
 
 test:
   stage: test
@@ -21,4 +21,4 @@ test:
     - compile
   script:
     - sudo docker pull "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA"
-    - sudo docker run --rm "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA" scala test .
+    - docker run --rm "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA" scala test .
