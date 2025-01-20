@@ -4,12 +4,21 @@ stages:
 
 compile:
   stage: compile
+  image: docker:latest
+  services:
+    - docker:dind
   script:
-    - make
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    - docker build -t "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA" .
+    - docker push "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA"
 
 test:
   stage: test
+  image: docker:latest
+  services:
+    - docker:dind
   dependencies:
     - compile
   script:
-    - scala-cli test .
+    - docker pull "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA"
+    - docker run --rm "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA" scala test .
