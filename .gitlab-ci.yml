@@ -2,6 +2,20 @@ stages:
   - compile
   - test
 
+before_script:
+  - echo "Checking disk space before starting..."
+  - df -h
+  - echo "Cleaning up temporary files..."
+  - rm -rf /tmp/* || true
+  - rm -rf ~/.cache/* || true
+
+after_script:
+  - echo "Checking disk space after finishing..."
+  - df -h
+  - echo "Cleaning up build artifacts..."
+  - rm -rf build/* || true
+  - rm -rf /tmp/* || true
+
 compile:
   stage: compile
   image: docker:latest
@@ -9,8 +23,8 @@ compile:
     - docker:dind
   script:
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
-    -  docker build -t "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA" .
-    -  docker push "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA"
+    - docker build -t "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA" .
+    - docker push "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA"
 
 test:
   stage: test
