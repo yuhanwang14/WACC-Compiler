@@ -16,7 +16,6 @@ object lexer {
         ),
         symbolDesc = SymbolDesc.plain.copy(
             hardKeywords = Set[String](
-                "null",
                 "int", 
                 "bool",
                 "char",
@@ -80,7 +79,11 @@ object lexer {
     )
     private val lexer = Lexer(desc)
 
-    val integer = lexer.lexeme.natural.decimal
+    val intLiter = lexer.lexeme.integer.decimal
+    val charLiter = lexer.lexeme.character.ascii
+    val strLiter = lexer.lexeme.string.ascii
+    
+    val ident = lexer.lexeme.names.identifier
     val implicits = lexer.lexeme.symbol.implicits
     def fully[A](p: Parsley[A]): Parsley[A] = lexer.fully(p)
 }
