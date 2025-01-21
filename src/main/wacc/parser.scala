@@ -1,20 +1,12 @@
 package wacc
 
-import parsley.{Parsley, Result}
-import parsley.expr.chain
+import parsley.Result
 
-import lexer.implicits.implicitSymbol
-import lexer.{intLiter, fully}
+import lexer.fully
+import expressions_parser.*
+import expressions.*
 
 object parser {
-    def parse(input: String): Result[String, BigInt] = parser.parse(input)
+    def parse(input: String): Result[String, Expr] = parser.parse(input)
     private val parser = fully(expr)
-    
-    private val add = (x: BigInt, y: BigInt) => x + y
-    private val sub = (x: BigInt, y: BigInt) => x - y
-
-    private lazy val expr: Parsley[BigInt] =
-        chain.left1(intLiter | "(" ~> expr <~ ")")(
-            ("+" as add) | ("-" as sub)
-        )
 }
