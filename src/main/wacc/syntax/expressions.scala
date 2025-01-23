@@ -2,9 +2,10 @@ package syntax
 
 import utils.ParserBridgePos1
 import utils.ParserBridgePos2
+import parsers.statements.*
 
 object expressions {
-    sealed trait Expr
+    abstract trait Expr extends RValue
     // Using subtypes to avoid useless constructors
     sealed trait Expr1 extends Expr
     case class Or(x: Expr2, y: Expr1)(val pos: (Int, Int)) extends Expr1
@@ -43,8 +44,8 @@ object expressions {
     case class CharLiter(c: Char)(val pos: (Int, Int)) extends Atom
     case class StrLiter(s: String)(val pos: (Int, Int)) extends Atom
     case class PairLiter(x: Null)(val pos: (Int, Int)) extends Atom
-    case class Ident(name: String)(val pos: (Int, Int)) extends Atom
-    case class ArrayElem(ident: Ident, exprs: List[Expr])(val pos: (Int, Int)) extends Atom
+    case class Ident(name: String)(val pos: (Int, Int)) extends Atom with LValue
+    case class ArrayElem(ident: Ident, exprs: List[Expr])(val pos: (Int, Int)) extends Atom with LValue
     case class Paren(x: Expr)(val pos: (Int, Int)) extends Atom
 
     object Or extends ParserBridgePos2[Expr2, Expr1, Expr1]

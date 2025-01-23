@@ -35,21 +35,21 @@ object statements {
     case class Delimiter(s1: Stmt, s2: Stmt)(val pos: (Int, Int)) extends Stmt
 
     // Left Value
-    sealed trait LValue extends Stmts
+    abstract trait LValue extends Stmts
     // Ident
     // ArrayElem
     case class PairElem(v: LValue)(val pos: (Int, Int)) extends LValue with RValue
 
     // Right Value
-    sealed trait RValue extends Stmts
+    abstract trait RValue extends Stmts
     // Expr
-    case class ArrayLiter(e1: Expr, e2: Option[List[Expr]])(val pos: (Int, Int)) extends RValue
+    case class ArrayLiter(es: Option[List[Expr]])(val pos: (Int, Int)) extends RValue
     case class NewPair(e1: Expr, e2: Expr)(val pos: (Int, Int)) extends RValue
     // PairElem
     case class Call(i: Ident, argL: Option[ArgList])(val pos: (Int, Int)) extends RValue
 
     // Arguments List
-    case class ArgList(e: Expr, es: Option[List[Expr]])(val pos: (Int, Int)) extends Stmts
+    case class ArgList(es: Option[List[Expr]])(val pos: (Int, Int)) extends Stmts
 
     object Program extends ParserBridgePos2[Option[List[Func]], Stmt, Program]
 
@@ -72,11 +72,12 @@ object statements {
     object Begin extends ParserBridgePos1[Stmt, Stmt]
     object Delimiter extends ParserBridgePos2[Stmt, Stmt, Stmt]
 
-    object PairElem extends ParserBridgePos1[LValue, LValue | RValue]
+    object PairElem extends ParserBridgePos1[LValue, PairElem]
     
-    object ArrayLiter extends ParserBridgePos2[Expr, Option[List[Expr]], RValue]
+    object ArrayLiter extends ParserBridgePos1[Option[List[Expr]], RValue]
     object NewPair extends ParserBridgePos2[Expr, Expr, RValue]
     object Call extends ParserBridgePos2[Ident, Option[ArgList], RValue]
 
-    object ArgList extends ParserBridgePos2[Expr, Option[List[Expr]], ArgList]
+    object ArgList extends ParserBridgePos1[Option[List[Expr]], ArgList]
+
 }

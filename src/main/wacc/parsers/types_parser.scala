@@ -15,14 +15,10 @@ object types_parser {
     val baseType: Parsley[WACCType] = intType | boolType | charType | stringType
 
     val arrayType: Parsley[WACCType] =
-        chain.postfix(baseType | nonErasedPairType) {
-            (pos <* "[]").map { p => (inner: WACCType) =>
-                ArrayType(inner)(p) 
-            }
-        }
+        chain.postfix(baseType | nonErasedPairType)(ArrayType from "[]")
 
     val erasedPairType = ("pair" as ErasedPairType) <~ notFollowedBy("(")
-    val pairElemType: Parsley[WACCType] = baseType | atomic(erasedPairType) | arrayType
+    val pairElemType = baseType | atomic(erasedPairType) | arrayType
     lazy val nonErasedPairType: Parsley[WACCType] = 
         NonErasedPairType("pair" ~> "(" ~> pairElemType <~ ",", pairElemType <~ ")")
 }

@@ -6,6 +6,7 @@ import parsley.Parsley.*, parsley.Parsley
 import parsley.expr.{precedence, SOps, Atoms, InfixL, InfixR, InfixN, Prefix}
 
 object expressions_parser {
+    lazy val arrayElem = atomic(ArrayElem(Ident(ident), some("[" ~> expr <~ "]")))
     lazy val atom = 
         Atoms(
             IntLiter(intLiter), 
@@ -15,7 +16,7 @@ object expressions_parser {
             PairLiter("null".as(null)),
             Ident(ident), 
             Paren("(" ~> expr <~ ")"),
-            atomic(ArrayElem(Ident(ident), some("[" ~> expr <~ "]")))
+            arrayElem
         )
     lazy val expr: Parsley[Expr] = precedence {
         SOps(InfixR)(Or from "||") +:
