@@ -6,10 +6,11 @@ import utils.ParserBridgePos2
 object types {
     sealed trait WACCType
     // Base Type
-    case object IntType extends WACCType
-    case object BoolType extends WACCType
-    case object CharType extends WACCType
-    case object StringType extends WACCType
+    sealed trait BaseType extends WACCType
+    case object IntType extends BaseType
+    case object BoolType extends BaseType
+    case object CharType extends BaseType
+    case object StringType extends BaseType
     // Array Type
     case class ArrayType(t: WACCType)(val pos: (Int, Int)) extends WACCType
     // Pair Type

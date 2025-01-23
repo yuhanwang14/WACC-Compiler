@@ -6,10 +6,9 @@ import parsley.Parsley.*, parsley.Parsley
 import parsley.debug.*
 import parsley.expr.chain
 import parsley.position.pos
-import parsley.internal.deepembedding.backend.NotFollowedBy
 
 object types_parser {
-    lazy val waccType: Parsley[WACCType] = nonErasedPairType | arrayType | baseType 
+    lazy val waccType: Parsley[WACCType] = atomic(arrayType) | nonErasedPairType | baseType 
     val intType = "int" as IntType
     val boolType = "bool" as BoolType
     val charType = "char" as CharType
@@ -24,7 +23,7 @@ object types_parser {
         }
 
     val erasedPairType = ("pair" as ErasedPairType) <~ notFollowedBy("(")
-    val pairElemType: Parsley[WACCType] = baseType | atomic(erasedPairType) | arrayType
+    val pairElemType: Parsley[WACCType] = atomic(erasedPairType)| arrayType | baseType
     lazy val nonErasedPairType: Parsley[WACCType] = 
         NonErasedPairType("pair" ~> "(" ~> pairElemType <~ ",", pairElemType <~ ")")
 }
