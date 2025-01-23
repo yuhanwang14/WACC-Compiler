@@ -4,19 +4,26 @@ import syntax.types.*
 import wacc.lexer.implicits.implicitSymbol, wacc.lexer.*
 import parsley.Parsley.*, parsley.Parsley
 import parsley.debug.*
+import parsley.expr.chain
+import parsley.position.pos
 
 object types_parser {
-    lazy val waccType: Parsley[WACCType] = baseType <|> arrayType 
-    lazy val intType = "int" as IntType
-    lazy val boolType = "bool" as BoolType
-    lazy val charType = "char" as CharType
-    lazy val stringType = "string" as StringType
-    lazy val baseType: Parsley[WACCType] = intType | boolType | charType | stringType
+    lazy val waccType: Parsley[WACCType] = nonErasedPairType | arrayType | baseType 
+    val intType = "int" as IntType
+    val boolType = "bool" as BoolType
+    val charType = "char" as CharType
+    val stringType = "string" as StringType
+    val baseType: Parsley[WACCType] = intType | boolType | charType | stringType
 
-    lazy val arrayType: Parsley[WACCType] = atomic(ArrayType(waccType <~ "[" <~ "]"))
+    val arrayType: Parsley[WACCType] =
+        chain.postfix(baseType | nonErasedPairType) {
+            (pos <* "[]").map { p => (inner: WACCType) =>
+                ArrayType(inner)(p) 
+            }
+        }
 
-    lazy val erasedPairType = "pair" as ErasedPairType
-    lazy val pairElemType: Parsley[WACCType] = baseType <|> arrayType <|> erasedPairType
+    val erasedPairType = "pair" as ErasedPairType
+    val pairElemType: Parsley[WACCType] = baseType | erasedPairType |  arrayType
     lazy val nonErasedPairType: Parsley[WACCType] = 
-        NonErasedPairType("pair" ~> "(" ~> pairElemType <~ ",", pairElemType <~ "")
+        NonErasedPairType("pair" ~> "(" ~> pairElemType <~ ",", pairElemType <~ ")")
 }
