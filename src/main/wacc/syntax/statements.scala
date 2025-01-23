@@ -1,66 +1,82 @@
-// package syntax
+package parsers
 
-// import parsley.Parsley
-// import parsley.generic.*
+import syntax.expressions.*
+import syntax.types.*
+import utils.*
 
+object statements {
+    sealed trait Stmts
+    // Program
+    case class Program(fs: Option[List[Func]], s: Stmt)(val pos: (Int, Int)) extends Stmts
 
-// type Ident = String
-// type Type = String
-// type Lvalue = String
-// type Rvalue = String
+    // Function
+    case class Func(t: WACCType, i: Ident, ps: Option[ParamList], s: Stmt)(val pos: (Int, Int)) extends Stmts
 
-// case class Param(t: Type, i: Ident)
-// object Param extends ParserBridge2[Type, Ident, Param]
+    // Parameter List
+    case class ParamList(p: Param, ps: List[Param])(val pos: (Int, Int)) extends Stmts
 
-// case class ParamList(ps: List[Param])
-// object ParamList extends ParserBridge1[List[Param], ParamList]
+    // Parameter
+    case class Param(t: WACCType, i: Ident)(val pos: (Int, Int)) extends Stmts
 
-// case class Func(t: Type, i: Ident, ps: Option[ParamList], s: Stmt)
-// object Func extends ParserBridge4[Type, Ident, Option[ParamList], Stmt, Func]
+    // Statement
+    sealed trait Stmt extends Stmts
+    case object Skip extends Stmt
+    case class Declare(t: WACCType, i: Ident, r: RValue)(val pos: (Int, Int)) extends Stmt
+    case class Assign(l: LValue, r: RValue)(val pos: (Int, Int)) extends Stmt
+    case class Read(l: LValue)(val pos: (Int, Int)) extends Stmt
+    case class Free(e: Expr)(val pos: (Int, Int)) extends Stmt
+    case class Return(e: Expr)(val pos: (Int, Int)) extends Stmt
+    case class Exit(e: Expr)(val pos: (Int, Int)) extends Stmt
+    case class Print(e: Expr)(val pos: (Int, Int)) extends Stmt
+    case class Println(e: Expr)(val pos: (Int, Int)) extends Stmt
+    case class If(cond: Expr, t: Stmt, e: Stmt)(val pos: (Int, Int)) extends Stmt
+    case class While(cond: Expr, s: Stmt)(val pos: (Int, Int)) extends Stmt
+    case class Begin(s: Stmt)(val pos: (Int, Int)) extends Stmt
+    case class Delimiter(s1: Stmt, s2: Stmt)(val pos: (Int, Int)) extends Stmt
 
-// case class Program(fs: List[Func], s: Stmt)
-// object Program extends ParserBridge2[List[Func], Stmt, Program]
+    // Left Value
+    sealed trait LValue extends Stmts
+    // Ident
+    // ArrayElem
+    case class PairElem(v: LValue)(val pos: (Int, Int)) extends LValue with RValue
 
-// sealed trait Stmt
-// case object Skip extends Stmt
-// case class Declare(t: Type, i: Ident, r: Rvalue) extends Stmt
-// case class Assign(l: Lvalue, r: Rvalue) extends Stmt
-// case class Read(l: Lvalue) extends Stmt
-// case class Free(e: Expr) extends Stmt
-// case class Return(e: Expr) extends Stmt
-// case class Exit(e: Expr) extends Stmt
-// case class Print(e: Expr) extends Stmt
-// case class Println(e: Expr) extends Stmt
-// case class If(cond: Expr, t: Stmt, e: Stmt) extends Stmt
-// case class While(cond: Expr, s: Stmt) extends Stmt
-// case class Begin(s: Stmt) extends Stmt
-// case class Delimeter(s1: Stmt, s2: Stmt) extends Stmt
+    // Right Value
+    sealed trait RValue extends Stmts
+    // Expr
+    case class ArrayLiter(e1: Expr, e2: Option[List[Expr]])(val pos: (Int, Int)) extends RValue
+    case class NewPair(e1: Expr, e2: Expr)(val pos: (Int, Int)) extends RValue
+    // PairElem
+    case class Call(i: Ident, argL: Option[ArgList])(val pos: (Int, Int)) extends RValue
 
-// object Stmt:
-//     object Skip extends ParserBridge0[Stmt]
-//     object Declare extends ParserBridge3[Type, Ident, Rvalue, Stmt]
-//     object Assign extends ParserBridge2[Lvalue, Rvalue, Stmt]
-//     object Read extends ParserBridge1[Lvalue, Stmt]
-//     object Free extends ParserBridge1[Expr, Stmt]
-//     object Return extends ParserBridge1[Expr, Stmt]
-//     object Exit extends ParserBridge1[Expr, Stmt]
-//     object Print extends ParserBridge1[Expr, Stmt]
-//     object Println extends ParserBridge1[Expr, Stmt]
-//     object If extends ParserBridge3[Expr, Stmt, Stmt, Stmt]
-//     object While extends ParserBridge2[Expr, Stmt, Stmt]
-//     object Begin extends ParserBridge1[Stmt, Stmt]
-//     object Delimeter extends ParserBridge2[Stmt, Stmt, Stmt]
+    // Arguments List
+    case class ArgList(e: Expr, es: Option[List[Expr]])(val pos: (Int, Int)) extends Stmts
 
-// sealed trait PairElem
-// case class Fst(l: Lvalue) extends PairElem
-// case class Snd(l: Lvalue) extends PairElem
+    object Program extends ParserBridgePos2[Option[List[Func]], Stmt, Program]
 
-// // object PairElem:
-// //     object Fst extends ParserBridge1[Lvalue, PairElem]
-// //     object Snd extends ParserBridge1[Lvalue, PairElem]
+    object Func extends ParserBridgePos4[WACCType, Ident, Option[ParamList], Stmt, Func]
 
-// case class ArgList(es: List[Expr])
-// object ArgList extends ParserBridge1[List[Expr], ArgList]
+    object ParamList extends ParserBridgePos2[Param, List[Param], ParamList]
 
-// case class ArrayLitter(as: Option[ArgList])
-// object ArrayLitter extends ParserBridge1[Option[ArgList], ArrayLitter]
+    object Param extends ParserBridgePos2[WACCType, Ident, Param]
+
+    object Declare extends ParserBridgePos3[WACCType, Ident, RValue, Stmt]
+    object Assign extends ParserBridgePos2[LValue, RValue, Stmt]
+    object Read extends ParserBridgePos1[LValue, Stmt]
+    object Free extends ParserBridgePos1[Expr, Stmt]
+    object Return extends ParserBridgePos1[Expr, Stmt] 
+    object Exit extends ParserBridgePos1[Expr, Stmt]
+    object Print extends ParserBridgePos1[Expr, Stmt]
+    object Println extends ParserBridgePos1[Expr, Stmt]
+    object If extends ParserBridgePos3[Expr, Stmt, Stmt, Stmt]
+    object While extends ParserBridgePos2[Expr, Stmt, Stmt]
+    object Begin extends ParserBridgePos1[Stmt, Stmt]
+    object Delimiter extends ParserBridgePos2[Stmt, Stmt, Stmt]
+
+    object PairElem extends ParserBridgePos1[LValue, LValue | RValue]
+    
+    object ArrayLiter extends ParserBridgePos2[Expr, Option[List[Expr]], RValue]
+    object NewPair extends ParserBridgePos2[Expr, Expr, RValue]
+    object Call extends ParserBridgePos2[Ident, Option[ArgList], RValue]
+
+    object ArgList extends ParserBridgePos2[Expr, Option[List[Expr]], ArgList]
+}

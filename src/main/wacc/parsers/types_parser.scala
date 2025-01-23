@@ -3,10 +3,8 @@ package parsers
 import syntax.types.*
 import wacc.lexer.implicits.implicitSymbol, wacc.lexer.*
 import parsley.Parsley.*, parsley.Parsley
-import parsley.debug.*
 import parsley.expr.chain
 import parsley.position.pos
-import parsley.internal.deepembedding.backend.NotFollowedBy
 
 object types_parser {
     lazy val waccType: Parsley[WACCType] = nonErasedPairType | arrayType | baseType 

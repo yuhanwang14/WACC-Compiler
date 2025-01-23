@@ -2,8 +2,6 @@ package wacc
 
 import parsley.Result
 import lexer.fully
-import parsers.expressions_parser.*
-import syntax.expressions.*
 import syntax.types.WACCType
 import parsers.types_parser.waccType
 
