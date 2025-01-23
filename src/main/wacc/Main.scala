@@ -31,8 +31,11 @@ object Main {
             }
         }
         parse(sourceCode) match {
-            case Success(x) => println("Success.")
-            case Failure(x) => println("Failure.")
+            case Success(prog) => println("Success.")
+            case Failure(msg) => {
+                println("Failure.")
+                println(msg)
+            }
         }
     }
 }

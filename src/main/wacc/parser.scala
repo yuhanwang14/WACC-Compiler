@@ -2,8 +2,8 @@ package wacc
 
 import parsley.Result
 import lexer.fully
-import expressions_parser.*
-import expressions.*
+import parsers.expressions_parser.*
+import syntax.expressions.*
 
 object parser {
     def parse(input: String): Result[String, Expr] = parser.parse(input)
