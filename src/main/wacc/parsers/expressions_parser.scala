@@ -14,7 +14,7 @@ object expressions_parser {
             StrLiter(strLiter),
             PairLiter("null".as(null)),
             Ident(ident), 
-            atomic(Paren("(" ~> expr <~ ")")),
+            Paren("(" ~> expr <~ ")"),
             atomic(ArrayElem(Ident(ident), some("[" ~> expr <~ "]")))
         )
     lazy val expr: Parsley[Expr] = precedence {
