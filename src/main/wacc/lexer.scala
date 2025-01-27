@@ -79,10 +79,10 @@ object lexer {
     )
     private val lexer = Lexer(desc)
 
-    val intLiter = lexer.lexeme.integer.decimal
-    val charLiter = lexer.lexeme.character.ascii
-    val strLiter = lexer.lexeme.string.ascii
-    val ident = lexer.lexeme.names.identifier
+    lazy val intLiter = lexer.lexeme.integer.decimal
+    lazy val charLiter = lexer.lexeme.character.ascii
+    lazy val strLiter = lexer.lexeme.string.ascii
+    lazy val ident = lexer.lexeme.names.identifier
     val implicits = lexer.lexeme.symbol.implicits
 
     def fully[A](p: Parsley[A]): Parsley[A] = lexer.fully(p)

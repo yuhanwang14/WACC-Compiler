@@ -7,7 +7,7 @@ import utils.*
 object statements {
     sealed trait Stmts
     // Program
-    case class Program(fs: Option[List[Func]], s: Stmt)(val pos: (Int, Int)) extends Stmts
+    case class Program(fs: List[Func], s: Stmt)(val pos: (Int, Int)) extends Stmts
 
     // Function
     case class Func(t: WACCType, i: Ident, ps: Option[ParamList], s: Stmt)(val pos: (Int, Int)) extends Stmts
@@ -43,15 +43,15 @@ object statements {
     // Right Value
     abstract trait RValue extends Stmts
     // Expr
-    case class ArrayLiter(es: Option[List[Expr]])(val pos: (Int, Int)) extends RValue
+    case class ArrayLiter(es: List[Expr])(val pos: (Int, Int)) extends RValue
     case class NewPair(e1: Expr, e2: Expr)(val pos: (Int, Int)) extends RValue
     // PairElem
     case class Call(i: Ident, argL: Option[ArgList])(val pos: (Int, Int)) extends RValue
 
     // Arguments List
-    case class ArgList(es: Option[List[Expr]])(val pos: (Int, Int)) extends Stmts
+    case class ArgList(es: List[Expr])(val pos: (Int, Int)) extends Stmts
 
-    object Program extends ParserBridgePos2[Option[List[Func]], Stmt, Program]
+    object Program extends ParserBridgePos2[List[Func], Stmt, Program]
 
     object Func extends ParserBridgePos4[WACCType, Ident, Option[ParamList], Stmt, Func]
 
@@ -74,10 +74,9 @@ object statements {
 
     object PairElem extends ParserBridgePos1[LValue, PairElem]
     
-    object ArrayLiter extends ParserBridgePos1[Option[List[Expr]], RValue]
+    object ArrayLiter extends ParserBridgePos1[List[Expr], RValue]
     object NewPair extends ParserBridgePos2[Expr, Expr, RValue]
     object Call extends ParserBridgePos2[Ident, Option[ArgList], RValue]
 
-    object ArgList extends ParserBridgePos1[Option[List[Expr]], ArgList]
-
+    object ArgList extends ParserBridgePos1[List[Expr], ArgList]
 }
