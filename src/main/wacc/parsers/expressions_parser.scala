@@ -9,14 +9,14 @@ object expressions_parser {
     lazy val arrayElem = atomic(ArrayElem(Ident(ident), some("[" ~> expr <~ "]")))
     lazy val atom = 
         Atoms(
+            arrayElem,
             IntLiter(intLiter), 
             BoolLiter("true".as(true) | "false".as(false)),
             CharLiter(charLiter), 
             StrLiter(strLiter),
             PairLiter("null".as(null)),
             Ident(ident), 
-            Paren("(" ~> expr <~ ")"),
-            arrayElem
+            Paren("(" ~> expr <~ ")")
         )
     lazy val expr: Parsley[Expr] = precedence {
         SOps(InfixR)(Or from "||") +:

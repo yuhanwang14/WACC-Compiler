@@ -9,7 +9,6 @@ import syntax.expressions.*
 import parsers.expressions_parser.*
 import parsley.Parsley
 import parsley.expr.*
-import parsley.debug._
 
 object statements_parser {
     lazy val program = Program("begin" ~> many(func), stmt <~ "end")
@@ -32,7 +31,7 @@ object statements_parser {
     lazy val whileStmt = While("while" ~> expr, "do" ~> stmt <~ "done")
     lazy val beginStmt = Begin("begin" ~> stmt <~ "end")
 
-    val simpleStmt: Parsley[Stmt] = skipStmt | printlnStmt | printStmt
+    val simpleStmt: Parsley[Stmt] = skipStmt | atomic(printlnStmt) | printStmt
     | declareStmt | assignStmt | readStmt | freeStmt 
     | returnStmt | exitStmt | ifStmt | whileStmt | beginStmt
     lazy val delimiterStmt = chain.right1(simpleStmt)(Delimiter from ";")
@@ -40,7 +39,7 @@ object statements_parser {
 
     lazy val lValue: Parsley[LValue] = Ident(ident) | arrayElem | pairElem
     lazy val pairElem = PairElem(("fst" ~> lValue) | ("snd" ~> lValue))
-    lazy val rValue = expr | arrayLiter | newPair | pairElem
+    lazy val rValue = expr | arrayLiter | newPair | pairElem | call
     val arrayLiter = ArrayLiter("[" ~> sepBy(expr, ",") <~ "]")
     val newPair = NewPair("newpair" ~> "(" ~> expr, "," ~> expr <~ ")")
     val call = Call("call" ~> Ident(ident), "(" ~> option(argList) <~ ")")
