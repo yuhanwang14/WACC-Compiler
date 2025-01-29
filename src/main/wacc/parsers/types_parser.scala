@@ -1,6 +1,6 @@
 package parsers
 
-import syntax.types.*
+import AST.types.*
 import wacc.lexer.implicits.implicitSymbol, wacc.lexer.*
 import parsley.Parsley.*, parsley.Parsley
 import parsley.expr.chain

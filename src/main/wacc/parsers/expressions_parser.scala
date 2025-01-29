@@ -1,6 +1,6 @@
 package parsers
 
-import syntax.expressions.*
+import AST.expressions.*
 import wacc.lexer.implicits.implicitSymbol, wacc.lexer.*
 import parsley.Parsley.*, parsley.Parsley
 import parsley.expr.{precedence, SOps, Atoms, InfixL, InfixR, InfixN, Prefix}

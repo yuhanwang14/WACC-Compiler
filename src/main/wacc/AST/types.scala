@@ -1,4 +1,4 @@
-package syntax
+package AST
 
 import utils.ParserBridgePos1
 import utils.ParserBridgePos2

@@ -1,7 +1,7 @@
-package parsers
+package AST
 
-import syntax.expressions.*
-import syntax.types.*
+import AST.expressions.*
+import AST.types.*
 import utils.*
 
 object statements {

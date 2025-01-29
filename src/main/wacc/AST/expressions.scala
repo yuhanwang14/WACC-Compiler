@@ -1,8 +1,8 @@
-package syntax
+package AST
 
 import utils.ParserBridgePos1
 import utils.ParserBridgePos2
-import parsers.statements.*
+import AST.statements.*
 
 object expressions {
     abstract trait Expr extends RValue
