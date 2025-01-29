@@ -15,7 +15,7 @@ object statements_parser {
 
     lazy val func = atomic(Func(waccType, Ident(ident), "(" ~> option(paramList) <~ ")", "is" ~> stmt <~ "end"))
 
-    lazy val paramList: Parsley[ParamList] = ParamList(param, many("," ~> param))
+    lazy val paramList: Parsley[ParamList] = ParamList(sepBy1(param, ","))
     lazy val param = Param(waccType, Ident(ident))
 
     val skipStmt = "skip" as Skip
@@ -37,7 +37,7 @@ object statements_parser {
     lazy val delimiterStmt = chain.right1(simpleStmt)(Delimiter from ";")
     lazy val stmt: Parsley[Stmt] = delimiterStmt
 
-    lazy val lValue: Parsley[LValue] = Ident(ident) | arrayElem | pairElem
+    lazy val lValue: Parsley[LValue] = arrayElem | Ident(ident) | pairElem
     lazy val pairElem = PairElem(("fst" ~> lValue) | ("snd" ~> lValue))
     lazy val rValue = expr | arrayLiter | newPair | pairElem | call
     val arrayLiter = ArrayLiter("[" ~> sepBy(expr, ",") <~ "]")

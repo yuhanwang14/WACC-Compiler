@@ -38,6 +38,7 @@ object lexer {
                 "do",
                 "done",
                 "call", 
+                "newpair",
                 "fst", 
                 "snd"
             ), 

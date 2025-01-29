@@ -13,7 +13,7 @@ object statements {
     case class Func(t: WACCType, i: Ident, ps: Option[ParamList], s: Stmt)(val pos: (Int, Int)) extends Stmts
 
     // Parameter List
-    case class ParamList(p: Param, ps: List[Param])(val pos: (Int, Int)) extends Stmts
+    case class ParamList(ps: List[Param])(val pos: (Int, Int)) extends Stmts
 
     // Parameter
     case class Param(t: WACCType, i: Ident)(val pos: (Int, Int)) extends Stmts
@@ -55,7 +55,7 @@ object statements {
 
     object Func extends ParserBridgePos4[WACCType, Ident, Option[ParamList], Stmt, Func]
 
-    object ParamList extends ParserBridgePos2[Param, List[Param], ParamList]
+    object ParamList extends ParserBridgePos1[List[Param], ParamList]
 
     object Param extends ParserBridgePos2[WACCType, Ident, Param]
 
