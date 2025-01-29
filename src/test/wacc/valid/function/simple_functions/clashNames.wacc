@@ -1,0 +1,21 @@
+# we should be able to use any function names, even if they clash with libc
+
+# Output:
+
+# Exit:
+# 101
+
+# Program:
+
+begin
+    int malloc() is return 42 end
+    int scanf() is return 37 end
+    int printf() is return 20 end
+    int puts() is return 2 end
+
+    int u = call malloc();
+    int x = call scanf();
+    int y = call printf();
+    int z = call puts();
+    exit (u + x + y + z)
+end
