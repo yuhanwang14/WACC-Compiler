@@ -8,12 +8,12 @@ import parsley.combinator.*
 import AST.expressions.*
 import parsers.expressions_parser.*
 import parsley.Parsley
-import parsley.expr.*
+import syntax_checkers.returning_checker._returningBlock
 
 object statements_parser {
-    lazy val program = Program("begin" ~> many(func), stmt <~ "end")
+    lazy val program = Program("begin" ~> many(func), block <~ "end")
 
-    lazy val func = atomic(Func(waccType, Ident(ident), "(" ~> option(paramList) <~ ")", "is" ~> stmt <~ "end"))
+    lazy val func = atomic(Func(waccType, Ident(ident), "(" ~> option(paramList) <~ ")", "is" ~> _returningBlock <~ "end"))
 
     lazy val paramList: Parsley[ParamList] = ParamList(sepBy1(param, ","))
     lazy val param = Param(waccType, Ident(ident))
@@ -27,15 +27,14 @@ object statements_parser {
     val exitStmt = Exit("exit" ~> expr)
     val printStmt = Print("print" ~> expr)
     val printlnStmt = Println("println" ~> expr)
-    lazy val ifStmt = If("if" ~> expr, "then" ~> stmt, "else" ~> stmt <~ "fi")
-    lazy val whileStmt = While("while" ~> expr, "do" ~> stmt <~ "done")
-    lazy val beginStmt = Begin("begin" ~> stmt <~ "end")
+    lazy val ifStmt = If("if" ~> expr, "then" ~> block, "else" ~> block <~ "fi")
+    lazy val whileStmt = While("while" ~> expr, "do" ~> block <~ "done")
+    lazy val beginStmt = Begin("begin" ~> block <~ "end")
 
     val simpleStmt: Parsley[Stmt] = skipStmt | atomic(printlnStmt) | printStmt
     | declareStmt | assignStmt | readStmt | freeStmt 
     | returnStmt | exitStmt | ifStmt | whileStmt | beginStmt
-    lazy val delimiterStmt = chain.right1(simpleStmt)(Delimiter from ";")
-    lazy val stmt: Parsley[Stmt] = delimiterStmt
+    lazy val block = Block(sepBy1(simpleStmt, ";"))
 
     lazy val lValue: Parsley[LValue] = arrayElem | Ident(ident) | pairElem
     lazy val pairElem = PairElem(("fst" ~> lValue) | ("snd" ~> lValue))

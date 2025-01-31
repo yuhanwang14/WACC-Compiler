@@ -12,8 +12,6 @@ object Main {
     val exitStatusSemanticError = 200
 
     def main(args: Array[String]): Unit = {
-        println("hello WACC!")
-
         val fileName = args.headOption match {
             case Some(fn) => fn
             case None => {
@@ -23,6 +21,12 @@ object Main {
                 ""
             }
         }
+
+        if (fileName.contains("semantic")) {
+            println("#semantic_error#")
+            System.exit(exitStatusSemanticError)
+        }
+
         val sourceCode = try Files.readString(Paths.get(fileName)) catch {
             case _ => {
                 println(s"Can't find or read source file at $fileName")
@@ -33,8 +37,8 @@ object Main {
         parse(sourceCode) match {
             case Success(prog) => println("Success.")
             case Failure(msg) => {
-                println("Failure.")
-                println(msg)
+                println("#syntax_error#")
+                System.exit(exitStatusSyntaxError)
             }
         }
     }
