@@ -15,7 +15,10 @@ class ValidSpec extends UnitSpec {
             val sourceCode = Files.readString(Paths.get(filePath))
             parse(sourceCode) match {
                 case Failure(msg) => assert(false, msg)
-                case Success(prog) => assert(true)
+                case Success(prog) => {
+                    println(prog)
+                    assert(true)
+                }
             }
         }
     }
