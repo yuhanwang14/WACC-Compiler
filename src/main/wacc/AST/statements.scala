@@ -5,21 +5,20 @@ import AST.types.*
 import utils.*
 
 object statements {
-    sealed trait Stmts
     // Program
-    case class Program(fs: List[Func], s: Stmt)(val pos: (Int, Int)) extends Stmts
+    case class Program(fs: List[Func], s: Stmt)(val pos: (Int, Int))
 
     // Function
-    case class Func(t: WACCType, i: Ident, ps: Option[ParamList], s: Stmt)(val pos: (Int, Int)) extends Stmts
+    case class Func(t: WACCType, i: Ident, ps: Option[ParamList], s: Stmt)(val pos: (Int, Int))
 
     // Parameter List
-    case class ParamList(ps: List[Param])(val pos: (Int, Int)) extends Stmts
+    case class ParamList(ps: List[Param])(val pos: (Int, Int))
 
     // Parameter
-    case class Param(t: WACCType, i: Ident)(val pos: (Int, Int)) extends Stmts
+    case class Param(t: WACCType, i: Ident)(val pos: (Int, Int))
 
     // Statement
-    sealed trait Stmt extends Stmts
+    sealed trait Stmt
     case object Skip extends Stmt
     case class Declare(t: WACCType, i: Ident, r: RValue)(val pos: (Int, Int)) extends Stmt
     case class Assign(l: LValue, r: RValue)(val pos: (Int, Int)) extends Stmt
@@ -32,16 +31,17 @@ object statements {
     case class If(cond: Expr, t: Stmt, e: Stmt)(val pos: (Int, Int)) extends Stmt
     case class While(cond: Expr, s: Stmt)(val pos: (Int, Int)) extends Stmt
     case class Begin(s: Stmt)(val pos: (Int, Int)) extends Stmt
-    case class Delimiter(s1: Stmt, s2: Stmt)(val pos: (Int, Int)) extends Stmt
+
+    case class Block(sts: List[Stmt])(val pos: (Int, Int)) extends Stmt
 
     // Left Value
-    abstract trait LValue extends Stmts
+    abstract trait LValue
     // Ident
     // ArrayElem
     case class PairElem(v: LValue)(val pos: (Int, Int)) extends LValue with RValue
 
     // Right Value
-    abstract trait RValue extends Stmts
+    abstract trait RValue
     // Expr
     case class ArrayLiter(es: List[Expr])(val pos: (Int, Int)) extends RValue
     case class NewPair(e1: Expr, e2: Expr)(val pos: (Int, Int)) extends RValue
@@ -49,7 +49,7 @@ object statements {
     case class Call(i: Ident, argL: Option[ArgList])(val pos: (Int, Int)) extends RValue
 
     // Arguments List
-    case class ArgList(es: List[Expr])(val pos: (Int, Int)) extends Stmts
+    case class ArgList(es: List[Expr])(val pos: (Int, Int))
 
     object Program extends ParserBridgePos2[List[Func], Stmt, Program]
 
@@ -70,8 +70,8 @@ object statements {
     object If extends ParserBridgePos3[Expr, Stmt, Stmt, Stmt]
     object While extends ParserBridgePos2[Expr, Stmt, Stmt]
     object Begin extends ParserBridgePos1[Stmt, Stmt]
-    object Delimiter extends ParserBridgePos2[Stmt, Stmt, Stmt]
-
+    object Block extends ParserBridgePos1[List[Stmt], Stmt]
+    
     object PairElem extends ParserBridgePos1[LValue, PairElem]
     
     object ArrayLiter extends ParserBridgePos1[List[Expr], RValue]

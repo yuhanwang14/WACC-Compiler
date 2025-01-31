@@ -8,13 +8,16 @@
 // class InvalidSpec extends UnitSpec {
 
 //     val fileList = Files.readAllLines(
-//         Paths.get("./src/test/wacc/file_lists/invalid_files")).asScala
+//         Paths.get("./src/test/wacc/file_lists/tmp_files")).asScala
 
 //     fileList.foreach { filePath =>
 //         test(filePath) {
 //             val sourceCode = Files.readString(Paths.get(filePath))
 //             parse(sourceCode) match {
-//                 case Failure(msg) => assert(true)
+//                 case Failure(msg) => {
+//                     println(msg)
+//                     assert(true)
+//                 }
 //                 case Success(prog) => assert(false)
 //             }
 //         }
