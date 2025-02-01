@@ -4,6 +4,8 @@ import utils.*
 
 object types {
     sealed trait WACCType
+    case object AnyType extends WACCType
+
     // Base Type
     sealed trait BaseType extends WACCType
     case object IntType extends BaseType

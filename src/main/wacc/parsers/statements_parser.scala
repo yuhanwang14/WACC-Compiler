@@ -38,7 +38,7 @@ object statements_parser {
     lazy val block = Block(sepBy1(simpleStmt, ";".hide))
 
     lazy val lValue: Parsley[LValue] = arrayElem | Ident(ident) | pairElem
-    lazy val pairElem = PairElem(("fst" ~> lValue.label("pair")) | ("snd" ~> lValue.label("pair")))
+    lazy val pairElem: Parsley[PairElem] = First(("fst" ~> lValue.label("pair"))) | Second(("snd" ~> lValue.label("pair")))
     lazy val rValue = expr | arrayLiter | newPair | pairElem | call
     val arrayLiter = ArrayLiter("[" ~> sepBy(expr, ",") <~ "]")
     val newPair = NewPair("newpair" ~> "(" ~> expr, "," ~> expr <~ ")")

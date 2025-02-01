@@ -38,7 +38,9 @@ object statements {
     abstract trait LValue
     // Ident
     // ArrayElem
-    case class PairElem(v: LValue)(val pos: (Int, Int)) extends LValue with RValue
+    trait PairElem extends LValue with RValue
+    case class First(v: LValue)(val pos: (Int, Int)) extends PairElem
+    case class Second(v: LValue)(val pos: (Int, Int)) extends PairElem
 
     // Right Value
     abstract trait RValue
@@ -72,7 +74,8 @@ object statements {
     object Begin extends ParserBridgePos1[Stmt, Stmt]
     object Block extends ParserBridgePos1[List[Stmt], Stmt]
     
-    object PairElem extends ParserBridgePos1[LValue, PairElem]
+    object First extends ParserBridgePos1[LValue, PairElem]
+    object Second extends ParserBridgePos1[LValue, PairElem]
     
     object ArrayLiter extends ParserBridgePos1[List[Expr], RValue]
     object NewPair extends ParserBridgePos2[Expr, Expr, RValue]
