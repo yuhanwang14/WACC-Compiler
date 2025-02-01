@@ -20,24 +20,24 @@ object expressions_parser {
             Paren("(" ~> expr <~ ")")
         )
     lazy val expr: Parsley[Expr] = precedence {
-        SOps(InfixR)(Or from "||".label("operator")) +:
-        SOps(InfixR)(And from "&&".label("operator")) +:
-        SOps(InfixN)(Equal from "==".label("operator"), 
-                     NotEqual from "!=".label("operator")) +:
-        SOps(InfixN)(Less from "<".label("operator"),  
-                     LessEqual from "<=".label("operator"),
-                     Greater from ">".label("operator"),  
-                     GreaterEqual from ">=".label("operator")) +: 
-        SOps(InfixL)(Add from "+".label("operator"),  
-                     Sub from "-".label("operator")) +:
-        SOps(InfixL)(Mul from "*".label("operator"),  
-                     Div from "/".label("operator"),
-                     Mod from "%".label("operator")) +:
-        SOps(Prefix)(Not from "!", 
-                     Negate from "-", 
-                     Len from "len", 
-                     Ord from "ord", 
-                     Chr from "chr") +:
+        SOps(InfixR)(Or from "||".label("binary operator")) +:
+        SOps(InfixR)(And from "&&".label("binary operator")) +:
+        SOps(InfixN)(Equal from "==".label("binary operator"), 
+                     NotEqual from "!=".label("binary operator")) +:
+        SOps(InfixN)(Less from "<".label("binary operator"),  
+                     LessEqual from "<=".label("binary operator"),
+                     Greater from ">".label("binary operator"),  
+                     GreaterEqual from ">=".label("binary operator")) +: 
+        SOps(InfixL)(Add from "+".label("binary operator"),  
+                     Sub from "-".label("binary operator")) +:
+        SOps(InfixL)(Mul from "*".label("binary operator"),  
+                     Div from "/".label("binary operator"),
+                     Mod from "%".label("binary operator")) +:
+        SOps(Prefix)(Not from "!".label("unary operator"), 
+                     Negate from "-".label("unary operator"), 
+                     Len from "len".label("unary operator"), 
+                     Ord from "ord".label("unary operator"), 
+                     Chr from "chr".label("unary operator")) +:
         atom
     }.label("expression")
 }

@@ -32,7 +32,7 @@ object statements_parser {
     lazy val whileStmt = While("while" ~> expr, "do" ~> block <~ "done")
     lazy val beginStmt = Begin("begin" ~> block <~ "end")
 
-    val simpleStmt: Parsley[Stmt] = (skipStmt | atomic(printlnStmt) | printStmt
+    val simpleStmt: Parsley[Stmt] = (skipStmt | printlnStmt | printStmt
     | declareStmt | assignStmt | readStmt | freeStmt 
     | returnStmt | exitStmt | ifStmt | whileStmt | beginStmt).label("statement")
     lazy val block = Block(sepBy1(simpleStmt, ";".hide))
