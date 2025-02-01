@@ -1,4 +1,4 @@
-package wacc.semantics
+package semantic_checkers
 
 import AST.statements.*
 
