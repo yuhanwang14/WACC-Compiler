@@ -1,7 +1,6 @@
 package AST
 
-import utils.ParserBridgePos1
-import utils.ParserBridgePos2
+import utils.*
 import AST.statements.*
 
 object expressions {
@@ -43,7 +42,7 @@ object expressions {
     case class BoolLiter(x: Boolean)(val pos: (Int, Int)) extends Atom
     case class CharLiter(c: Char)(val pos: (Int, Int)) extends Atom
     case class StrLiter(s: String)(val pos: (Int, Int)) extends Atom
-    case class PairLiter(x: Null)(val pos: (Int, Int)) extends Atom
+    case object PairLiter extends Atom
     case class Ident(name: String)(val pos: (Int, Int)) extends Atom with LValue
     case class ArrayElem(ident: Ident, exprs: List[Expr])(val pos: (Int, Int)) extends Atom with LValue
     case class Paren(x: Expr)(val pos: (Int, Int)) extends Atom
@@ -77,7 +76,6 @@ object expressions {
     object BoolLiter extends ParserBridgePos1[Boolean, BoolLiter]
     object CharLiter extends ParserBridgePos1[Char, CharLiter]
     object StrLiter extends ParserBridgePos1[String, StrLiter]
-    object PairLiter extends ParserBridgePos1[Null, PairLiter]
     object Ident extends ParserBridgePos1[String, Ident]
     object ArrayElem extends ParserBridgePos2[Ident, List[Expr], ArrayElem]
     object Paren extends ParserBridgePos1[Expr, Paren]

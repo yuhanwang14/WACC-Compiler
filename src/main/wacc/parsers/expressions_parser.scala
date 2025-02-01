@@ -12,10 +12,10 @@ object expressions_parser {
         Atoms(
             arrayElem,
             IntLiter(intLiter), 
-            BoolLiter("true".as(true) | "false".as(false)),
+            BoolLiter("true" #> true | "false" #> false),
             CharLiter(charLiter), 
             StrLiter(strLiter),
-            PairLiter("null".as(null)),
+            "null" #> PairLiter,
             Ident(ident), 
             Paren("(" ~> expr <~ ")")
         )

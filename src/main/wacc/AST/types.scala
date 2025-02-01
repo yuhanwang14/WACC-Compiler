@@ -1,7 +1,6 @@
 package AST
 
-import utils.ParserBridgePos1
-import utils.ParserBridgePos2
+import utils.*
 
 object types {
     sealed trait WACCType
