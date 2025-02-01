@@ -38,8 +38,8 @@ object errors {
         override val msgs: Seq[String] = (unexpected, expected) match {
             case (None, None) => reasons
             case _ => 
-                ("unexpected: " + unexpected.getOrElse("")) +:
-                ("expected: " + expected.getOrElse("")) +:
+                ("unexpected " + unexpected.getOrElse("")) +:
+                ("expected " + expected.getOrElse("")) +:
                 reasons
         }
         override val lines: Seq[String] = lineInfo.format
