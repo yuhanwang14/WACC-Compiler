@@ -8,8 +8,8 @@ object errors {
     case class Error(pos: (Int, Int), source: Option[String], lines: ErrorLines) {
 
         def format: String = {
-            val errorDesc 
-                = source.fold(lines.errorType)(file => s"${lines.errorType} in $file")
+            val errorDesc = 
+                source.fold(lines.errorType)(file => s"${lines.errorType} in $file")
             val errorLoc = s"(row ${pos._1}, col ${pos._2}):"
             val errorMsgs = lines.msgs.mkString("\n  ")
             val errorLines = lines.lines.mkString("\n  ")
@@ -28,6 +28,20 @@ object errors {
         val lines: Seq[String]
     }
 
+    private def mergeExpectation(
+        unexpected: Option[String],
+        expected: Option[String],
+        reasons: Seq[String]
+    ): Seq[String] = {
+        (unexpected, expected) match {
+            case (None, None) => reasons
+            case _ =>
+                ("unexpected " + unexpected.getOrElse("")) +:
+                ("expected " + expected.getOrElse("")) +:
+                reasons
+        }
+    }
+
     case class SyntaxError(
         unexpected: Option[String],
         expected: Option[String],
@@ -35,14 +49,21 @@ object errors {
         lineInfo: LineInfo
     ) extends ErrorLines {
         override val errorType: String = "syntax error"
-        override val msgs: Seq[String] = (unexpected, expected) match {
-            case (None, None) => reasons
-            case _ => 
-                ("unexpected " + unexpected.getOrElse("")) +:
-                ("expected " + expected.getOrElse("")) +:
-                reasons
-        }
+        override val msgs: Seq[String] = 
+            mergeExpectation(unexpected, expected, reasons)
         override val lines: Seq[String] = lineInfo.format
+    }
+
+    case class SemanticError(
+        unexpected: Option[String],
+        expected: Option[String],
+        reasons: Seq[String],
+        lineinfo: LineInfo
+    ) extends ErrorLines {
+        override val errorType: String = "semantic error"
+        override val msgs: Seq[String] = 
+            mergeExpectation(unexpected, expected, reasons)
+        override val lines: Seq[String] = lineinfo.format
     }
 
     case class LineInfo(
