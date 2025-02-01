@@ -40,7 +40,8 @@ object lexer {
                 "call", 
                 "newpair",
                 "fst", 
-                "snd"
+                "snd",
+                "null"
             ), 
             hardOperators = Set[String](
                 "!", 
