@@ -3,6 +3,7 @@ package parsers
 import AST.types.*
 import wacc.lexer.implicits.implicitSymbol, wacc.lexer.*
 import parsley.Parsley.*, parsley.Parsley
+import parsley.errors.combinator.*
 import parsley.expr.chain
 
 object types_parser {
@@ -14,7 +15,7 @@ object types_parser {
     val baseType: Parsley[WACCType] = intType | boolType | charType | stringType
 
     val arrayType: Parsley[WACCType] =
-        chain.postfix1(baseType | nonErasedPairType)(ArrayType from "[]")
+        chain.postfix1(baseType | nonErasedPairType)(ArrayType from "[]".hide)
 
     val erasedPairType = ("pair" as ErasedPairType) <~ notFollowedBy("(")
     val pairElemType: Parsley[WACCType] = atomic(erasedPairType)| atomic(arrayType) | baseType

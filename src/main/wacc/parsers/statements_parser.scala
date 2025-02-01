@@ -8,19 +8,20 @@ import parsley.combinator.*
 import AST.expressions.*
 import parsers.expressions_parser.*
 import parsley.Parsley
+import parsley.errors.combinator.*
 import syntax_checkers.returning_checker._returningBlock
 
 object statements_parser {
     lazy val program = Program("begin" ~> many(func), block <~ "end")
 
-    lazy val func = atomic(Func(waccType, Ident(ident), "(" ~> option(paramList) <~ ")", "is" ~> _returningBlock <~ "end"))
+    lazy val func = atomic(Func(waccType, Ident(ident), "(" ~> option(paramList) <~ ")", "is" ~> _returningBlock <~ "end".hide))
 
     lazy val paramList: Parsley[ParamList] = ParamList(sepBy1(param, ","))
     lazy val param = Param(waccType, Ident(ident))
 
     val skipStmt = "skip" as Skip
     lazy val declareStmt = Declare(waccType, Ident(ident), "=" ~> rValue)
-    lazy val assignStmt = Assign(lValue, "=" ~> rValue)
+    lazy val assignStmt = Assign(lValue, "=".label("assignment") ~> rValue)
     lazy val readStmt = Read("read" ~> lValue)
     val freeStmt = Free("free" ~> expr)
     val returnStmt = Return("return" ~> expr)
@@ -31,13 +32,13 @@ object statements_parser {
     lazy val whileStmt = While("while" ~> expr, "do" ~> block <~ "done")
     lazy val beginStmt = Begin("begin" ~> block <~ "end")
 
-    val simpleStmt: Parsley[Stmt] = skipStmt | atomic(printlnStmt) | printStmt
+    val simpleStmt: Parsley[Stmt] = (skipStmt | atomic(printlnStmt) | printStmt
     | declareStmt | assignStmt | readStmt | freeStmt 
-    | returnStmt | exitStmt | ifStmt | whileStmt | beginStmt
-    lazy val block = Block(sepBy1(simpleStmt, ";"))
+    | returnStmt | exitStmt | ifStmt | whileStmt | beginStmt).label("statement")
+    lazy val block = Block(sepBy1(simpleStmt, ";".hide))
 
     lazy val lValue: Parsley[LValue] = arrayElem | Ident(ident) | pairElem
-    lazy val pairElem = PairElem(("fst" ~> lValue) | ("snd" ~> lValue))
+    lazy val pairElem = PairElem(("fst" ~> lValue.label("pair")) | ("snd" ~> lValue.label("pair")))
     lazy val rValue = expr | arrayLiter | newPair | pairElem | call
     val arrayLiter = ArrayLiter("[" ~> sepBy(expr, ",") <~ "]")
     val newPair = NewPair("newpair" ~> "(" ~> expr, "," ~> expr <~ ")")
