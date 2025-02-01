@@ -10,14 +10,14 @@ object errors {
         def format: String = {
             val errorDesc 
                 = source.fold(lines.errorType)(file => s"${lines.errorType} in $file")
-            val errorLoc = s"(row ${pos._1}, col ${pos._2})"
-            val errorMsgs = lines.msgs.mkString("\n")
-            val errorLines = lines.lines.mkString("\n")
+            val errorLoc = s"(row ${pos._1}, col ${pos._2}):"
+            val errorMsgs = lines.msgs.mkString("\n  ")
+            val errorLines = lines.lines.mkString("\n  ")
             
             s"""$errorDesc
             |$errorLoc
-            |$errorMsgs
-            |$errorLines""".stripMargin
+            |  $errorMsgs
+            |  $errorLines""".stripMargin
         }
     
     }
@@ -28,13 +28,13 @@ object errors {
         val lines: Seq[String]
     }
 
-    case class SyntexError(
+    case class SyntaxError(
         unexpected: Option[String],
         expected: Option[String],
         reasons: Seq[String],
         lineInfo: LineInfo
     ) extends ErrorLines {
-        override val errorType: String = "syntex error"
+        override val errorType: String = "syntax error"
         override val msgs: Seq[String] = (unexpected, expected) match {
             case (None, None) => reasons
             case _ => 
@@ -101,12 +101,12 @@ object errors {
             expected: ExpectedLine, 
             reasons: Messages, 
             line: LineInfo
-        ): ErrorInfoLines = SyntexError(unexpected, expected, reasons, line)
+        ): ErrorInfoLines = SyntaxError(unexpected, expected, reasons, line)
 
         override def specializedError(
             msgs: Messages, 
             line: LineInfo
-        ): ErrorInfoLines = SyntexError(None, None, msgs, line)
+        ): ErrorInfoLines = SyntaxError(None, None, msgs, line)
 
         override def lineInfo(
             line: String, 
