@@ -20,7 +20,7 @@ object errors {
             |$errorLines""".stripMargin
         }
     
-}
+    }
 
     sealed trait ErrorLines {
         val errorType: String
@@ -62,7 +62,7 @@ object errors {
 
             val offset: Int = linesBefore.size
             val formattedLinesBefore: Seq[String] = addLineNums(linesBefore, lineNum - offset)
-            val formattedLinesAfter: Seq[String] = addLineNums(linesAfter, lineNum + offset)
+            val formattedLinesAfter: Seq[String] = addLineNums(linesAfter, lineNum + 1)
             val formattedLine: Seq[String] = addLineNums(Seq(line), lineNum)
 
             val lineNumOffset: Int = lineNum.toString().length() + 3
