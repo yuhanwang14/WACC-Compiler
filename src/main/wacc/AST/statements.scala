@@ -19,7 +19,7 @@ object statements {
 
     // Statement
     sealed trait Stmt
-    case object Skip extends Stmt
+    case class Skip()(val pos: (Int, Int)) extends Stmt
     case class Declare(t: WACCType, i: Ident, r: RValue)(val pos: (Int, Int)) extends Stmt
     case class Assign(l: LValue, r: RValue)(val pos: (Int, Int)) extends Stmt
     case class Read(l: LValue)(val pos: (Int, Int)) extends Stmt
@@ -61,6 +61,7 @@ object statements {
 
     object Param extends ParserBridgePos2[WACCType, Ident, Param]
 
+    object Skip extends ParserBridgePos0[Stmt]
     object Declare extends ParserBridgePos3[WACCType, Ident, RValue, Stmt]
     object Assign extends ParserBridgePos2[LValue, RValue, Stmt]
     object Read extends ParserBridgePos1[LValue, Stmt]

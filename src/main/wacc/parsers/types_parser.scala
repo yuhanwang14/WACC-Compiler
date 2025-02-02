@@ -7,16 +7,16 @@ import parsley.expr.chain
 
 object types_parser {
     lazy val waccType: Parsley[WACCType] = arrayType | nonErasedPairType | baseType 
-    val intType = "int" #> IntType
-    val boolType = "bool" #> BoolType
-    val charType = "char" #> CharType
-    val stringType = "string" #> StringType
+    val intType = IntType from "int"
+    val boolType = BoolType from "bool"
+    val charType = CharType from "char"
+    val stringType = StringType from "string"
     val baseType: Parsley[WACCType] = intType | boolType | charType | stringType
 
     val arrayType: Parsley[WACCType] =
         atomic(chain.postfix1(baseType | nonErasedPairType)(ArrayType from "[]"))
 
-    val erasedPairType = ("pair" #> ErasedPairType) <~ notFollowedBy("(")
+    val erasedPairType = (ErasedPairType from "pair") <~ notFollowedBy("(")
     val pairElemType: Parsley[WACCType] = erasedPairType | arrayType | baseType
     lazy val nonErasedPairType: Parsley[WACCType] = 
         NonErasedPairType("pair" ~> "(" ~> pairElemType <~ ",", pairElemType <~ ")")

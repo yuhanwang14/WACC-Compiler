@@ -15,7 +15,7 @@ object expressions_parser {
             BoolLiter("true" #> true | "false" #> false),
             CharLiter(charLiter), 
             StrLiter(strLiter),
-            "null" #> PairLiter,
+            PairLiter from "null",
             Ident(ident), 
             Paren("(" ~> expr <~ ")")
         )

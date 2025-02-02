@@ -39,7 +39,7 @@ object expressions {
     case class BoolLiter(x: Boolean)(val pos: (Int, Int)) extends Expr
     case class CharLiter(c: Char)(val pos: (Int, Int)) extends Expr
     case class StrLiter(s: String)(val pos: (Int, Int)) extends Expr
-    case object PairLiter extends Expr
+    case class PairLiter()(val pos: (Int, Int)) extends Expr
     case class Ident(name: String)(val pos: (Int, Int)) extends Expr with LValue
     case class ArrayElem(ident: Ident, exprs: List[Expr])(val pos: (Int, Int)) extends Expr with LValue
     case class Paren(x: Expr)(val pos: (Int, Int)) extends Expr
@@ -74,6 +74,7 @@ object expressions {
     object CharLiter extends ParserBridgePos1[Char, CharLiter]
     object StrLiter extends ParserBridgePos1[String, StrLiter]
     object Ident extends ParserBridgePos1[String, Ident]
+    object PairLiter extends ParserBridgePos0[PairLiter]
     object ArrayElem extends ParserBridgePos2[Ident, List[Expr], ArrayElem]
     object Paren extends ParserBridgePos1[Expr, Paren]
 }

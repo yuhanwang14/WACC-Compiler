@@ -19,7 +19,7 @@ object statements_parser {
     lazy val paramList: Parsley[ParamList] = ParamList(sepBy1(param, ","))
     lazy val param = Param(waccType, Ident(ident))
 
-    val skipStmt = "skip" #> Skip
+    val skipStmt = Skip from "skip"
     lazy val declareStmt = Declare(waccType, Ident(ident), "=" ~> rValue)
     lazy val assignStmt = Assign(lValue, "=".label("assignment") ~> rValue)
     lazy val readStmt = Read("read" ~> lValue)
