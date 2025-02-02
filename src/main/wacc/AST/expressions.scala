@@ -5,72 +5,69 @@ import AST.statements.*
 
 object expressions {
     abstract trait Expr extends RValue
-    // Using subtypes to avoid useless constructors
-    sealed trait Expr1 extends Expr
-    case class Or(x: Expr2, y: Expr1)(val pos: (Int, Int)) extends Expr1
 
-    sealed trait Expr2 extends Expr1
-    case class And(x: Expr3, y: Expr2)(val pos: (Int, Int)) extends Expr2
+    sealed trait BinaryOp extends Expr
 
-    sealed trait Expr3 extends Expr2
-    case class Equal(x: Expr4, y: Expr4)(val pos: (Int, Int)) extends Expr3
-    case class NotEqual(x: Expr4, y: Expr4)(val pos: (Int, Int)) extends Expr3
+    case class Or(x: Expr, y: Expr)(val pos: (Int, Int)) extends BinaryOp
 
-    sealed trait Expr4 extends Expr3
-    case class Less(x: Expr5, y: Expr5)(val pos: (Int, Int)) extends Expr4
-    case class LessEqual(x: Expr5, y: Expr5)(val pos: (Int, Int)) extends Expr4
-    case class Greater(x: Expr5, y: Expr5)(val pos: (Int, Int)) extends Expr4
-    case class GreaterEqual(x: Expr5, y: Expr5)(val pos: (Int, Int)) extends Expr4
+    case class And(x: Expr, y: Expr)(val pos: (Int, Int)) extends BinaryOp
 
-    sealed trait Expr5 extends Expr4
-    case class Add(x: Expr5, y: Expr6)(val pos: (Int, Int)) extends Expr5
-    case class Sub(x: Expr5, y: Expr6)(val pos: (Int, Int)) extends Expr5
+    case class Equal(x: Expr, y: Expr)(val pos: (Int, Int)) extends BinaryOp
+    case class NotEqual(x: Expr, y: Expr)(val pos: (Int, Int)) extends BinaryOp
 
-    sealed trait Expr6 extends Expr5
-    case class Mul(x: Expr6, y: Atom)(val pos: (Int, Int)) extends Expr6
-    case class Div(x: Expr6, y: Atom)(val pos: (Int, Int)) extends Expr6
-    case class Mod(x: Expr6, y: Atom)(val pos: (Int, Int)) extends Expr6
+    case class Less(x: Expr, y: Expr)(val pos: (Int, Int)) extends BinaryOp
+    case class LessEqual(x: Expr, y: Expr)(val pos: (Int, Int)) extends BinaryOp
+    case class Greater(x: Expr, y: Expr)(val pos: (Int, Int)) extends BinaryOp
+    case class GreaterEqual(x: Expr, y: Expr)(val pos: (Int, Int)) extends BinaryOp
 
-    sealed trait Atom extends Expr6
-    case class Not(x: Atom)(val pos: (Int, Int)) extends Atom
-    case class Negate(x: Atom)(val pos: (Int, Int)) extends Atom
-    case class Len(x: Atom)(val pos: (Int, Int)) extends Atom
-    case class Ord(x: Atom)(val pos: (Int, Int)) extends Atom
-    case class Chr(x: Atom)(val pos: (Int, Int)) extends Atom
+    case class Add(x: Expr, y: Expr)(val pos: (Int, Int)) extends BinaryOp
+    case class Sub(x: Expr, y: Expr)(val pos: (Int, Int)) extends BinaryOp
 
-    case class IntLiter(x: BigInt)(val pos: (Int, Int)) extends Atom
-    case class BoolLiter(x: Boolean)(val pos: (Int, Int)) extends Atom
-    case class CharLiter(c: Char)(val pos: (Int, Int)) extends Atom
-    case class StrLiter(s: String)(val pos: (Int, Int)) extends Atom
-    case object PairLiter extends Atom
-    case class Ident(name: String)(val pos: (Int, Int)) extends Atom with LValue
-    case class ArrayElem(ident: Ident, exprs: List[Expr])(val pos: (Int, Int)) extends Atom with LValue
-    case class Paren(x: Expr)(val pos: (Int, Int)) extends Atom
+    case class Mul(x: Expr, y: Expr)(val pos: (Int, Int)) extends BinaryOp
+    case class Div(x: Expr, y: Expr)(val pos: (Int, Int)) extends BinaryOp
+    case class Mod(x: Expr, y: Expr)(val pos: (Int, Int)) extends BinaryOp
 
-    object Or extends ParserBridgePos2[Expr2, Expr1, Expr1]
+    sealed trait UnaryOp extends Expr
 
-    object And extends ParserBridgePos2[Expr3, Expr2, Expr2]
+    case class Not(x: Expr)(val pos: (Int, Int)) extends UnaryOp
+    case class Negate(x: Expr)(val pos: (Int, Int)) extends UnaryOp
+    case class Len(x: Expr)(val pos: (Int, Int)) extends UnaryOp
+    case class Ord(x: Expr)(val pos: (Int, Int)) extends UnaryOp
+    case class Chr(x: Expr)(val pos: (Int, Int)) extends UnaryOp
 
-    object Equal extends ParserBridgePos2[Expr4, Expr4, Expr3]
-    object NotEqual extends ParserBridgePos2[Expr4, Expr4, Expr3]
+    case class IntLiter(x: BigInt)(val pos: (Int, Int)) extends Expr
+    case class BoolLiter(x: Boolean)(val pos: (Int, Int)) extends Expr
+    case class CharLiter(c: Char)(val pos: (Int, Int)) extends Expr
+    case class StrLiter(s: String)(val pos: (Int, Int)) extends Expr
+    case object PairLiter extends Expr
+    case class Ident(name: String)(val pos: (Int, Int)) extends Expr with LValue
+    case class ArrayElem(ident: Ident, exprs: List[Expr])(val pos: (Int, Int)) extends Expr with LValue
+    case class Paren(x: Expr)(val pos: (Int, Int)) extends Expr
 
-    object Less extends ParserBridgePos2[Expr5, Expr5, Expr4]
-    object LessEqual extends ParserBridgePos2[Expr5, Expr5, Expr4]
-    object Greater extends ParserBridgePos2[Expr5, Expr5, Expr4]
-    object GreaterEqual extends ParserBridgePos2[Expr5, Expr5, Expr4]
+    object Or extends ParserBridgePos2[Expr, Expr, Expr]
 
-    object Add extends ParserBridgePos2[Expr5, Expr6, Expr5]
-    object Sub extends ParserBridgePos2[Expr5, Expr6, Expr5]
+    object And extends ParserBridgePos2[Expr, Expr, Expr]
 
-    object Mul extends ParserBridgePos2[Expr6, Atom, Expr6]
-    object Div extends ParserBridgePos2[Expr6, Atom, Expr6]
-    object Mod extends ParserBridgePos2[Expr6, Atom, Expr6]
+    object Equal extends ParserBridgePos2[Expr, Expr, Expr]
+    object NotEqual extends ParserBridgePos2[Expr, Expr, Expr]
 
-    object Not extends ParserBridgePos1[Atom, Atom]
-    object Negate extends ParserBridgePos1[Atom, Atom]
-    object Len extends ParserBridgePos1[Atom, Atom]
-    object Ord extends ParserBridgePos1[Atom, Atom]
-    object Chr extends ParserBridgePos1[Atom, Atom]
+    object Less extends ParserBridgePos2[Expr, Expr, Expr]
+    object LessEqual extends ParserBridgePos2[Expr, Expr, Expr]
+    object Greater extends ParserBridgePos2[Expr, Expr, Expr]
+    object GreaterEqual extends ParserBridgePos2[Expr, Expr, Expr]
+
+    object Add extends ParserBridgePos2[Expr, Expr, Expr]
+    object Sub extends ParserBridgePos2[Expr, Expr, Expr]
+
+    object Mul extends ParserBridgePos2[Expr, Expr, Expr]
+    object Div extends ParserBridgePos2[Expr, Expr, Expr]
+    object Mod extends ParserBridgePos2[Expr, Expr, Expr]
+
+    object Not extends ParserBridgePos1[Expr, Expr]
+    object Negate extends ParserBridgePos1[Expr, Expr]
+    object Len extends ParserBridgePos1[Expr, Expr]
+    object Ord extends ParserBridgePos1[Expr, Expr]
+    object Chr extends ParserBridgePos1[Expr, Expr]
 
     object IntLiter extends ParserBridgePos1[BigInt, IntLiter]
     object BoolLiter extends ParserBridgePos1[Boolean, BoolLiter]
