@@ -139,7 +139,7 @@ object type_checker {
         }
     }
     
-    // def verifyType(expr: Expr): Option[Expr] = expr match {
-    //     case Or(e1, e2) => ???
-    // }
+    def verifyType(expr: Expr): Option[Expr] = expr match {
+        case Or(e1, e2) => ???
+    }
 }
