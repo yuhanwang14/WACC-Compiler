@@ -26,13 +26,14 @@ class SymbolTable {
     }
 
     // Adds a symbol to the current scope
-    def addSymbol(name: String, typ: WACCType): Unit = { // change output to returning SemanticError
+    def addSymbol(name: String, typ: WACCType): Boolean = // change output to returning SemanticError
         if (varTable.head.contains(name)) { // Already declared in current scope
-            throw new Exception(f"Conflicting definition for $name")
+            false
         }
-          
-        varTable.head(name) = typ
-    }
+        else {
+            varTable.head(name) = typ
+            true
+        }
 
     // Looks up a symbol from innermost to outermost scope
     def lookupSymbol(name: String): Option[WACCType] = {
