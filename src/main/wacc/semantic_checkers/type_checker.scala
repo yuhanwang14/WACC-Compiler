@@ -5,6 +5,8 @@ import AST.statements.*
 import AST.expressions.*
 import scala.util.control.Breaks.{break, breakable}
 import scala.collection.mutable
+import parsley.Result
+import parsley.Success
 
 object type_checker {
     val defaultPos: (Int, Int) = (-1, -1)
@@ -143,31 +145,31 @@ object type_checker {
     
     def verifyUnary(expr: UnaryOp)(
         implicit varTable: mutable.Stack[mutable.Map[String, WACCType]]
-    ): Option[Expr] = expr match {
+    ): Result[Error, Expr] = expr match {
         case Not(e) => getType(e) match {
-            case Some(BoolType()) => Some(expr)
+            case Some(BoolType()) => Success(expr)
             case _ => ???
         }
         case Negate(e) => getType(e) match {
-            case Some(IntType()) => Some(expr)
+            case Some(IntType()) => Success(expr)
             case _ => ???
         }
         case Len(e) => getType(e) match {
             case Some(t) => 
                 if (compatible(ArrayType(AnyType()(defaultPos))(defaultPos), t)) {
-                    Some(expr)
+                    Success(expr)
                 } else {
-                    None
+                    ???
                 }
-            case None => None
+            case None => ???
         }
         case Ord(e) => getType(e) match {
-            case Some(CharType()) => Some(expr)
-            case _ => None
+            case Some(CharType()) => Success(expr)
+            case _ => ???
         }
         case Chr(e) => getType(e) match {
-            case Some(IntType()) => Some(expr)
-            case _ => None
+            case Some(IntType()) => Success(expr)
+            case _ => ???
         }
     }
 }
