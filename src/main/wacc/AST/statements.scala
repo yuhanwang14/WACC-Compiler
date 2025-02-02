@@ -1,24 +1,25 @@
 package AST
 
 import AST.expressions.*
+import AST.position.*
 import AST.types.*
 import utils.*
 
 object statements {
     // Program
-    case class Program(fs: List[Func], s: Stmt)(val pos: (Int, Int))
+    case class Program(fs: List[Func], s: Stmt)(val pos: (Int, Int)) extends Position
 
     // Function
-    case class Func(t: WACCType, i: Ident, ps: Option[ParamList], s: Stmt)(val pos: (Int, Int))
+    case class Func(t: WACCType, i: Ident, ps: Option[ParamList], s: Stmt)(val pos: (Int, Int)) extends Position
 
     // Parameter List
-    case class ParamList(ps: List[Param])(val pos: (Int, Int))
+    case class ParamList(ps: List[Param])(val pos: (Int, Int)) extends Position
 
     // Parameter
-    case class Param(t: WACCType, i: Ident)(val pos: (Int, Int))
+    case class Param(t: WACCType, i: Ident)(val pos: (Int, Int)) extends Position
 
     // Statement
-    sealed trait Stmt
+    sealed trait Stmt extends Position
     case class Skip()(val pos: (Int, Int)) extends Stmt
     case class Declare(t: WACCType, i: Ident, r: RValue)(val pos: (Int, Int)) extends Stmt
     case class Assign(l: LValue, r: RValue)(val pos: (Int, Int)) extends Stmt
@@ -35,7 +36,7 @@ object statements {
     case class Block(sts: List[Stmt])(val pos: (Int, Int)) extends Stmt
 
     // Left Value
-    abstract trait LValue
+    abstract trait LValue extends Position
     // Ident
     // ArrayElem
     trait PairElem extends LValue with RValue
@@ -43,7 +44,7 @@ object statements {
     case class Second(v: LValue)(val pos: (Int, Int)) extends PairElem
 
     // Right Value
-    abstract trait RValue
+    abstract trait RValue extends Position
     // Expr
     case class ArrayLiter(es: List[Expr])(val pos: (Int, Int)) extends RValue
     case class NewPair(e1: Expr, e2: Expr)(val pos: (Int, Int)) extends RValue
@@ -51,7 +52,7 @@ object statements {
     case class Call(i: Ident, argL: Option[ArgList])(val pos: (Int, Int)) extends RValue
 
     // Arguments List
-    case class ArgList(es: List[Expr])(val pos: (Int, Int))
+    case class ArgList(es: List[Expr])(val pos: (Int, Int)) extends Position
 
     object Program extends ParserBridgePos2[List[Func], Stmt, Program]
 
