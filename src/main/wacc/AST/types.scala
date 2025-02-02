@@ -1,9 +1,10 @@
 package AST
 
 import utils.*
+import AST.position.Position
 
 object types {
-    sealed trait WACCType
+    sealed trait WACCType extends Position
     case class AnyType()(val pos: (Int, Int)) extends WACCType
     case class UnknownType()(val pos: (Int, Int)) extends WACCType
 
