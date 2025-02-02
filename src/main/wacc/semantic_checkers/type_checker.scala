@@ -174,4 +174,85 @@ object type_checker {
             case _ => ???
         }
     }
+
+    def verifyBinary(expr: BinaryOp)(
+        implicit varTable: mutable.Stack[mutable.Map[String, WACCType]]
+    ): Result[Error, Expr] = expr match {
+        case Mul(e1, e2) => (getType(e1), getType(e2)) match {
+            case (Some(IntType()), Some(IntType())) => Success(expr)
+            case _ => ???
+        }
+        case Div(e1, e2) => (getType(e1), getType(e2)) match {
+            case (Some(IntType()), Some(IntType())) => Success(expr)
+            case _ => ???
+        }
+        case Mod(e1, e2) => (getType(e1), getType(e2)) match {
+            case (Some(IntType()), Some(IntType())) => Success(expr)
+            case _ => ???
+        }
+        case Add(e1, e2) => (getType(e1), getType(e2)) match {
+            case (Some(IntType()), Some(IntType())) => Success(expr)
+            case _ => ???
+        }
+        case Sub(e1, e2) => (getType(e1), getType(e2)) match {
+            case (Some(IntType()), Some(IntType())) => Success(expr)
+            case _ => ???
+        }
+        case Greater(e1, e2) => (getType(e1), getType(e2)) match {
+            case (Some(IntType()), Some(IntType())) => Success(expr)
+            case (Some(CharType()), Some(IntType())) => Success(expr)
+            case (Some(IntType()), Some(CharType())) => Success(expr)
+            case (Some(CharType()), Some(CharType())) => Success(expr)
+            case _ => ???
+        }
+        case GreaterEqual(e1, e2) => (getType(e1), getType(e2)) match {
+            case (Some(IntType()), Some(IntType())) => Success(expr)
+            case (Some(CharType()), Some(IntType())) => Success(expr)
+            case (Some(IntType()), Some(CharType())) => Success(expr)
+            case (Some(CharType()), Some(CharType())) => Success(expr)
+            case _ => ???
+        }
+        case Less(e1, e2) => (getType(e1), getType(e2)) match {
+            case (Some(IntType()), Some(IntType())) => Success(expr)
+            case (Some(CharType()), Some(IntType())) => Success(expr)
+            case (Some(IntType()), Some(CharType())) => Success(expr)
+            case (Some(CharType()), Some(CharType())) => Success(expr)
+            case _ => ???
+        }
+        case LessEqual(e1, e2) => (getType(e1), getType(e2)) match {
+            case (Some(IntType()), Some(IntType())) => Success(expr)
+            case (Some(CharType()), Some(IntType())) => Success(expr)
+            case (Some(IntType()), Some(CharType())) => Success(expr)
+            case (Some(CharType()), Some(CharType())) => Success(expr)
+            case _ => ???
+        }
+        case Equal(e1, e2) => (getType(e1), getType(e2)) match {
+            case (Some(t1), Some(t2)) => {
+                if (compatible(t1, t2) || compatible(t2, t1)) {
+                    Success(expr)
+                } else {
+                    ???
+                }
+            }
+            case _ => ???
+        }
+        case NotEqual(e1, e2) => (getType(e1), getType(e2)) match {
+            case (Some(t1), Some(t2)) => {
+                if (compatible(t1, t2) || compatible(t2, t1)) {
+                    Success(expr)
+                } else {
+                    ???
+                }
+            }
+            case _ => ???
+        }
+        case And(e1, e2) => (getType(e1), getType(e2)) match {
+            case (Some(BoolType()), Some(BoolType())) => Success(expr)
+            case _ => ???
+        }
+        case Or(e1, e2) => (getType(e1), getType(e2)) match {
+            case (Some(BoolType()), Some(BoolType())) => Success(expr)
+            case _ => ???
+        }
+    }
 }
