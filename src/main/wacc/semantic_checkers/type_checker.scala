@@ -141,7 +141,33 @@ object type_checker {
         }
     }
     
-    def verifyBinary(expr: BinaryOp): Option[BinaryOp] = expr match {
-        case Or(e1, e2) => ???
+    def verifyUnary(expr: UnaryOp)(
+        implicit varTable: mutable.Stack[mutable.Map[String, WACCType]]
+    ): Option[Expr] = expr match {
+        case Not(e) => getType(e) match {
+            case Some(BoolType()) => Some(expr)
+            case _ => ???
+        }
+        case Negate(e) => getType(e) match {
+            case Some(IntType()) => Some(expr)
+            case _ => ???
+        }
+        case Len(e) => getType(e) match {
+            case Some(t) => 
+                if (compatible(ArrayType(AnyType()(defaultPos))(defaultPos), t)) {
+                    Some(expr)
+                } else {
+                    None
+                }
+            case None => None
+        }
+        case Ord(e) => getType(e) match {
+            case Some(CharType()) => Some(expr)
+            case _ => None
+        }
+        case Chr(e) => getType(e) match {
+            case Some(IntType()) => Some(expr)
+            case _ => None
+        }
     }
 }
