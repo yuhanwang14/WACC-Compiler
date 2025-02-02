@@ -3,7 +3,6 @@ package wacc
 import parsley.Parsley
 import parsley.token.*
 import parsley.token.descriptions.*
-import parsley.errors.combinator.*
 
 object lexer {
     private val desc = LexicalDesc.plain.copy(

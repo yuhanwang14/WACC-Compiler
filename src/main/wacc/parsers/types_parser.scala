@@ -3,8 +3,6 @@ package parsers
 import AST.types.*
 import wacc.lexer.implicits.implicitSymbol, wacc.lexer.*
 import parsley.Parsley.*, parsley.Parsley
-import parsley.errors.combinator.*
-import parsley.errors.patterns.*
 import parsley.expr.chain
 
 object types_parser {
