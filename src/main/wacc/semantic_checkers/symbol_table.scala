@@ -15,8 +15,9 @@ class SymbolTable {
 
     def getFuncTable() = funcTable
 
-    // Enters a new nested scope 
+    // Enters a new nested scope
     def enterScope(): Unit = varTable.push(mutable.Map())
+
 
     // Exits the current scope but ensures the global scope is never removed
     def exitScope(): Unit = {
@@ -25,14 +26,9 @@ class SymbolTable {
     }
 
     // Adds a symbol to the current scope
-    def addSymbol(name: String, typ: WACCType): Unit = {
+    def addSymbol(name: String, typ: WACCType): Unit = { // change output to returning SemanticError
         if (varTable.head.contains(name)) { // Already declared in current scope
-            // error
-            return
-        }  
-        else if (lookupSymbol(name).isDefined) { // Shadowing an existing variable
-            // Shadowing
-            return
+            throw new Exception(f"Conflicting definition for $name")
         }
           
         varTable.head(name) = typ
@@ -40,7 +36,12 @@ class SymbolTable {
 
     // Looks up a symbol from innermost to outermost scope
     def lookupSymbol(name: String): Option[WACCType] = {
-        varTable.find(_.contains(name)).flatMap(_.get(name))
+        for (scope <- varTable) {
+            if (scope.contains(name)) {
+                scope(name)
+            }
+        }
+        None
     }
     
     def addFunction(f: Func): Boolean = { // change output to returning SemanticError
