@@ -12,6 +12,8 @@ object type_checker {
     val defaultPos: (Int, Int) = (-1, -1)
     def compatible(t1: WACCType, t2: WACCType): Boolean = 
         t1 == t2 || ((t1, t2) match {
+            case (UnknownType(), _) => false
+            case (_, UnknownType()) => false
             case (ArrayType(CharType()), StringType()) => true
             case (ArrayType(tt1), ArrayType(tt2)) => 
                 compatible(tt1, tt2) && 
