@@ -201,12 +201,22 @@ object type_checker {
     // }
 
     // def verifyBinary(expr: BinaryOp)(
-    //     implicit st: SymbolTable
-    // ): Result[Error, Expr] = expr match {
-    //     case Mul(e1, e2) => (getType(e1), getType(e2)) match {
-    //         case (Some(IntType()), Some(IntType())) => Success(expr)
-    //         case _ => ???
+    //     implicit st: SymbolTable,
+    //     errors: Seq[Error],
+    //     lines: Seq[String],
+    //     source: String
+    // ): Unit = expr match {
+    //     case Mul(e1, e2) => {
+    //         val t1 = getType(e1)
+    //         val t2 = getType(e2)
+
+    //         if (!t1.isInstanceOf[IntType])
+    //             errors :+ genVanillaError(t1.toString, "int", Seq(), expr.pos)
+
+    //         if (!t2.isInstanceOf[IntType])
+    //             errors :+ genVanillaError(t2.toString, "int", Seq(), expr.pos)
     //     }
+        
     //     case Div(e1, e2) => (getType(e1), getType(e2)) match {
     //         case (Some(IntType()), Some(IntType())) => Success(expr)
     //         case _ => ???
