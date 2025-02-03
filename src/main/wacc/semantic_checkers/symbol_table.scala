@@ -28,6 +28,7 @@ class SymbolTable {
     // Adds a symbol to the current scope
     def addSymbol(name: String, typ: WACCType): Boolean = // change output to returning SemanticError
         if (varTable.head.contains(name)) { // Already declared in current scope
+            varTable.head(name) = typ
             false
         }
         else {

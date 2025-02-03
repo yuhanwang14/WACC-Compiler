@@ -6,7 +6,7 @@ import AST.expressions.*
 
 object scopeChecker {
     def checkUpdate(s: Stmt)(implicit st: SymbolTable): Boolean = s match {
-        case Declare(t, i, r) => decomposeRValue(r) && st.addSymbol(i.name, AnyType)
+        case Declare(t, i, r) => decomposeRValue(r) && st.addSymbol(i.name, AnyType()(s.pos))
         case Assign(l, r) => decomposeRValue(r) && decomposeLValue(l)
         case _ => true
     }

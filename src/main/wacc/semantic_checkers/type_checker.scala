@@ -4,7 +4,6 @@ import AST.types.*
 import AST.statements.*
 import AST.expressions.*
 import scala.util.control.Breaks.{break, breakable}
-import scala.collection.mutable
 import parsley.Result
 import parsley.Success
 
@@ -59,8 +58,7 @@ object type_checker {
     }
 
     def getType(rVal: RValue)(
-        implicit varTable: mutable.Stack[mutable.Map[String, WACCType]], 
-        funcTable: mutable.Map[String, FunctionSignature]
+        implicit st: SymbolTable
     ): Option[WACCType] = rVal match {
         case (expr: Expr) => getType(expr)
         case ArrayLiter(es) => commonAncestor(es.map(getType))
@@ -85,20 +83,20 @@ object type_checker {
             case Some(ErasedPairType()) => Some(UnknownType()(defaultPos))
             case _ => None
         }
-        case Call(Ident(name), _) => funcTable.get(name) match {
+        case Call(Ident(name), _) => st.lookupFunction(name) match {
             case Some(funcSign) => Some(funcSign.returnType)
             case None => None
         }
     } 
 
     def getType(lVal: LValue)(
-        implicit varTable: mutable.Stack[mutable.Map[String, WACCType]]
+        implicit st: SymbolTable
     ): Option[WACCType] = lVal match {
         case ArrayElem(id, _) => getType(id: Expr) match {
             case Some(ArrayType(t)) => Some(t)
             case _ => None
         }
-        case Ident(name) => varTable.top.get(name)
+        case Ident(name) => st.lookupSymbol(name)
         case First(insideLVal) => getType(insideLVal) match {
             case Some(NonErasedPairType(t, _)) => Some(t)
             case Some(ErasedPairType()) => Some(UnknownType()(defaultPos))
@@ -112,7 +110,7 @@ object type_checker {
     }
 
     def getType(expr: Expr)(
-        implicit varTable: mutable.Stack[mutable.Map[String, WACCType]]
+        implicit st: SymbolTable
     ): Option[WACCType] = expr match {
         case IntLiter(x) => Some(IntType()(defaultPos))
         case BoolLiter(x) => Some(BoolType()(defaultPos))
@@ -138,7 +136,7 @@ object type_checker {
         case NotEqual(e1, e2) => Some(BoolType()(defaultPos))
         case And(e1, e2) => Some(BoolType()(defaultPos))
         case Or(e1, e2) => Some(BoolType()(defaultPos))
-        case Ident(name) => varTable.top.get(name)
+        case Ident(name) => st.lookupSymbol(name)
         case ArrayElem(id, _) => getType(id: Expr) match {
             case Some(ArrayType(t)) => Some(t)
             case _ => None
@@ -146,7 +144,7 @@ object type_checker {
     }
     
     def verifyUnary(expr: UnaryOp)(
-        implicit varTable: mutable.Stack[mutable.Map[String, WACCType]]
+        implicit st: SymbolTable
     ): Result[Error, Expr] = expr match {
         case Not(e) => getType(e) match {
             case Some(BoolType()) => Success(expr)
@@ -176,7 +174,7 @@ object type_checker {
     }
 
     def verifyBinary(expr: BinaryOp)(
-        implicit varTable: mutable.Stack[mutable.Map[String, WACCType]]
+        implicit st: SymbolTable
     ): Result[Error, Expr] = expr match {
         case Mul(e1, e2) => (getType(e1), getType(e2)) match {
             case (Some(IntType()), Some(IntType())) => Success(expr)
@@ -257,8 +255,7 @@ object type_checker {
     }
 
     def verifyStmt(stmt: Stmt)(
-        implicit varTable: mutable.Stack[mutable.Map[String, WACCType]],
-        funcTable: mutable.Map[String, FunctionSignature]
+        implicit st: SymbolTable
     ): Result[Error, Stmt] = stmt match {
         
         case Exit(e) => getType(e) match {
