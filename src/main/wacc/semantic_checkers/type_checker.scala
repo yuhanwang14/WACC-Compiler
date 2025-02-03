@@ -274,14 +274,57 @@ object type_checker {
         source: String
     ): Unit = stmt match {
         case Exit(e)           => verifyType(e, BoolType()(defaultPos))
-        case If(e, _, _)       => verifyType(e, BoolType()(defaultPos))
-        case While(e, _)       => verifyType(e, BoolType()(defaultPos))
+        case If(e, stmt1, stmt2) => {
+            st.enterScope()
+            verifyType(e, BoolType()(defaultPos))
+            verifyStmt(stmt1)
+            verifyStmt(stmt2)
+            st.exitScope()
+        }
+        case While(e, stmt0) => {
+            st.enterScope()
+            verifyType(e, BoolType()(defaultPos))
+            verifyStmt(stmt0)
+            st.exitScope()
+        }
         case Print(e)          => verifyType(e, anyType)
         case Println(e)        => verifyType(e, anyType)
         case Read(e)           => verifyType(e, anyType)
-        case Declare(t1, _, v) => verifyType(v, t1)
-        case Assign(v1, v2)    => verifyType(v2, getType(v1))
-        case Begin(s)          => verifyStmt(s)
+        case Declare(t1, Ident(name), r_val) => {
+            verifyType(r_val, t1)
+            if(!st.addSymbol(name, t1)) {
+                errors :+
+                genSpecializedError(
+                    Seq(
+                        s"Scope error: illegal redeclaration of variable $name "
+                    ),
+                    stmt.pos
+                )
+            }
+        }
+        case Assign(v1, v2) => {
+            (getType(v1), getType(v2)) match {
+                case (UnknownType(), UnknownType()) => 
+                    errors :+
+                    genSpecializedError(
+                        Seq(
+                            "Type error: attempting to exchange values between pairs of unknown types", 
+                            "pair exchange is only legal when the type of at least one of the sides is known or specified"
+                        ),
+                        stmt.pos
+                    )
+                case (UnknownType(), t2) => ???
+                case (t1, UnknownType()) => ???
+                case _ => 
+
+            }
+            verifyType(v2, getType(v1))
+        }
+        case Begin(stmt0)          => {
+            st.enterScope()
+            verifyStmt(stmt0)
+            st.exitScope()
+        }
         case Block(sts)        => sts.foreach(verifyStmt)
         case Skip()            =>
         case Free(e) =>
@@ -291,7 +334,7 @@ object type_checker {
               NonErasedPairType(anyType, anyType)(defaultPos)
             )
         case Return(e) => {
-            
+            ???
         }
     }
 }
