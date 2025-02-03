@@ -159,46 +159,84 @@ object type_checker {
             getType(id: Expr) match { case ArrayType(t) => t }
     }
 
-    // def verifyUnary(expr: UnaryOp)(
-    //     implicit st: SymbolTable,
-    //     errors: Seq[Error],
-    //     lines: Seq[String],
-    //     source: String
-    // ): Unit = expr match {
-    //     case Not(e) => getType(e) match {
-    //         case BoolType() =>  
-    //         case t => {
-    //             errors :+ 
-    //             genVanillaError(
-    //                 s"${t.toString()}", 
-    //                 "bool", 
-    //                 Seq(), 
-    //                 expr.pos
-    //             )
-    //         }
-    //     }
-    //     case Negate(e) => getType(e) match {
-    //         case Some(IntType()) => Success(expr)
-    //         case _ => ???
-    //     }
-    //     case Len(e) => getType(e) match {
-    //         case Some(t) => 
-    //             if (compatible(ArrayType(AnyType()(defaultPos))(defaultPos), t)) {
-    //                 Success(expr)
-    //             } else {
-    //                 ???
-    //             }
-    //         case None => ???
-    //     }
-    //     case Ord(e) => getType(e) match {
-    //         case Some(CharType()) => Success(expr)
-    //         case _ => ???
-    //     }
-    //     case Chr(e) => getType(e) match {
-    //         case Some(IntType()) => Success(expr)
-    //         case _ => ???
-    //     }
-    // }
+    def verifyUnary(expr: UnaryOp)(
+        implicit st: SymbolTable,
+        errors: Seq[Error],
+        lines: Seq[String],
+        source: String
+    ): Unit = expr match {
+        case Not(e) => getType(e) match {
+            case BoolType() =>  
+            case t => {
+                errors :+ 
+                genVanillaError(
+                    s"${t.toString()}", 
+                    "bool", 
+                    Seq(), 
+                    expr.pos
+                )
+            }
+        }
+        case Negate(e) => getType(e) match {
+            case BoolType() => 
+            case t => {
+                errors :+ 
+                genVanillaError(
+                    s"${t.toString()}", 
+                    "bool", 
+                    Seq(), 
+                    expr.pos
+                )     
+            }
+        }
+        case Len(e) => getType(e) match {
+            case t => 
+                if (compatible(ArrayType(AnyType()(defaultPos))(defaultPos), t)) {
+                    
+                } else {
+                   errors :+ 
+                    genVanillaError(
+                        s"${t.toString()}", 
+                        "bool", 
+                        Seq(), 
+                        expr.pos
+                    )      
+                }
+            case t => {
+                errors :+ 
+                genVanillaError(
+                    s"${t.toString()}", 
+                    "bool", 
+                    Seq(), 
+                    expr.pos
+                )     
+            }        
+        }
+        case Ord(e) => getType(e) match {
+            case CharType() => 
+            case t => {
+                errors :+ 
+                genVanillaError(
+                    s"${t.toString()}", 
+                    "bool", 
+                    Seq(), 
+                    expr.pos
+                )     
+            }
+        }
+        case Chr(e) => getType(e) match {
+            case IntType() => 
+            case t => {
+                errors :+ 
+                genVanillaError(
+                    s"${t.toString()}", 
+                    "bool", 
+                    Seq(), 
+                    expr.pos
+                )     
+            }
+        }
+    }
 
     // def verifyBinary(expr: BinaryOp)(
     //     implicit st: SymbolTable,
