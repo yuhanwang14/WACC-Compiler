@@ -7,6 +7,7 @@ object types {
     sealed trait WACCType extends Position
     case class AnyType()(val pos: (Int, Int)) extends WACCType
     case class UnknownType()(val pos: (Int, Int)) extends WACCType
+    case class NotExistType()(val pos: (Int, Int)) extends WACCType
 
     // Base Type
     sealed trait BaseType extends WACCType

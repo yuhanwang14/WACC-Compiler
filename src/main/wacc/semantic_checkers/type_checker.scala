@@ -5,8 +5,9 @@ import AST.statements.*
 import AST.expressions.*
 import parsley.Result
 import parsley.Success
-import errors.generator.*
 import errors.errors.*
+import errors.generator.*
+import scala.util.control.Breaks.{break, breakable}
 
 object type_checker {
     val defaultPos: (Int, Int) = (-1, -1)
@@ -23,7 +24,41 @@ object type_checker {
     def compatible(t1: WACCType, t2: WACCType): Boolean = 
         t1 == t2 || weakened(t1, t2) || t1 == AnyType() || t2 == AnyType()
 
-    def commonAncestor(ts: List[WACCType]): WACCType = ???
+    def commonAncestor(es: List[Expr])(
+        implicit st: SymbolTable,
+        errors: Seq[Error], 
+        lines: Seq[String], 
+        source: String
+    ): WACCType = es.map(getType).distinct match {
+        case Nil => ArrayType(AnyType()(defaultPos))(defaultPos)
+        case ts @ (head :: tail) => {
+            var resultType = head
+            var invalid = false
+            breakable{
+                tail.foreach{ t =>
+                    if (compatible(t, resultType)) {
+                        resultType = t;
+                    } else if (!compatible(resultType, t)) {
+                        invalid = true
+                        break()
+                    }
+                }
+            }
+            if (invalid) {
+                errors :+
+                genSpecializedError(
+                    Seq(
+                        "Scope Error: array literal mismatch", 
+                        s"literal contains mix of ${ts.mkString(",")}"
+                    ), 
+                    es.head.pos
+                )
+                NotExistType()(defaultPos)
+            } else {
+                resultType
+            }
+        }
+    }
 
     def getType(rVal: RValue)(
         implicit st: SymbolTable,
@@ -32,8 +67,8 @@ object type_checker {
         source: String
     ): WACCType = rVal match {
         
-        case ArrayLiter(elements) =>
-            commonAncestor(elements.map(getType))
+        case ArrayLiter(es) =>
+            commonAncestor(es)
         
         case NewPair(e1, e2) => {
             val t1 = getType(e1)
@@ -88,8 +123,7 @@ object type_checker {
             NonErasedPairType(AnyType()(defaultPos), AnyType()(defaultPos))(defaultPos)
         
         // Parentheses
-        case Paren(e) =>
-            getType(e)
+        case Paren(e) => getType(e)
         
         // Unary operators
         case Not(_)   => BoolType()(defaultPos)
