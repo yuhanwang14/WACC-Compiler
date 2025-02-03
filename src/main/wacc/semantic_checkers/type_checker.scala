@@ -255,4 +255,46 @@ object type_checker {
             case _ => ???
         }
     }
+
+    def verifyStmt(stmt: Stmt)(
+        implicit varTable: mutable.Stack[mutable.Map[String, WACCType]],
+        funcTable: mutable.Map[String, FunctionSignature]
+    ): Result[Error, Stmt] = stmt match {
+        
+        case Exit(e) => getType(e) match {
+            case Some(IntType()) => Success(stmt)
+            case _ => ???
+        }
+        case If(e, _, _) => getType(e) match {
+            case Some(BoolType()) => Success(stmt)
+            case _ => ???
+        }
+        case While(e, _) => getType(e) match {
+            case Some(BoolType()) => Success(stmt)
+            case _ => ???
+        }
+        case Print(e) => getType(e) match {
+            case Some(_) => Success(stmt)
+            case _ => ???
+        }
+        case Println(e) => getType(e) match {
+            case Some(_) => Success(stmt)
+            case _ => ???
+        }
+        case Read(e) => getType(e) match {
+            case Some(_) => Success(stmt)
+            case _ => ???
+        }
+        case Declare(t1, _, v) => getType(v) match {
+            case Some(t2) =>
+                if compatible(t1, t2) then Success(stmt) else ???
+            case _ => ???
+        }
+        case Assign(v1, v2) => (getType(v1), getType(v2)) match {
+            case (Some(t1), Some(t2)) =>
+                if compatible(t1, t2) then Success(stmt) else ???
+            case _ => ???
+        }
+    }
+    
 }
