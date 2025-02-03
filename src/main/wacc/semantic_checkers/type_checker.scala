@@ -3,39 +3,39 @@ package semantic_checkers
 import AST.types.*
 import AST.statements.*
 import AST.expressions.*
-import parsley.Result
-import parsley.Success
 import errors.errors.*
 import errors.generator.*
 import scala.util.control.Breaks.{break, breakable}
 
 object type_checker {
     val defaultPos: (Int, Int) = (-1, -1)
+    val anyType: WACCType = AnyType()(defaultPos)
 
-    def invariant(t1: WACCType, t2: WACCType): Boolean = 
-        t1 != ArrayType(CharType()(t1.pos))(t1.pos) && t2 != StringType()(t2.pos)
+    def invariant(t1: WACCType, t2: WACCType): Boolean =
+        t1 != ArrayType(CharType()(t1.pos))(t1.pos)
+            && t2 != StringType()(t2.pos)
 
     def weakened(t1: WACCType, t2: WACCType): Boolean = (t1, t2) match
-            case (ArrayType(CharType()), StringType()) => true
-            case (NonErasedPairType(_, _), ErasedPairType()) => true
-            case (ErasedPairType(), NonErasedPairType(_, _)) => true
-            case _ => false
+        case (ArrayType(CharType()), StringType())       => true
+        case (NonErasedPairType(_, _), ErasedPairType()) => true
+        case (ErasedPairType(), NonErasedPairType(_, _)) => true
+        case _                                           => false
 
-    def compatible(t1: WACCType, t2: WACCType): Boolean = 
+    def compatible(t1: WACCType, t2: WACCType): Boolean =
         t1 == t2 || weakened(t1, t2) || t1 == AnyType() || t2 == AnyType()
 
-    def commonAncestor(es: List[Expr])(
-        implicit st: SymbolTable,
-        errors: Seq[Error], 
-        lines: Seq[String], 
+    def commonAncestor(es: List[Expr])(implicit
+        st: SymbolTable,
+        errors: Seq[Error],
+        lines: Seq[String],
         source: String
     ): WACCType = es.map(getType).distinct match {
-        case Nil => ArrayType(AnyType()(defaultPos))(defaultPos)
+        case Nil => ArrayType(anyType)(defaultPos)
         case ts @ (head :: tail) => {
             var resultType = head
             var invalid = false
-            breakable{
-                tail.foreach{ t =>
+            breakable {
+                tail.foreach { t =>
                     if (compatible(t, resultType)) {
                         resultType = t;
                     } else if (!compatible(resultType, t)) {
@@ -46,13 +46,13 @@ object type_checker {
             }
             if (invalid) {
                 errors :+
-                genSpecializedError(
-                    Seq(
-                        "Scope Error: array literal mismatch", 
+                    genSpecializedError(
+                      Seq(
+                        "Scope Error: array literal mismatch",
                         s"literal contains mix of ${ts.mkString(",")}"
-                    ), 
-                    es.head.pos
-                )
+                      ),
+                      es.head.pos
+                    )
                 NotExistType()(defaultPos)
             } else {
                 resultType
@@ -60,56 +60,64 @@ object type_checker {
         }
     }
 
-    def getType(rVal: RValue)(
-        implicit st: SymbolTable,
+    def getType(rVal: RValue)(implicit
+        st: SymbolTable,
         errors: Seq[Error],
         lines: Seq[String],
         source: String
     ): WACCType = rVal match {
-        
+
         case ArrayLiter(es) =>
             commonAncestor(es)
-        
+
         case NewPair(e1, e2) => {
             val t1 = getType(e1)
             val t2 = getType(e2)
             NonErasedPairType(t1, t2)(defaultPos)
         }
-        
-        case Call(id @ Ident(name), _) =>{
+
+        case Call(id @ Ident(name), _) => {
 
             st.lookupFunction(name) match {
                 case Some(FunctionSignature(t, _)) => t
                 case _ => {
                     errors :+
-                    genSpecializedError(
-                        Seq(s"Undefined error: function $name has not been efined"),
-                        id.pos
-                    )
-                    AnyType()(defaultPos)
+                        genSpecializedError(
+                          Seq(
+                            s"Undefined error: function $name has not been defined"
+                          ),
+                          id.pos
+                        )
+                    anyType
                 }
             }
         }
     }
 
-    def getType(lVal: LValue)(
-        implicit st: SymbolTable
-    ): Option[WACCType] = lVal match {
+    def getType(lVal: LValue)(implicit
+        st: SymbolTable,
+        errors: Seq[Error],
+        lines: Seq[String],
+        source: String
+    ): WACCType = lVal match {
         case First(insideLVal) =>
-            getType(insideLVal).collect {
+            getType(insideLVal) match {
                 case NonErasedPairType(t, _) => t
                 case ErasedPairType()        => UnknownType()(defaultPos)
+                case _                       => ???
             }
-        
+
         case Second(insideLVal) =>
-            getType(insideLVal).collect {
+            getType(insideLVal) match {
                 case NonErasedPairType(_, t) => t
                 case ErasedPairType()        => UnknownType()(defaultPos)
+                case _                       => ???
             }
+        case e: Expr => getType(e: Expr)
     }
 
-    def getType(expr: Expr)(
-        implicit st: SymbolTable,
+    def getType(expr: Expr)(implicit
+        st: SymbolTable,
         errors: Seq[Error],
         lines: Seq[String],
         source: String
@@ -119,254 +127,170 @@ object type_checker {
         case BoolLiter(_) => BoolType()(defaultPos)
         case CharLiter(_) => CharType()(defaultPos)
         case StrLiter(_)  => StringType()(defaultPos)
-        case PairLiter()  =>
-            NonErasedPairType(AnyType()(defaultPos), AnyType()(defaultPos))(defaultPos)
-        
+        case PairLiter() =>
+            NonErasedPairType(anyType, anyType)(
+              defaultPos
+            )
+
         // Parentheses
         case Paren(e) => getType(e)
-        
+
         // Unary operators
-        case Not(_)   => BoolType()(defaultPos)
+        case Not(_)    => BoolType()(defaultPos)
         case Negate(_) => IntType()(defaultPos)
-        case Len(_)   => IntType()(defaultPos)
-        case Ord(_)   => IntType()(defaultPos)
-        case Chr(_)   => CharType()(defaultPos)
-        
+        case Len(_)    => IntType()(defaultPos)
+        case Ord(_)    => IntType()(defaultPos)
+        case Chr(_)    => CharType()(defaultPos)
+
         // Binary operators producing Int results
         case Mul(_, _) | Div(_, _) | Mod(_, _) | Add(_, _) | Sub(_, _) =>
             IntType()(defaultPos)
-        
+
         // Binary operators producing Bool results
         case Less(_, _) | LessEqual(_, _) | Greater(_, _) | GreaterEqual(_, _) |
             Equal(_, _) | NotEqual(_, _) | And(_, _) | Or(_, _) =>
             BoolType()(defaultPos)
-        
+
         // Identifiers
-        case (id @ Ident(name)) => st.lookupSymbol(name) match {
-            case Some(t) => t
-            case _ => {
-                errors :+
-                genSpecializedError(
-                    Seq(s"Scope error: variable $name has not been declared in this scope"), 
-                    id.pos
-                )
-                AnyType()(defaultPos)
+        case (id @ Ident(name)) =>
+            st.lookupSymbol(name) match {
+                case Some(t) => t
+                case _ => {
+                    errors :+
+                        genSpecializedError(
+                          Seq(
+                            s"Scope error: variable $name has not been declared in this scope"
+                          ),
+                          id.pos
+                        )
+                    anyType
+                }
             }
-        }
-        
+
         // Array elements
         case ArrayElem(id, _) =>
-            getType(id: Expr) match { case ArrayType(t) => t }
+            getType(id: Expr) match {
+                case ArrayType(t) => t
+                case _            => ???
+            }
     }
+    private def verifyTypeHelper(t: WACCType, expT: Seq[WACCType])(implicit
+        st: SymbolTable,
+        errors: Seq[Error],
+        lines: Seq[String],
+        source: String
+    ): Unit =
+        if (expT.forall(!compatible(_, t)))
+            errors :+
+                genVanillaError(
+                  s"${t.toString()}",
+                  expT.toString(),
+                  Seq(),
+                  t.pos
+                )
 
-    def verifyUnary(expr: UnaryOp)(
-        implicit st: SymbolTable,
+    private def verifyType(e: LValue, expT: WACCType*)(implicit
+        st: SymbolTable,
+        errors: Seq[Error],
+        lines: Seq[String],
+        source: String
+    ): Unit = verifyTypeHelper(getType(e), expT)
+
+    private def verifyType(e: RValue, expT: WACCType*)(implicit
+        st: SymbolTable,
+        errors: Seq[Error],
+        lines: Seq[String],
+        source: String
+    ): Unit = verifyTypeHelper(getType(e), expT)
+
+    private def verifyType(e: Expr, expT: WACCType*)(implicit
+        st: SymbolTable,
+        errors: Seq[Error],
+        lines: Seq[String],
+        source: String
+    ): Unit = verifyTypeHelper(getType(e), expT)
+
+    def verifyUnary(expr: UnaryOp)(implicit
+        st: SymbolTable,
         errors: Seq[Error],
         lines: Seq[String],
         source: String
     ): Unit = expr match {
-        case Not(e) => getType(e) match {
-            case BoolType() =>  
-            case t => {
-                errors :+ 
-                genVanillaError(
-                    s"${t.toString()}", 
-                    "bool", 
-                    Seq(), 
-                    expr.pos
-                )
-            }
-        }
-        case Negate(e) => getType(e) match {
-            case BoolType() => 
-            case t => {
-                errors :+ 
-                genVanillaError(
-                    s"${t.toString()}", 
-                    "bool", 
-                    Seq(), 
-                    expr.pos
-                )     
-            }
-        }
-        case Len(e) => getType(e) match {
-            case t => 
-                if (compatible(ArrayType(AnyType()(defaultPos))(defaultPos), t)) {
-                    
-                } else {
-                   errors :+ 
-                    genVanillaError(
-                        s"${t.toString()}", 
-                        "bool", 
-                        Seq(), 
-                        expr.pos
-                    )      
-                }
-            case t => {
-                errors :+ 
-                genVanillaError(
-                    s"${t.toString()}", 
-                    "bool", 
-                    Seq(), 
-                    expr.pos
-                )     
-            }        
-        }
-        case Ord(e) => getType(e) match {
-            case CharType() => 
-            case t => {
-                errors :+ 
-                genVanillaError(
-                    s"${t.toString()}", 
-                    "bool", 
-                    Seq(), 
-                    expr.pos
-                )     
-            }
-        }
-        case Chr(e) => getType(e) match {
-            case IntType() => 
-            case t => {
-                errors :+ 
-                genVanillaError(
-                    s"${t.toString()}", 
-                    "bool", 
-                    Seq(), 
-                    expr.pos
-                )     
-            }
-        }
+        case Not(e)    => verifyType(e, BoolType()(defaultPos))
+        case Negate(e) => verifyType(e, BoolType()(defaultPos))
+        case Len(e)    => verifyType(e, ArrayType(anyType)(defaultPos))
+        case Ord(e)    => verifyType(e, CharType()(defaultPos))
+        case Chr(e)    => verifyType(e, IntType()(defaultPos))
     }
 
-    // def verifyBinary(expr: BinaryOp)(
-    //     implicit st: SymbolTable,
-    //     errors: Seq[Error],
-    //     lines: Seq[String],
-    //     source: String
-    // ): Unit = expr match {
-    //     case Mul(e1, e2) => {
-    //         val t1 = getType(e1)
-    //         val t2 = getType(e2)
+    def verifyBinary(expr: BinaryOp)(implicit
+        st: SymbolTable,
+        errors: Seq[Error],
+        lines: Seq[String],
+        source: String
+    ): Unit = expr match {
+        case Mul(e1, e2) =>
+            verifyType(e1, IntType()(defaultPos))
+            verifyType(e2, IntType()(defaultPos))
+        case Div(e1, e2) =>
+            verifyType(e1, IntType()(defaultPos))
+            verifyType(e2, IntType()(defaultPos))
+        case Mod(e1, e2) =>
+            verifyType(e1, IntType()(defaultPos))
+            verifyType(e2, IntType()(defaultPos))
+        case Add(e1, e2) =>
+            verifyType(e1, IntType()(defaultPos))
+            verifyType(e2, IntType()(defaultPos))
+        case Sub(e1, e2) =>
+            verifyType(e1, IntType()(defaultPos))
+            verifyType(e2, IntType()(defaultPos))
+        case Greater(e1, e2) =>
+            verifyType(e1, IntType()(defaultPos), CharType()(defaultPos))
+            verifyType(e2, IntType()(defaultPos), CharType()(defaultPos))
+        case GreaterEqual(e1, e2) =>
+            verifyType(e1, IntType()(defaultPos), CharType()(defaultPos))
+            verifyType(e2, IntType()(defaultPos), CharType()(defaultPos))
+        case Less(e1, e2) =>
+            verifyType(e1, IntType()(defaultPos), CharType()(defaultPos))
+            verifyType(e2, IntType()(defaultPos), CharType()(defaultPos))
+        case LessEqual(e1, e2) =>
+            verifyType(e1, IntType()(defaultPos), CharType()(defaultPos))
+            verifyType(e2, IntType()(defaultPos), CharType()(defaultPos))
+        case Equal(e1, e2) =>
+            verifyType(e2, getType(e1))
+        case NotEqual(e1, e2) =>
+            verifyType(e2, getType(e1))
+        case And(e1, e2) =>
+            verifyType(e1, BoolType()(defaultPos))
+            verifyType(e2, BoolType()(defaultPos))
+        case Or(e1, e2) =>
+            verifyType(e1, BoolType()(defaultPos))
+            verifyType(e2, BoolType()(defaultPos))
+    }
 
-    //         if (!t1.isInstanceOf[IntType])
-    //             errors :+ genVanillaError(t1.toString, "int", Seq(), expr.pos)
-
-    //         if (!t2.isInstanceOf[IntType])
-    //             errors :+ genVanillaError(t2.toString, "int", Seq(), expr.pos)
-    //     }
-        
-    //     case Div(e1, e2) => (getType(e1), getType(e2)) match {
-    //         case (Some(IntType()), Some(IntType())) => Success(expr)
-    //         case _ => ???
-    //     }
-    //     case Mod(e1, e2) => (getType(e1), getType(e2)) match {
-    //         case (Some(IntType()), Some(IntType())) => Success(expr)
-    //         case _ => ???
-    //     }
-    //     case Add(e1, e2) => (getType(e1), getType(e2)) match {
-    //         case (Some(IntType()), Some(IntType())) => Success(expr)
-    //         case _ => ???
-    //     }
-    //     case Sub(e1, e2) => (getType(e1), getType(e2)) match {
-    //         case (Some(IntType()), Some(IntType())) => Success(expr)
-    //         case _ => ???
-    //     }
-    //     case Greater(e1, e2) => (getType(e1), getType(e2)) match {
-    //         case (Some(IntType()), Some(IntType())) => Success(expr)
-    //         case (Some(CharType()), Some(IntType())) => Success(expr)
-    //         case (Some(IntType()), Some(CharType())) => Success(expr)
-    //         case (Some(CharType()), Some(CharType())) => Success(expr)
-    //         case _ => ???
-    //     }
-    //     case GreaterEqual(e1, e2) => (getType(e1), getType(e2)) match {
-    //         case (Some(IntType()), Some(IntType())) => Success(expr)
-    //         case (Some(CharType()), Some(IntType())) => Success(expr)
-    //         case (Some(IntType()), Some(CharType())) => Success(expr)
-    //         case (Some(CharType()), Some(CharType())) => Success(expr)
-    //         case _ => ???
-    //     }
-    //     case Less(e1, e2) => (getType(e1), getType(e2)) match {
-    //         case (Some(IntType()), Some(IntType())) => Success(expr)
-    //         case (Some(CharType()), Some(IntType())) => Success(expr)
-    //         case (Some(IntType()), Some(CharType())) => Success(expr)
-    //         case (Some(CharType()), Some(CharType())) => Success(expr)
-    //         case _ => ???
-    //     }
-    //     case LessEqual(e1, e2) => (getType(e1), getType(e2)) match {
-    //         case (Some(IntType()), Some(IntType())) => Success(expr)
-    //         case (Some(CharType()), Some(IntType())) => Success(expr)
-    //         case (Some(IntType()), Some(CharType())) => Success(expr)
-    //         case (Some(CharType()), Some(CharType())) => Success(expr)
-    //         case _ => ???
-    //     }
-    //     case Equal(e1, e2) => (getType(e1), getType(e2)) match {
-    //         case (Some(t1), Some(t2)) => {
-    //             if (compatible(t1, t2) || compatible(t2, t1)) {
-    //                 Success(expr)
-    //             } else {
-    //                 ???
-    //             }
-    //         }
-    //         case _ => ???
-    //     }
-    //     case NotEqual(e1, e2) => (getType(e1), getType(e2)) match {
-    //         case (Some(t1), Some(t2)) => {
-    //             if (compatible(t1, t2) || compatible(t2, t1)) {
-    //                 Success(expr)
-    //             } else {
-    //                 ???
-    //             }
-    //         }
-    //         case _ => ???
-    //     }
-    //     case And(e1, e2) => (getType(e1), getType(e2)) match {
-    //         case (Some(BoolType()), Some(BoolType())) => Success(expr)
-    //         case _ => ???
-    //     }
-    //     case Or(e1, e2) => (getType(e1), getType(e2)) match {
-    //         case (Some(BoolType()), Some(BoolType())) => Success(expr)
-    //         case _ => ???
-    //     }
-    // }
-
-    // def verifyStmt(stmt: Stmt)(
-    //     implicit st: SymbolTable
-    // ): Result[Error, Stmt] = stmt match {
-        
-    //     case Exit(e) => getType(e) match {
-    //         case Some(IntType()) => Success(stmt)
-    //         case _ => ???
-    //     }
-    //     case If(e, _, _) => getType(e) match {
-    //         case Some(BoolType()) => Success(stmt)
-    //         case _ => ???
-    //     }
-    //     case While(e, _) => getType(e) match {
-    //         case Some(BoolType()) => Success(stmt)
-    //         case _ => ???
-    //     }
-    //     case Print(e) => getType(e) match {
-    //         case Some(_) => Success(stmt)
-    //         case _ => ???
-    //     }
-    //     case Println(e) => getType(e) match {
-    //         case Some(_) => Success(stmt)
-    //         case _ => ???
-    //     }
-    //     case Read(e) => getType(e) match {
-    //         case Some(_) => Success(stmt)
-    //         case _ => ???
-    //     }
-    //     case Declare(t1, _, v) => getType(v) match {
-    //         case Some(t2) =>
-    //             if compatible(t1, t2) then Success(stmt) else ???
-    //         case _ => ???
-    //     }
-    //     case Assign(v1, v2) => (getType(v1), getType(v2)) match {
-    //         case (Some(t1), Some(t2)) =>
-    //             if compatible(t1, t2) then Success(stmt) else ???
-    //         case _ => ???
-    //     }
-    // }
-    
+    def verifyStmt(stmt: Stmt)(implicit
+        st: SymbolTable,
+        errors: Seq[Error],
+        lines: Seq[String],
+        source: String
+    ): Unit = stmt match {
+        case Exit(e)           => verifyType(e, BoolType()(defaultPos))
+        case If(e, _, _)       => verifyType(e, BoolType()(defaultPos))
+        case While(e, _)       => verifyType(e, BoolType()(defaultPos))
+        case Print(e)          => verifyType(e, anyType)
+        case Println(e)        => verifyType(e, anyType)
+        case Read(e)           => verifyType(e, anyType)
+        case Declare(t1, _, v) => verifyType(v, t1)
+        case Assign(v1, v2)    => verifyType(v2, getType(v1))
+        case Begin(s)          => verifyStmt(s)
+        case Block(sts)        => sts.foreach(verifyStmt)
+        case Skip()            =>
+        case Free(e) =>
+            verifyType(
+              e,
+              ArrayType(anyType)(defaultPos),
+              NonErasedPairType(anyType, anyType)(defaultPos)
+            )
+        case Return(pos) => ???
+    }
 }
