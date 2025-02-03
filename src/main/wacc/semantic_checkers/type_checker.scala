@@ -24,8 +24,8 @@ object type_checker {
     def compatible(t1: WACCType, t2: WACCType): Boolean =
         t1 == t2 || weakened(t1, t2) || t1 == AnyType() || t2 == AnyType()
 
-    def commonAncestor(es: List[Expr])(implicit
-        st: SymbolTable,
+    def commonAncestor(es: List[Expr])(
+        implicit st: SymbolTable,
         errors: Seq[Error],
         lines: Seq[String],
         source: String
@@ -60,8 +60,8 @@ object type_checker {
         }
     }
 
-    def getType(rVal: RValue)(implicit
-        st: SymbolTable,
+    def getType(rVal: RValue)(
+        implicit st: SymbolTable,
         errors: Seq[Error],
         lines: Seq[String],
         source: String
@@ -94,8 +94,8 @@ object type_checker {
         }
     }
 
-    def getType(lVal: LValue)(implicit
-        st: SymbolTable,
+    def getType(lVal: LValue)(
+        implicit st: SymbolTable,
         errors: Seq[Error],
         lines: Seq[String],
         source: String
@@ -174,9 +174,8 @@ object type_checker {
                 case _            => ???
             }
     }
-    private def verifyTypeHelper(t: WACCType, expT: Seq[WACCType])(implicit
-        st: SymbolTable,
-        errors: Seq[Error],
+    private def verifyTypeHelper(t: WACCType, expT: Seq[WACCType])(
+        implicit errors: Seq[Error],
         lines: Seq[String],
         source: String
     ): Unit =
@@ -189,29 +188,29 @@ object type_checker {
                   t.pos
                 )
 
-    private def verifyType(e: LValue, expT: WACCType*)(implicit
-        st: SymbolTable,
+    private def verifyType(e: LValue, expT: WACCType*)(
+        implicit st: SymbolTable,
         errors: Seq[Error],
         lines: Seq[String],
         source: String
     ): Unit = verifyTypeHelper(getType(e), expT)
 
-    private def verifyType(e: RValue, expT: WACCType*)(implicit
-        st: SymbolTable,
+    private def verifyType(e: RValue, expT: WACCType*)(
+        implicit st: SymbolTable,
         errors: Seq[Error],
         lines: Seq[String],
         source: String
     ): Unit = verifyTypeHelper(getType(e), expT)
 
-    private def verifyType(e: Expr, expT: WACCType*)(implicit
-        st: SymbolTable,
+    private def verifyType(e: Expr, expT: WACCType*)(
+        implicit st: SymbolTable,
         errors: Seq[Error],
         lines: Seq[String],
         source: String
     ): Unit = verifyTypeHelper(getType(e), expT)
 
-    def verifyUnary(expr: UnaryOp)(implicit
-        st: SymbolTable,
+    def verifyUnary(expr: UnaryOp)(
+        implicit st: SymbolTable,
         errors: Seq[Error],
         lines: Seq[String],
         source: String
@@ -223,8 +222,8 @@ object type_checker {
         case Chr(e)    => verifyType(e, IntType()(defaultPos))
     }
 
-    def verifyBinary(expr: BinaryOp)(implicit
-        st: SymbolTable,
+    def verifyBinary(expr: BinaryOp)(
+        implicit st: SymbolTable,
         errors: Seq[Error],
         lines: Seq[String],
         source: String
@@ -291,6 +290,8 @@ object type_checker {
               ArrayType(anyType)(defaultPos),
               NonErasedPairType(anyType, anyType)(defaultPos)
             )
-        case Return(pos) => ???
+        case Return(e) => {
+            
+        }
     }
 }
