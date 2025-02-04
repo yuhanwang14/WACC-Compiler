@@ -7,31 +7,39 @@ import errors.errors.*
 import errors.generator.*
 import scala.util.control.Breaks.{break, breakable}
 
-object type_checker {
+object semanticChecker {
     val defaultPos: (Int, Int) = (-1, -1)
     val anyType: WACCType = AnyType()(defaultPos)
 
-    def compatible(t1: WACCType, t2: WACCType): Boolean = 
+    def compatible(t1: WACCType, t2: WACCType): Boolean =
         t1 == t2 || ((t1, t2) match {
+            case (UnknownType(), _)                    => true
+            case (_, UnknownType())                    => true
             case (ArrayType(CharType()), StringType()) => true
-            case (ArrayType(tt1), ArrayType(tt2)) => 
-                compatible(tt1, tt2) && 
-                tt1 != ArrayType(CharType()(defaultPos))(defaultPos) && 
+            case (ArrayType(tt1), ArrayType(tt2)) =>
+                compatible(tt1, tt2) &&
+                tt1 != ArrayType(CharType()(defaultPos))(defaultPos) &&
                 tt2 != StringType()(defaultPos)
-            case (NonErasedPairType(t1_1, t1_2), NonErasedPairType(t2_1, t2_2)) => 
-                compatible(t1_1, t2_1) && compatible(t1_2, t2_2) && 
-                t1_1 != ArrayType(CharType()(defaultPos)) && t2_1 != StringType()(defaultPos) &&
-                t1_2 != ArrayType(CharType()(defaultPos)) && t2_2 != StringType()(defaultPos)
+            case (
+                  NonErasedPairType(t1_1, t1_2),
+                  NonErasedPairType(t2_1, t2_2)
+                ) =>
+                compatible(t1_1, t2_1) && compatible(t1_2, t2_2) &&
+                t1_1 != ArrayType(
+                  CharType()(defaultPos)
+                ) && t2_1 != StringType()(defaultPos) &&
+                t1_2 != ArrayType(
+                  CharType()(defaultPos)
+                ) && t2_2 != StringType()(defaultPos)
             case (NonErasedPairType(_, _), ErasedPairType()) => true
-            case (ErasedPairType(), NonErasedPairType(_, _)) => true    
-            case (AnyType(), _) => true
-            case (_, AnyType()) => true
-            case _ => false
+            case (ErasedPairType(), NonErasedPairType(_, _)) => true
+            case (AnyType(), _)                              => true
+            case (_, AnyType())                              => true
+            case _                                           => false
         })
 
-
-    def commonAncestor(es: List[Expr])(
-        implicit st: SymbolTable,
+    def commonAncestor(es: List[Expr])(implicit
+        st: SymbolTable,
         errors: Seq[Error],
         lines: Seq[String],
         source: String
@@ -66,13 +74,12 @@ object type_checker {
         }
     }
 
-    def getType(rVal: RValue)(
-        implicit st: SymbolTable,
+    def getType(rVal: RValue)(implicit
+        st: SymbolTable,
         errors: Seq[Error],
         lines: Seq[String],
         source: String
     ): WACCType = rVal match {
-
         case ArrayLiter(es) =>
             commonAncestor(es)
 
@@ -100,8 +107,8 @@ object type_checker {
         }
     }
 
-    def getType(lVal: LValue)(
-        implicit st: SymbolTable,
+    def getType(lVal: LValue)(implicit
+        st: SymbolTable,
         errors: Seq[Error],
         lines: Seq[String],
         source: String
@@ -110,7 +117,7 @@ object type_checker {
             getType(insideLVal) match {
                 case NonErasedPairType(t, _) => t
                 case ErasedPairType()        => UnknownType()(defaultPos)
-                case t                       => {
+                case t => {
                     FirstErrorType(t)(defaultPos)
                 }
             }
@@ -119,15 +126,15 @@ object type_checker {
             getType(insideLVal) match {
                 case NonErasedPairType(_, t) => t
                 case ErasedPairType()        => UnknownType()(defaultPos)
-                case t                       => {
+                case t => {
                     SecondErrorType(t)(defaultPos)
                 }
             }
         case e: Expr => getType(e: Expr)
     }
 
-    def getType(expr: Expr)(
-        implicit st: SymbolTable,
+    def getType(expr: Expr)(implicit
+        st: SymbolTable,
         errors: Seq[Error],
         lines: Seq[String],
         source: String
@@ -181,13 +188,13 @@ object type_checker {
         case ArrayElem(id, _) =>
             getType(id: Expr) match {
                 case ArrayType(t) => t
-                case t            => {
+                case t => {
                     ArrayErrorType(t)(defaultPos)
                 }
             }
     }
-    private def verifyTypeHelper(t: WACCType, expT: Seq[WACCType])(
-        implicit errors: Seq[Error],
+    private def verifyTypeHelper(t: WACCType, expT: Seq[WACCType])(implicit
+        errors: Seq[Error],
         lines: Seq[String],
         source: String
     ): Unit =
@@ -200,29 +207,29 @@ object type_checker {
                   t.pos
                 )
 
-    private def verifyType(e: LValue, expT: WACCType*)(
-        implicit st: SymbolTable,
-        errors: Seq[Error],
-        lines: Seq[String],
-        source: String
-    ): Unit = ???
-
-    private def verifyType(e: RValue, expT: WACCType*)(
-        implicit st: SymbolTable,
-        errors: Seq[Error],
-        lines: Seq[String],
-        source: String
-    ): Unit = ???
-
-    private def verifyType(e: Expr, expT: WACCType*)(
-        implicit st: SymbolTable,
+    private def verifyType(e: LValue, expT: WACCType*)(implicit
+        st: SymbolTable,
         errors: Seq[Error],
         lines: Seq[String],
         source: String
     ): Unit = verifyTypeHelper(getType(e), expT)
 
-    def verifyUnary(expr: UnaryOp)(
-        implicit st: SymbolTable,
+    private def verifyType(e: RValue, expT: WACCType*)(implicit
+        st: SymbolTable,
+        errors: Seq[Error],
+        lines: Seq[String],
+        source: String
+    ): Unit = verifyTypeHelper(getType(e), expT)
+
+    private def verifyType(e: Expr, expT: WACCType*)(implicit
+        st: SymbolTable,
+        errors: Seq[Error],
+        lines: Seq[String],
+        source: String
+    ): Unit = verifyTypeHelper(getType(e), expT)
+
+    def verifyUnary(expr: UnaryOp)(implicit
+        st: SymbolTable,
         errors: Seq[Error],
         lines: Seq[String],
         source: String
@@ -234,8 +241,8 @@ object type_checker {
         case Chr(e)    => verifyType(e, IntType()(defaultPos))
     }
 
-    def verifyBinary(expr: BinaryOp)(
-        implicit st: SymbolTable,
+    def verifyBinary(expr: BinaryOp)(implicit
+        st: SymbolTable,
         errors: Seq[Error],
         lines: Seq[String],
         source: String
@@ -285,75 +292,54 @@ object type_checker {
         lines: Seq[String],
         source: String
     ): Unit = stmt match {
-        case Exit(e)           => verifyType(e, BoolType()(defaultPos))
-        case If(e, stmt1, stmt2) => {
-            st.enterScope()
+        case Exit(e) => verifyType(e, BoolType()(defaultPos))
+        case If(e, s1, s2) =>
             verifyType(e, BoolType()(defaultPos))
-            verifyStmt(stmt1)
-            verifyStmt(stmt2)
-            st.exitScope()
-        }
-        case While(e, stmt0) => {
-            st.enterScope()
+            verifyStmt(s1)
+            verifyStmt(s2)
+        case While(e, s) =>
             verifyType(e, BoolType()(defaultPos))
-            verifyStmt(stmt0)
-            st.exitScope()
-        }
-        case Print(e)          => verifyType(e, anyType)
-        case Println(e)        => verifyType(e, anyType)
-        case Read(e)           => verifyType(e, anyType)
-        case Declare(t1, Ident(name), r_val) => {
-            verifyType(r_val, t1)
-            if(!st.addSymbol(name, t1)) {
+            verifyStmt(s)
+        case Print(e)   => verifyType(e, anyType)
+        case Println(e) => verifyType(e, anyType)
+        case Read(e)    => verifyType(e, anyType)
+        case Declare(t1, Ident(name), v) => {
+            verifyType(v, t1)
+            if (!st.addSymbol(name, t1)) {
                 errors :+
-                genSpecializedError(
-                    Seq(
-                        s"Scope error: illegal redeclaration of variable $name "
-                    ),
-                    stmt.pos
-                )
-            }
-        }
-        case Assign(v1, v2) => {
-            (getType(v1), getType(v2)) match {
-                case (UnknownType(), UnknownType()) => 
-                    errors :+
                     genSpecializedError(
-                        Seq(
-                            "Type error: attempting to exchange values between pairs of unknown types", 
-                            "pair exchange is only legal when the type of at least one of the sides is known or specified"
-                        ),
-                        stmt.pos
+                      Seq(
+                        s"Scope error: illegal redeclaration of variable $name "
+                      ),
+                      stmt.pos
                     )
-                case (UnknownType(), t2) => ???
-                case (t1, UnknownType()) => ???
-                case (t1, t2) => if (!compatible(t2, t1)) {
-                    genVanillaError(
-                        t2.toString(), 
-                        t1.toString(), 
-                        Seq(), 
-                        v2.pos
-                    )
-                }
-
             }
-            verifyType(v2, getType(v1))
         }
-        case Begin(stmt0)          => {
+        case Assign(v1, v2) =>
+            (getType(v1), getType(v2)) match {
+                case (UnknownType(), UnknownType()) =>
+                    errors :+
+                        genSpecializedError(
+                          Seq(
+                            "Type error: attempting to exchange values between pairs of unknown types",
+                            "pair exchange is only legal when the type of at least one of the sides is known or specified"
+                          ),
+                          stmt.pos
+                        )
+                case (_, _) => verifyType(v2, getType(v1))
+            }
+        case Begin(stmt) => verifyStmt(stmt)
+        case Block(sts) =>
             st.enterScope()
-            verifyStmt(stmt0)
+            sts.foreach(verifyStmt)
             st.exitScope()
-        }
-        case Block(sts)        => sts.foreach(verifyStmt)
-        case Skip()            =>
+        case Skip() =>
         case Free(e) =>
             verifyType(
               e,
               ArrayType(anyType)(defaultPos),
               NonErasedPairType(anyType, anyType)(defaultPos)
             )
-        case Return(e) => {
-            ???
-        }
+        case Return(e) => verifyType(e, st.getReturnType())
     }
 }
