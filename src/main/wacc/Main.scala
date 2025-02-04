@@ -1,9 +1,12 @@
 package wacc
 
-import parsley.{Success, Failure}
-import java.nio.file.{Files, Paths}
-
 import parser.parse
+import java.io.File
+import scala.util.Success
+import scala.util.Failure
+import scala.io.Source
+import semantic_checkers.semantic_checker.checker
+import scala.collection.mutable.Seq as MutableSeq
 
 object Main {
     val exitStatusSuccess = 0
@@ -22,24 +25,29 @@ object Main {
             }
         }
 
-        if (fileName.contains("semantic")) {
-            println("#semantic_error#")
-            System.exit(exitStatusSemanticError)
-        }
+        val src: File = new File(fileName)
 
-        val sourceCode = try Files.readString(Paths.get(fileName)) catch {
-            case _ => {
+        parse(src) match 
+            case Success(result) => result match 
+                case parsley.Success(prog) => 
+                    implicit val lines: Seq[String] = 
+                        Source.fromFile(src).getLines().toSeq
+                    implicit val sourceName: String = 
+                        fileName
+                    checker(prog) match
+                        case MutableSeq() => println("Success.")
+                        case errors       => 
+                            println("#semantic_error#")
+                            errors.map{error => println(error.format)}
+                            System.exit(exitStatusSemanticError)
+                
+                case parsley.Failure(error) => 
+                    println("#syntax_error#")
+                    println(error.format)
+                    System.exit(exitStatusSyntaxError)
+
+            case Failure(_) => 
                 println(s"Can't find or read source file at $fileName")
                 System.exit(exitStatusFailure)
-                ""
-            }
-        }
-        parse(sourceCode) match {
-            case Success(prog) => println("Success.")
-            case Failure(msg) => {
-                println("#syntax_error#")
-                System.exit(exitStatusSyntaxError)
-            }
-        }
     }
 }

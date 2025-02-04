@@ -1,11 +1,12 @@
 package semantic_checkers
 
-import AST.types.*
-import AST.statements.*
-import AST.expressions.*
+import ast.types.*
+import ast.statements.*
+import ast.expressions.*
 import errors.errors.*
 import errors.generator.*
 import scala.util.control.Breaks.{break, breakable}
+import scala.collection.mutable.Seq as MutableSeq
 
 object semanticChecker {
     val defaultPos: (Int, Int) = (-1, -1)
@@ -40,7 +41,7 @@ object semanticChecker {
 
     def commonAncestor(es: List[Expr])(implicit
         st: SymbolTable,
-        errors: Seq[Error],
+        errors: MutableSeq[Error],
         lines: Seq[String],
         source: String
     ): WACCType = es.map(getType).distinct match {
@@ -76,7 +77,7 @@ object semanticChecker {
 
     def getType(rVal: RValue)(implicit
         st: SymbolTable,
-        errors: Seq[Error],
+        errors: MutableSeq[Error],
         lines: Seq[String],
         source: String
     ): WACCType = rVal match {
@@ -105,11 +106,13 @@ object semanticChecker {
                 }
             }
         }
+
+        case e: Expr => getType(e)
     }
 
     def getType(lVal: LValue)(implicit
         st: SymbolTable,
-        errors: Seq[Error],
+        errors: MutableSeq[Error],
         lines: Seq[String],
         source: String
     ): WACCType = lVal match {
@@ -135,7 +138,7 @@ object semanticChecker {
 
     def getType(expr: Expr)(implicit
         st: SymbolTable,
-        errors: Seq[Error],
+        errors: MutableSeq[Error],
         lines: Seq[String],
         source: String
     ): WACCType = expr match {
@@ -193,8 +196,8 @@ object semanticChecker {
                 }
             }
     }
-    private def verifyTypeHelper(t: WACCType, expT: Seq[WACCType])(implicit
-        errors: Seq[Error],
+    private def verifyTypeHelper(t: WACCType, expT: Seq[WACCType], pos: (Int, Int))(implicit
+        errors: MutableSeq[Error],
         lines: Seq[String],
         source: String
     ): Unit =
@@ -204,33 +207,33 @@ object semanticChecker {
                   s"${t.toString()}",
                   expT.toString(),
                   Seq(),
-                  t.pos
+                  pos
                 )
 
     private def verifyType(e: LValue, expT: WACCType*)(implicit
         st: SymbolTable,
-        errors: Seq[Error],
+        errors: MutableSeq[Error],
         lines: Seq[String],
         source: String
-    ): Unit = verifyTypeHelper(getType(e), expT)
+    ): Unit = verifyTypeHelper(getType(e), expT, e.pos)
 
     private def verifyType(e: RValue, expT: WACCType*)(implicit
         st: SymbolTable,
-        errors: Seq[Error],
+        errors: MutableSeq[Error],
         lines: Seq[String],
         source: String
-    ): Unit = verifyTypeHelper(getType(e), expT)
+    ): Unit = verifyTypeHelper(getType(e), expT, e.pos)
 
     private def verifyType(e: Expr, expT: WACCType*)(implicit
         st: SymbolTable,
-        errors: Seq[Error],
+        errors: MutableSeq[Error],
         lines: Seq[String],
         source: String
-    ): Unit = verifyTypeHelper(getType(e), expT)
+    ): Unit = verifyTypeHelper(getType(e), expT, e.pos)
 
     def verifyUnary(expr: UnaryOp)(implicit
         st: SymbolTable,
-        errors: Seq[Error],
+        errors: MutableSeq[Error],
         lines: Seq[String],
         source: String
     ): Unit = expr match {
@@ -243,7 +246,7 @@ object semanticChecker {
 
     def verifyBinary(expr: BinaryOp)(implicit
         st: SymbolTable,
-        errors: Seq[Error],
+        errors: MutableSeq[Error],
         lines: Seq[String],
         source: String
     ): Unit = expr match {
@@ -288,7 +291,7 @@ object semanticChecker {
 
     def verifyStmt(stmt: Stmt)(implicit
         st: SymbolTable,
-        errors: Seq[Error],
+        errors: MutableSeq[Error],
         lines: Seq[String],
         source: String
     ): Unit = stmt match {

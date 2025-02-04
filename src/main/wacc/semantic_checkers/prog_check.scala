@@ -1,8 +1,9 @@
 package semantic_checkers
 
-import AST.statements.*
+import ast.statements.*
 import errors.errors.Error
 import semanticChecker.*
+import scala.collection.mutable.Seq as MutableSeq
 
 class SemanticError {}
 
@@ -10,18 +11,19 @@ object semantic_checker {
 
     def checker(prog: Program)(
         implicit lines: Seq[String],
-        source: String
-    ): Unit = {
+        sourceName: String
+    ): MutableSeq[Error] = {
         implicit val symbolTable = new SymbolTable()
-        implicit val errors: Seq[Error] = Seq()
+        implicit val errors: MutableSeq[Error] = MutableSeq() 
         symbolTable.enterScope()
         prog.fs.foreach(checkFunction(_))
         verifyStmt(prog.s)
+        errors
     }
 
     def checkFunction(f: Func)(
         implicit st: SymbolTable,
-        errors: Seq[Error],
+        errors: MutableSeq[Error],
         lines: Seq[String],
         source: String
     ): Unit = {
