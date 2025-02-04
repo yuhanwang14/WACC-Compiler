@@ -1,4 +1,4 @@
-package syntax_checkers
+package syntaxCheckers
 
 import parsers.statementParser.*
 import parsley.lift.*

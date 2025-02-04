@@ -18,8 +18,10 @@ object Main {
         val fileName = args.headOption match {
             case Some(fn) => fn
             case None => {
-                println("No argument given!\n" +
-                    "Example usage: compile my_code.wacc")
+                println(
+                  "No argument given!\n" +
+                      "Example usage: compile my_code.wacc"
+                )
                 System.exit(exitStatusFailure)
                 ""
             }
@@ -27,26 +29,26 @@ object Main {
 
         val src: File = new File(fileName)
 
-        parse(src) match 
-            case Success(result) => result match 
-                case parsley.Success(prog) => 
-                    implicit val lines: Seq[String] = 
-                        Source.fromFile(src).getLines().toSeq
-                    implicit val sourceName: String = 
-                        fileName
-                    check(prog) match
-                        case MutableSeq() => println("Success.")
-                        case errors       => 
-                            println("#semantic_error#")
-                            errors.map{error => println(error.format)}
-                            System.exit(exitStatusSemanticError)
-                
-                case parsley.Failure(error) => 
-                    println("#syntax_error#")
-                    println(error.format)
-                    System.exit(exitStatusSyntaxError)
+        parse(src) match
+            case Success(result) =>
+                result match
+                    case parsley.Success(prog) =>
+                        check(prog)(
+                          source = fileName,
+                          lines = Source.fromFile(src).getLines().toSeq
+                        ) match
+                            case MutableSeq() => println("Success.")
+                            case errors =>
+                                println("#semantic_error#")
+                                errors.map { error => println(error.format) }
+                                System.exit(exitStatusSemanticError)
 
-            case Failure(_) => 
+                    case parsley.Failure(error) =>
+                        println("#syntax_error#")
+                        println(error.format)
+                        System.exit(exitStatusSyntaxError)
+
+            case Failure(_) =>
                 println(s"Can't find or read source file at $fileName")
                 System.exit(exitStatusFailure)
     }

@@ -1,7 +1,7 @@
 package semanticCheckers
 
 import ast.*
-import errors.errors.Error
+import errors.Error
 import semanticChecker.*
 import scala.collection.mutable.ListBuffer
 
@@ -9,7 +9,7 @@ object programChecker {
 
     def check(prog: Program)(
         implicit lines: Seq[String],
-        sourceName: String
+        source: String
     ): ListBuffer[Error] = {
         implicit val symbolTable = new SymbolTable()
         implicit val errors: ListBuffer[Error] = ListBuffer() 

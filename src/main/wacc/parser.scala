@@ -5,12 +5,12 @@ import lexer.fully
 import parsers.statementParser.program
 import ast.Program
 
-import errors.errors.{CustomErrorBuilder, Error}
+import errors.{CustomParsleyErrorBuilder, Error}
 import java.io.File
 import scala.util.Try
 
 object parser {
-    implicit val errorBuilder: CustomErrorBuilder = new CustomErrorBuilder
+    implicit val errorBuilder: CustomParsleyErrorBuilder = new CustomParsleyErrorBuilder
     def parse(input: File): Try[Result[Error, Program]] = parser.parseFile(input)
     private val parser = fully(program)
 }

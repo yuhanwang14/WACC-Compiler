@@ -9,7 +9,7 @@ import parsley.combinator.*
 import parsers.expressionParser.*
 import parsley.Parsley
 import parsley.errors.combinator.*
-import syntax_checkers.returning_checker._returningBlock
+import syntaxCheckers.returning_checker._returningBlock
 
 object statementParser {
     lazy val program = Program("begin" ~> many(func), block <~ "end")

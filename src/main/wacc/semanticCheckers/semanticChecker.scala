@@ -2,8 +2,7 @@ package semanticCheckers
 
 import ast.*
 
-import errors.errors.*
-import errors.generator.*
+import errors.*
 import scala.util.control.Breaks.{break, breakable}
 import scala.collection.mutable.ListBuffer
 
@@ -14,7 +13,7 @@ object semanticChecker {
     def weakens(tarT: WaccType, srcT: WaccType): Boolean = (tarT, srcT) match
         case (ArrayType(CharType()), StringType()) => true
         case (StringType(), ArrayType(CharType())) => true
-        case _ => false
+        case _                                     => false
 
     def compatible(tarT: WaccType, srcT: WaccType): Boolean =
         tarT == srcT || ((tarT, srcT) match {
@@ -27,7 +26,10 @@ object semanticChecker {
                   NonErasedPairType(tarElemT1, tarElemT2),
                   NonErasedPairType(srcElemT1, srcElemT2)
                 ) =>
-                compatible(tarElemT1, srcElemT1) && compatible(tarElemT2, srcElemT2) &&
+                compatible(tarElemT1, srcElemT1) && compatible(
+                  tarElemT2,
+                  srcElemT2
+                ) &&
                 !weakens(tarElemT1, srcElemT1) && !weakens(tarElemT2, srcElemT2)
             case (NonErasedPairType(_, _), ErasedPairType()) => true
             case (ErasedPairType(), NonErasedPairType(_, _)) => true
@@ -58,7 +60,7 @@ object semanticChecker {
             }
             if (invalid) {
                 errors +=
-                    genSpecializedError(
+                    ErrorBuilder.specializedError(
                       Seq(
                         "Type Error: array literal mismatch",
                         s"literal contains mix of ${ts.mkString(",")}"
@@ -93,7 +95,7 @@ object semanticChecker {
                 case Some(FunctionSignature(t, _)) => t
                 case _ => {
                     errors +=
-                        genSpecializedError(
+                        ErrorBuilder.specializedError(
                           Seq(
                             s"Undefined error: function $name has not been defined"
                           ),
@@ -171,24 +173,25 @@ object semanticChecker {
         case Paren(e) => getType(e)
 
         // Unary operators
-        case e @ Not(_)    => 
+        case e @ Not(_) =>
             verifyUnary(e)
             BoolType()(defaultPos)
-        case e @ (Negate(_) | Len(_) | Ord(_)) => 
+        case e @ (Negate(_) | Len(_) | Ord(_)) =>
             verifyUnary(e)
             IntType()(defaultPos)
-        case e @ Chr(_)    => 
+        case e @ Chr(_) =>
             verifyUnary(e)
             CharType()(defaultPos)
 
         // Binary operators producing Int results
-        case e @(Mul(_, _) | Div(_, _) | Mod(_, _) | Add(_, _) | Sub(_, _)) =>
+        case e @ (Mul(_, _) | Div(_, _) | Mod(_, _) | Add(_, _) | Sub(_, _)) =>
             verifyBinary(e)
             IntType()(defaultPos)
 
         // Binary operators producing Bool results
-        case e @ (Less(_, _) | LessEqual(_, _) | Greater(_, _) | GreaterEqual(_, _) |
-            Equal(_, _) | NotEqual(_, _) | And(_, _) | Or(_, _)) =>
+        case e @ (Less(_, _) | LessEqual(_, _) | Greater(_, _) |
+            GreaterEqual(_, _) | Equal(_, _) | NotEqual(_, _) | And(_, _) |
+            Or(_, _)) =>
             verifyBinary(e)
             BoolType()(defaultPos)
 
@@ -198,7 +201,7 @@ object semanticChecker {
                 case Some(t) => t
                 case None => {
                     errors +=
-                        genSpecializedError(
+                        ErrorBuilder.specializedError(
                           Seq(
                             s"Scope error: variable $name has not been declared in this scope"
                           ),
@@ -217,14 +220,18 @@ object semanticChecker {
                 }
             }
     }
-    private def verifyTypeHelper(t: WaccType, expT: Seq[WaccType], pos: (Int, Int))(implicit
+    private def verifyTypeHelper(
+        t: WaccType,
+        expT: Seq[WaccType],
+        pos: (Int, Int)
+    )(implicit
         errors: ListBuffer[Error],
         lines: Seq[String],
         source: String
     ): Unit =
         if (expT.forall(!compatible(t, _)))
             errors +=
-                genVanillaError(
+                ErrorBuilder.vanillaError(
                   s"${t.toString()}",
                   expT.mkString(", "),
                   Seq(),
@@ -330,7 +337,7 @@ object semanticChecker {
         case Declare(t, Ident(name), v) => {
             if (!st.addSymbol(name, t)) {
                 errors +=
-                    genSpecializedError(
+                    ErrorBuilder.specializedError(
                       Seq(
                         s"Scope error: illegal redeclaration of variable $name "
                       ),
@@ -343,7 +350,7 @@ object semanticChecker {
             (getType(v1), getType(v2)) match {
                 case (UnknownType(), UnknownType()) =>
                     errors +=
-                        genSpecializedError(
+                        ErrorBuilder.specializedError(
                           Seq(
                             "Type error: attempting to exchange values between pairs of unknown types",
                             "pair exchange is only legal when the type of at least one of the sides is known or specified"
@@ -364,15 +371,15 @@ object semanticChecker {
               ArrayType(anyType)(defaultPos),
               NonErasedPairType(anyType, anyType)(defaultPos)
             )
-        case Return(e) => 
+        case Return(e) =>
             verifyType(e, st.getReturnType())
-            if (st.isGlobalScope()) 
+            if (st.isGlobalScope())
                 errors +=
-                    genSpecializedError(
-                        Seq(
+                    ErrorBuilder.specializedError(
+                      Seq(
                         "Return Placement Error: return outside of function is not allowed"
-                        ),
-                        stmt.pos
+                      ),
+                      stmt.pos
                     )
     }
 }
