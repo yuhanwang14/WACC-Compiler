@@ -1,8 +1,7 @@
-package AST
+package ast
 
-import AST.expressions.*
-import AST.position.*
-import AST.types.*
+import ast.expressions.*
+import ast.types.*
 import utils.*
 
 object statements {
