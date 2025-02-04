@@ -3,9 +3,9 @@ package semanticCheckers
 import scala.collection.mutable
 import ast.*
 import ast.Func
-import semanticCheckers.semanticChecker.anyType
+import SemanticChecker.anyType
 import scala.util.control.Breaks.{break, breakable}
-import semanticCheckers.semanticChecker.defaultPos
+import SemanticChecker.defaultPos
 
 //  scopes are introduced by ‘begin .. end’, functions, if-statements, and while-loops
 

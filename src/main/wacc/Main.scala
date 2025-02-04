@@ -5,7 +5,7 @@ import java.io.File
 import scala.util.Success
 import scala.util.Failure
 import scala.io.Source
-import semanticCheckers.programChecker.check
+import semanticCheckers.ProgramChecker
 import scala.collection.mutable.Seq as MutableSeq
 
 object Main {
@@ -33,7 +33,7 @@ object Main {
             case Success(result) =>
                 result match
                     case parsley.Success(prog) =>
-                        check(prog)(
+                        ProgramChecker.check(prog)(
                           source = fileName,
                           lines = Source.fromFile(src).getLines().toSeq
                         ) match

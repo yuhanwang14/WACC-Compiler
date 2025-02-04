@@ -6,7 +6,7 @@ import errors.*
 import scala.util.control.Breaks.{break, breakable}
 import scala.collection.mutable.ListBuffer
 
-object semanticChecker {
+object SemanticChecker {
     val defaultPos: (Int, Int) = (-1, -1)
     val anyType: WaccType = AnyType()(defaultPos)
 

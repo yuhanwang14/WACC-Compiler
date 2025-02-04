@@ -2,10 +2,9 @@ package semanticCheckers
 
 import ast.*
 import errors.Error
-import semanticChecker.*
 import scala.collection.mutable.ListBuffer
 
-object programChecker {
+object ProgramChecker {
 
     def check(prog: Program)(
         implicit lines: Seq[String],
@@ -17,7 +16,7 @@ object programChecker {
         prog.fs.forall(f => symbolTable.addFunction(f))
         prog.fs.foreach(checkFunction(_))
         symbolTable.exitScope()
-        verifyStmt(prog.s)
+        SemanticChecker.verifyStmt(prog.s)
         errors
     }
 
@@ -37,7 +36,7 @@ object programChecker {
             case _ => 
         }
 
-        verifyStmt(f.s)
+        SemanticChecker.verifyStmt(f.s)
         st.exitScope()
         st.clearReturnType()
     }

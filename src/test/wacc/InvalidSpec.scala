@@ -7,7 +7,7 @@ import scala.util.Success
 import scala.util.Failure
 import java.io.File
 import scala.io.Source
-import semanticCheckers.programChecker.check
+import semanticCheckers.ProgramChecker
 import scala.collection.mutable.Seq as MutableSeq
 
 class InvalidSpec extends UnitSpec {
@@ -26,7 +26,7 @@ class InvalidSpec extends UnitSpec {
                             Source.fromFile(src).getLines().toSeq
                         implicit val sourceName: String = 
                             fileName
-                        check(prog) match
+                        ProgramChecker.check(prog) match
                             case MutableSeq() => {
                                 println("Success.")
                                 assert(false)
