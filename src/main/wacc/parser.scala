@@ -3,7 +3,7 @@ package wacc
 import parsley.Result
 import lexer.fully
 import parsers.statementParser.program
-import ast.statements.Program
+import ast.Program
 
 import errors.errors.{CustomErrorBuilder, Error}
 import java.io.File

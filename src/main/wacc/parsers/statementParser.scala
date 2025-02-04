@@ -1,11 +1,11 @@
 package parsers
 
-import ast.statements.*
+import ast.*
 import parsley.Parsley.*
-import parsers.typeParser.waccType
+import parsers.typeParser.WaccType
 import wacc.lexer.implicits.implicitSymbol, wacc.lexer.*
 import parsley.combinator.*
-import ast.expressions.*
+
 import parsers.expressionParser.*
 import parsley.Parsley
 import parsley.errors.combinator.*
@@ -14,13 +14,13 @@ import syntax_checkers.returning_checker._returningBlock
 object statementParser {
     lazy val program = Program("begin" ~> many(func), block <~ "end")
 
-    lazy val func = atomic(Func(waccType, Ident(ident), "(" ~> option(paramList) <~ ")", "is" ~> _returningBlock <~ "end".hide))
+    lazy val func = atomic(Func(WaccType, Ident(ident), "(" ~> option(paramList) <~ ")", "is" ~> _returningBlock <~ "end".hide))
 
     lazy val paramList: Parsley[ParamList] = ParamList(sepBy1(param, ","))
-    lazy val param = Param(waccType, Ident(ident))
+    lazy val param = Param(WaccType, Ident(ident))
 
     val skipStmt = Skip from "skip"
-    lazy val declareStmt = Declare(waccType, Ident(ident), "=" ~> rValue)
+    lazy val declareStmt = Declare(WaccType, Ident(ident), "=" ~> rValue)
     lazy val assignStmt = Assign(lValue, "=".label("assignment") ~> rValue)
     lazy val readStmt = Read("read" ~> lValue)
     val freeStmt = Free("free" ~> expr)

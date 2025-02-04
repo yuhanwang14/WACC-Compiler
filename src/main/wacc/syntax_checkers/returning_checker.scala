@@ -2,7 +2,7 @@ package syntax_checkers
 
 import parsers.statementParser.*
 import parsley.lift.*
-import ast.statements.*
+import ast.*
 import parsers.expressionParser.*
 import wacc.lexer.implicits.implicitSymbol
 import parsley.Parsley.*, parsley.Parsley

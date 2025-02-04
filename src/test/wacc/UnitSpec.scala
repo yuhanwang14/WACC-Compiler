@@ -1,6 +1,6 @@
 package wacc
 
-import org.scalatest._
+import org.scalatest.*
 import org.scalatest.funsuite.AnyFunSuite
 
 abstract class UnitSpec

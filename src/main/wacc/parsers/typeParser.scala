@@ -1,23 +1,23 @@
 package parsers
 
-import ast.types.*
+import ast.*
 import wacc.lexer.implicits.implicitSymbol, wacc.lexer.*
 import parsley.Parsley.*, parsley.Parsley
 import parsley.expr.chain
 
 object typeParser {
-    lazy val waccType: Parsley[WACCType] = arrayType | nonErasedPairType | baseType 
+    lazy val WaccType: Parsley[WaccType] = arrayType | nonErasedPairType | baseType 
     val intType = IntType from "int"
     val boolType = BoolType from "bool"
     val charType = CharType from "char"
     val stringType = StringType from "string"
-    val baseType: Parsley[WACCType] = intType | boolType | charType | stringType
+    val baseType: Parsley[WaccType] = intType | boolType | charType | stringType
 
-    val arrayType: Parsley[WACCType] =
+    val arrayType: Parsley[WaccType] =
         atomic(chain.postfix1(baseType | nonErasedPairType)(ArrayType from "[]"))
 
     val erasedPairType = (ErasedPairType from "pair") <~ notFollowedBy("(")
-    val pairElemType: Parsley[WACCType] = erasedPairType | arrayType | baseType
-    lazy val nonErasedPairType: Parsley[WACCType] = 
+    val pairElemType: Parsley[WaccType] = erasedPairType | arrayType | baseType
+    lazy val nonErasedPairType: Parsley[WaccType] = 
         NonErasedPairType("pair" ~> "(" ~> pairElemType <~ ",", pairElemType <~ ")")
 }

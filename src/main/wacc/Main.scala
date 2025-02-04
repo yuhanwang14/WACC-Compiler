@@ -5,7 +5,7 @@ import java.io.File
 import scala.util.Success
 import scala.util.Failure
 import scala.io.Source
-import semantic_checkers.semantic_checker.checker
+import semanticCheckers.programChecker.check
 import scala.collection.mutable.Seq as MutableSeq
 
 object Main {
@@ -34,7 +34,7 @@ object Main {
                         Source.fromFile(src).getLines().toSeq
                     implicit val sourceName: String = 
                         fileName
-                    checker(prog) match
+                    check(prog) match
                         case MutableSeq() => println("Success.")
                         case errors       => 
                             println("#semantic_error#")

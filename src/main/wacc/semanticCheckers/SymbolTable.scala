@@ -1,19 +1,19 @@
-package semantic_checkers
+package semanticCheckers
 
 import scala.collection.mutable
-import ast.types.*
-import ast.statements.Func
-import semantic_checkers.semanticChecker.anyType
+import ast.*
+import ast.Func
+import semanticCheckers.semanticChecker.anyType
 import scala.util.control.Breaks.{break, breakable}
-import semantic_checkers.semanticChecker.defaultPos
+import semanticCheckers.semanticChecker.defaultPos
 
 //  scopes are introduced by ‘begin .. end’, functions, if-statements, and while-loops
 
 class SymbolTable {
     // Initialize with a global scope
-    private val varTable = mutable.Stack[mutable.Map[String, WACCType]]()
+    private val varTable = mutable.Stack[mutable.Map[String, WaccType]]()
     private val funcTable = mutable.Map[String, FunctionSignature]()
-    private var returnType: WACCType = anyType
+    private var returnType: WaccType = anyType
 
     def getVarTable() = varTable
 
@@ -21,7 +21,7 @@ class SymbolTable {
 
     def getReturnType() = returnType
 
-    def setReturnType(t: WACCType) : Unit = {returnType = t}
+    def setReturnType(t: WaccType) : Unit = {returnType = t}
 
     def clearReturnType() : Unit = {returnType = anyType}
     
@@ -35,7 +35,7 @@ class SymbolTable {
     def exitScope(): Unit = varTable.pop()
 
     // Adds a symbol to the current scope
-    def addSymbol(name: String, typ: WACCType): Boolean = // change output to returning SemanticError
+    def addSymbol(name: String, typ: WaccType): Boolean = // change output to returning SemanticError
         if (varTable.head.contains(name)) { // Already declared in current scope
             varTable.head(name) = typ
             false
@@ -46,9 +46,9 @@ class SymbolTable {
         }
 
     // Looks up a symbol from innermost to outermost scope
-    def lookupSymbol(name: String): Option[WACCType] = {
+    def lookupSymbol(name: String): Option[WaccType] = {
         var flag = false
-        var result: WACCType = AnyType()(defaultPos)
+        var result: WaccType = AnyType()(defaultPos)
         breakable {
             for (scope <- varTable) {
                 if (scope.contains(name)) {
@@ -81,4 +81,4 @@ class SymbolTable {
     def lookupFunction(name: String): Option[FunctionSignature] = funcTable.get(name)
 }
 
-case class FunctionSignature(returnType: WACCType, paramTypes: List[WACCType])
+case class FunctionSignature(returnType: WaccType, paramTypes: List[WaccType])

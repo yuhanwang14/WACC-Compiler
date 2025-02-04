@@ -1,8 +1,7 @@
-package semantic_checkers
+package semanticCheckers
 
-import ast.types.*
-import ast.statements.*
-import ast.expressions.*
+import ast.*
+
 import errors.errors.*
 import errors.generator.*
 import scala.util.control.Breaks.{break, breakable}
@@ -10,14 +9,14 @@ import scala.collection.mutable.ListBuffer
 
 object semanticChecker {
     val defaultPos: (Int, Int) = (-1, -1)
-    val anyType: WACCType = AnyType()(defaultPos)
+    val anyType: WaccType = AnyType()(defaultPos)
 
-    def weakens(tarT: WACCType, srcT: WACCType): Boolean = (tarT, srcT) match
+    def weakens(tarT: WaccType, srcT: WaccType): Boolean = (tarT, srcT) match
         case (ArrayType(CharType()), StringType()) => true
         case (StringType(), ArrayType(CharType())) => true
         case _ => false
 
-    def compatible(tarT: WACCType, srcT: WACCType): Boolean =
+    def compatible(tarT: WaccType, srcT: WaccType): Boolean =
         tarT == srcT || ((tarT, srcT) match {
             case (UnknownType(), _)                    => true
             case (_, UnknownType())                    => true
@@ -42,7 +41,7 @@ object semanticChecker {
         errors: ListBuffer[Error],
         lines: Seq[String],
         source: String
-    ): WACCType = es.map(getType).distinct match {
+    ): WaccType = es.map(getType).distinct match {
         case Nil => ArrayType(anyType)(defaultPos)
         case ts @ (head :: tail) => {
             var resultType = head
@@ -78,7 +77,7 @@ object semanticChecker {
         errors: ListBuffer[Error],
         lines: Seq[String],
         source: String
-    ): WACCType = rVal match {
+    ): WaccType = rVal match {
         case ArrayLiter(es) =>
             commonAncestor(es)
 
@@ -131,7 +130,7 @@ object semanticChecker {
         errors: ListBuffer[Error],
         lines: Seq[String],
         source: String
-    ): WACCType = lVal match {
+    ): WaccType = lVal match {
         case First(insideLVal) =>
             getType(insideLVal) match {
                 case NonErasedPairType(t, _) => t
@@ -157,7 +156,7 @@ object semanticChecker {
         errors: ListBuffer[Error],
         lines: Seq[String],
         source: String
-    ): WACCType = expr match {
+    ): WaccType = expr match {
         // Literal cases
         case IntLiter(_)  => IntType()(defaultPos)
         case BoolLiter(_) => BoolType()(defaultPos)
@@ -218,7 +217,7 @@ object semanticChecker {
                 }
             }
     }
-    private def verifyTypeHelper(t: WACCType, expT: Seq[WACCType], pos: (Int, Int))(implicit
+    private def verifyTypeHelper(t: WaccType, expT: Seq[WaccType], pos: (Int, Int))(implicit
         errors: ListBuffer[Error],
         lines: Seq[String],
         source: String
@@ -232,21 +231,21 @@ object semanticChecker {
                   pos
                 )
 
-    private def verifyType(e: LValue, expT: WACCType*)(implicit
+    private def verifyType(e: LValue, expT: WaccType*)(implicit
         st: SymbolTable,
         errors: ListBuffer[Error],
         lines: Seq[String],
         source: String
     ): Unit = verifyTypeHelper(getType(e), expT, e.pos)
 
-    private def verifyType(e: RValue, expT: WACCType*)(implicit
+    private def verifyType(e: RValue, expT: WaccType*)(implicit
         st: SymbolTable,
         errors: ListBuffer[Error],
         lines: Seq[String],
         source: String
     ): Unit = verifyTypeHelper(getType(e), expT, e.pos)
 
-    private def verifyType(e: Expr, expT: WACCType*)(implicit
+    private def verifyType(e: Expr, expT: WaccType*)(implicit
         st: SymbolTable,
         errors: ListBuffer[Error],
         lines: Seq[String],

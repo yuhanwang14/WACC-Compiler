@@ -1,15 +1,13 @@
-package semantic_checkers
+package semanticCheckers
 
-import ast.statements.*
+import ast.*
 import errors.errors.Error
 import semanticChecker.*
 import scala.collection.mutable.ListBuffer
 
-class SemanticError {}
+object programChecker {
 
-object semantic_checker {
-
-    def checker(prog: Program)(
+    def check(prog: Program)(
         implicit lines: Seq[String],
         sourceName: String
     ): ListBuffer[Error] = {
@@ -23,7 +21,7 @@ object semantic_checker {
         errors
     }
 
-    def checkFunction(f: Func)(
+    private def checkFunction(f: Func)(
         implicit st: SymbolTable,
         errors: ListBuffer[Error],
         lines: Seq[String],

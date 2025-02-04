@@ -2,12 +2,12 @@
 
 // import parser.parse
 // import java.nio.file.{Files, Paths}
-// import scala.jdk.CollectionConverters._
+// import scala.jdk.CollectionConverters.*
 // import scala.util.Success
 // import scala.util.Failure
 // import java.io.File
 // import scala.io.Source
-// import semantic_checkers.semantic_checker.checker
+// import semanticCheckers.programChecker.check
 // import scala.collection.mutable.Seq as MutableSeq
 
 // class ValidSpec extends UnitSpec {
@@ -26,7 +26,7 @@
 //                             Source.fromFile(src).getLines().toSeq
 //                         implicit val sourceName: String = 
 //                             fileName
-//                         checker(prog) match
+//                         check(prog) match
 //                             case MutableSeq() => {
 //                                 println(prog)
 //                                 assert(true)

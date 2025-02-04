@@ -2,7 +2,7 @@ package utils
 
 import parsley.generic
 import parsley.Parsley
-import parsley.ap._
+import parsley.ap.*
 import parsley.position.pos
 
 trait ParserSingletonBridgePos[+R] extends generic.ErrorBridge {
