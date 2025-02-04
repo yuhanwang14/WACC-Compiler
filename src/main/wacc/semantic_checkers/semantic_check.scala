@@ -6,7 +6,7 @@ import ast.expressions.*
 import errors.errors.*
 import errors.generator.*
 import scala.util.control.Breaks.{break, breakable}
-import scala.collection.mutable.Seq as MutableSeq
+import scala.collection.mutable.ListBuffer
 
 object semanticChecker {
     val defaultPos: (Int, Int) = (-1, -1)
@@ -41,7 +41,7 @@ object semanticChecker {
 
     def commonAncestor(es: List[Expr])(implicit
         st: SymbolTable,
-        errors: MutableSeq[Error],
+        errors: ListBuffer[Error],
         lines: Seq[String],
         source: String
     ): WACCType = es.map(getType).distinct match {
@@ -60,7 +60,7 @@ object semanticChecker {
                 }
             }
             if (invalid) {
-                errors :+
+                errors +=
                     genSpecializedError(
                       Seq(
                         "Type Error: array literal mismatch",
@@ -77,7 +77,7 @@ object semanticChecker {
 
     def getType(rVal: RValue)(implicit
         st: SymbolTable,
-        errors: MutableSeq[Error],
+        errors: ListBuffer[Error],
         lines: Seq[String],
         source: String
     ): WACCType = rVal match {
@@ -95,7 +95,7 @@ object semanticChecker {
             st.lookupFunction(name) match {
                 case Some(FunctionSignature(t, _)) => t
                 case _ => {
-                    errors :+
+                    errors +=
                         genSpecializedError(
                           Seq(
                             s"Undefined error: function $name has not been defined"
@@ -130,7 +130,7 @@ object semanticChecker {
 
     def getType(lVal: LValue)(implicit
         st: SymbolTable,
-        errors: MutableSeq[Error],
+        errors: ListBuffer[Error],
         lines: Seq[String],
         source: String
     ): WACCType = lVal match {
@@ -156,7 +156,7 @@ object semanticChecker {
 
     def getType(expr: Expr)(implicit
         st: SymbolTable,
-        errors: MutableSeq[Error],
+        errors: ListBuffer[Error],
         lines: Seq[String],
         source: String
     ): WACCType = expr match {
@@ -194,7 +194,7 @@ object semanticChecker {
             st.lookupSymbol(name) match {
                 case Some(t) => t
                 case _ => {
-                    errors :+
+                    errors +=
                         genSpecializedError(
                           Seq(
                             s"Scope error: variable $name has not been declared in this scope"
@@ -215,12 +215,12 @@ object semanticChecker {
             }
     }
     private def verifyTypeHelper(t: WACCType, expT: Seq[WACCType], pos: (Int, Int))(implicit
-        errors: MutableSeq[Error],
+        errors: ListBuffer[Error],
         lines: Seq[String],
         source: String
     ): Unit =
         if (expT.forall(!compatible(_, t)))
-            errors :+
+            errors +=
                 genVanillaError(
                   s"${t.toString()}",
                   expT.toString(),
@@ -230,28 +230,28 @@ object semanticChecker {
 
     private def verifyType(e: LValue, expT: WACCType*)(implicit
         st: SymbolTable,
-        errors: MutableSeq[Error],
+        errors: ListBuffer[Error],
         lines: Seq[String],
         source: String
     ): Unit = verifyTypeHelper(getType(e), expT, e.pos)
 
     private def verifyType(e: RValue, expT: WACCType*)(implicit
         st: SymbolTable,
-        errors: MutableSeq[Error],
+        errors: ListBuffer[Error],
         lines: Seq[String],
         source: String
     ): Unit = verifyTypeHelper(getType(e), expT, e.pos)
 
     private def verifyType(e: Expr, expT: WACCType*)(implicit
         st: SymbolTable,
-        errors: MutableSeq[Error],
+        errors: ListBuffer[Error],
         lines: Seq[String],
         source: String
     ): Unit = verifyTypeHelper(getType(e), expT, e.pos)
 
     def verifyUnary(expr: UnaryOp)(implicit
         st: SymbolTable,
-        errors: MutableSeq[Error],
+        errors: ListBuffer[Error],
         lines: Seq[String],
         source: String
     ): Unit = expr match {
@@ -264,7 +264,7 @@ object semanticChecker {
 
     def verifyBinary(expr: BinaryOp)(implicit
         st: SymbolTable,
-        errors: MutableSeq[Error],
+        errors: ListBuffer[Error],
         lines: Seq[String],
         source: String
     ): Unit = expr match {
@@ -309,7 +309,7 @@ object semanticChecker {
 
     def verifyStmt(stmt: Stmt)(implicit
         st: SymbolTable,
-        errors: MutableSeq[Error],
+        errors: ListBuffer[Error],
         lines: Seq[String],
         source: String
     ): Unit = stmt match {
@@ -327,7 +327,7 @@ object semanticChecker {
         case Declare(t1, Ident(name), v) => {
             verifyType(v, t1)
             if (!st.addSymbol(name, t1)) {
-                errors :+
+                errors +=
                     genSpecializedError(
                       Seq(
                         s"Scope error: illegal redeclaration of variable $name "
@@ -339,7 +339,7 @@ object semanticChecker {
         case Assign(v1, v2) =>
             (getType(v1), getType(v2)) match {
                 case (UnknownType(), UnknownType()) =>
-                    errors :+
+                    errors +=
                         genSpecializedError(
                           Seq(
                             "Type error: attempting to exchange values between pairs of unknown types",
@@ -364,7 +364,7 @@ object semanticChecker {
         case Return(e) => 
             verifyType(e, st.getReturnType())
             if (st.isGlobalScope()) 
-                errors :+
+                errors +=
                     genSpecializedError(
                         Seq(
                         "Return Placement Error: return outside of function is not allowed"

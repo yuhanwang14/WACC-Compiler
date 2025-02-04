@@ -3,7 +3,7 @@ package semantic_checkers
 import ast.statements.*
 import errors.errors.Error
 import semanticChecker.*
-import scala.collection.mutable.Seq as MutableSeq
+import scala.collection.mutable.ListBuffer
 
 class SemanticError {}
 
@@ -12,9 +12,9 @@ object semantic_checker {
     def checker(prog: Program)(
         implicit lines: Seq[String],
         sourceName: String
-    ): MutableSeq[Error] = {
+    ): ListBuffer[Error] = {
         implicit val symbolTable = new SymbolTable()
-        implicit val errors: MutableSeq[Error] = MutableSeq() 
+        implicit val errors: ListBuffer[Error] = ListBuffer() 
         symbolTable.enterScope()
         prog.fs.foreach(checkFunction(_))
         verifyStmt(prog.s)
@@ -23,7 +23,7 @@ object semantic_checker {
 
     def checkFunction(f: Func)(
         implicit st: SymbolTable,
-        errors: MutableSeq[Error],
+        errors: ListBuffer[Error],
         lines: Seq[String],
         source: String
     ): Unit = {
