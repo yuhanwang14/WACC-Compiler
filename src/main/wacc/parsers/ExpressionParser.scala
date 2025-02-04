@@ -6,7 +6,7 @@ import parsley.Parsley.*, parsley.Parsley
 import parsley.errors.combinator.*
 import parsley.expr.{precedence, SOps, Atoms, InfixL, InfixR, InfixN, Prefix}
 
-object expressionParser {
+object ExpressionParser {
     lazy val arrayElem = atomic(ArrayElem(Ident(ident), some("[".hide ~> expr <~ "]".hide)))
     lazy val atom = 
         Atoms(
