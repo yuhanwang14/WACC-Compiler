@@ -5,7 +5,7 @@ import wacc.lexer.implicits.implicitSymbol, wacc.lexer.*
 import parsley.Parsley.*, parsley.Parsley
 import parsley.expr.chain
 
-object types_parser {
+object typeParser {
     lazy val waccType: Parsley[WACCType] = arrayType | nonErasedPairType | baseType 
     val intType = IntType from "int"
     val boolType = BoolType from "bool"

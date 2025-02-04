@@ -2,16 +2,16 @@ package parsers
 
 import AST.statements.*
 import parsley.Parsley.*
-import parsers.types_parser.waccType
+import parsers.typeParser.waccType
 import wacc.lexer.implicits.implicitSymbol, wacc.lexer.*
 import parsley.combinator.*
 import AST.expressions.*
-import parsers.expressions_parser.*
+import parsers.expressionParser.*
 import parsley.Parsley
 import parsley.errors.combinator.*
 import syntax_checkers.returning_checker._returningBlock
 
-object statements_parser {
+object statementParser {
     lazy val program = Program("begin" ~> many(func), block <~ "end")
 
     lazy val func = atomic(Func(waccType, Ident(ident), "(" ~> option(paramList) <~ ")", "is" ~> _returningBlock <~ "end".hide))
