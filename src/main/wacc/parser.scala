@@ -2,7 +2,7 @@ package wacc
 
 import parsley.Result
 import lexer.fully
-import parsers.statements_parser.program
+import parsers.statementParser.program
 import AST.statements.Program
 
 import errors.errors.{CustomErrorBuilder, Error}
