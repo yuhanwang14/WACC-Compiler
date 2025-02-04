@@ -11,18 +11,24 @@ object type_checker {
     val defaultPos: (Int, Int) = (-1, -1)
     val anyType: WACCType = AnyType()(defaultPos)
 
-    def invariant(t1: WACCType, t2: WACCType): Boolean =
-        t1 != ArrayType(CharType()(t1.pos))(t1.pos)
-            && t2 != StringType()(t2.pos)
+    def compatible(t1: WACCType, t2: WACCType): Boolean = 
+        t1 == t2 || ((t1, t2) match {
+            case (ArrayType(CharType()), StringType()) => true
+            case (ArrayType(tt1), ArrayType(tt2)) => 
+                compatible(tt1, tt2) && 
+                tt1 != ArrayType(CharType()(defaultPos))(defaultPos) && 
+                tt2 != StringType()(defaultPos)
+            case (NonErasedPairType(t1_1, t1_2), NonErasedPairType(t2_1, t2_2)) => 
+                compatible(t1_1, t2_1) && compatible(t1_2, t2_2) && 
+                t1_1 != ArrayType(CharType()(defaultPos)) && t2_1 != StringType()(defaultPos) &&
+                t1_2 != ArrayType(CharType()(defaultPos)) && t2_2 != StringType()(defaultPos)
+            case (NonErasedPairType(_, _), ErasedPairType()) => true
+            case (ErasedPairType(), NonErasedPairType(_, _)) => true    
+            case (AnyType(), _) => true
+            case (_, AnyType()) => true
+            case _ => false
+        })
 
-    def weakened(t1: WACCType, t2: WACCType): Boolean = (t1, t2) match
-        case (ArrayType(CharType()), StringType())       => true
-        case (NonErasedPairType(_, _), ErasedPairType()) => true
-        case (ErasedPairType(), NonErasedPairType(_, _)) => true
-        case _                                           => false
-
-    def compatible(t1: WACCType, t2: WACCType): Boolean =
-        t1 == t2 || weakened(t1, t2) || t1 == AnyType() || t2 == AnyType()
 
     def commonAncestor(es: List[Expr])(
         implicit st: SymbolTable,
@@ -48,7 +54,7 @@ object type_checker {
                 errors :+
                     genSpecializedError(
                       Seq(
-                        "Scope Error: array literal mismatch",
+                        "Type Error: array literal mismatch",
                         s"literal contains mix of ${ts.mkString(",")}"
                       ),
                       es.head.pos
@@ -104,20 +110,24 @@ object type_checker {
             getType(insideLVal) match {
                 case NonErasedPairType(t, _) => t
                 case ErasedPairType()        => UnknownType()(defaultPos)
-                case _                       => ???
+                case t                       => {
+                    FirstErrorType(t)(defaultPos)
+                }
             }
 
         case Second(insideLVal) =>
             getType(insideLVal) match {
                 case NonErasedPairType(_, t) => t
                 case ErasedPairType()        => UnknownType()(defaultPos)
-                case _                       => ???
+                case t                       => {
+                    SecondErrorType(t)(defaultPos)
+                }
             }
         case e: Expr => getType(e: Expr)
     }
 
-    def getType(expr: Expr)(implicit
-        st: SymbolTable,
+    def getType(expr: Expr)(
+        implicit st: SymbolTable,
         errors: Seq[Error],
         lines: Seq[String],
         source: String
@@ -171,7 +181,9 @@ object type_checker {
         case ArrayElem(id, _) =>
             getType(id: Expr) match {
                 case ArrayType(t) => t
-                case _            => ???
+                case t            => {
+                    ArrayErrorType(t)(defaultPos)
+                }
             }
     }
     private def verifyTypeHelper(t: WACCType, expT: Seq[WACCType])(
@@ -193,14 +205,14 @@ object type_checker {
         errors: Seq[Error],
         lines: Seq[String],
         source: String
-    ): Unit = verifyTypeHelper(getType(e), expT)
+    ): Unit = ???
 
     private def verifyType(e: RValue, expT: WACCType*)(
         implicit st: SymbolTable,
         errors: Seq[Error],
         lines: Seq[String],
         source: String
-    ): Unit = verifyTypeHelper(getType(e), expT)
+    ): Unit = ???
 
     private def verifyType(e: Expr, expT: WACCType*)(
         implicit st: SymbolTable,
@@ -315,7 +327,14 @@ object type_checker {
                     )
                 case (UnknownType(), t2) => ???
                 case (t1, UnknownType()) => ???
-                case _ => 
+                case (t1, t2) => if (!compatible(t2, t1)) {
+                    genVanillaError(
+                        t2.toString(), 
+                        t1.toString(), 
+                        Seq(), 
+                        v2.pos
+                    )
+                }
 
             }
             verifyType(v2, getType(v1))

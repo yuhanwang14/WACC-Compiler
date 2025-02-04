@@ -15,6 +15,8 @@ class SymbolTable {
 
     def getFuncTable() = funcTable
 
+    def globalScope(): Boolean = varTable.size == 1
+    
     // Enters a new nested scope
     def enterScope(): Unit = varTable.push(mutable.Map())
 

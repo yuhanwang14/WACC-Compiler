@@ -8,6 +8,9 @@ object types {
     case class AnyType()(val pos: (Int, Int)) extends WACCType
     case class UnknownType()(val pos: (Int, Int)) extends WACCType
     case class NotExistType()(val pos: (Int, Int)) extends WACCType
+    case class FirstErrorType(t: WACCType)(val pos: (Int, Int)) extends WACCType
+    case class SecondErrorType(t: WACCType)(val pos: (Int, Int)) extends WACCType
+    case class ArrayErrorType(t: WACCType)(val pos: (Int, Int)) extends WACCType
 
     // Base Type
     sealed trait BaseType extends WACCType
@@ -23,6 +26,11 @@ object types {
 
     object AnyType extends ParserBridgePos0[AnyType]
     object UnknownType extends ParserBridgePos0[UnknownType]
+    object NotExistType extends ParserBridgePos0[NotExistType]
+    object FirstErrorType extends ParserBridgePos1[WACCType, FirstErrorType]
+    object SecondErrorType extends ParserBridgePos1[WACCType, SecondErrorType]
+    object ArrayErrorType extends ParserBridgePos1[WACCType, ArrayErrorType]
+
     object IntType extends ParserBridgePos0[IntType]
     object BoolType extends ParserBridgePos0[BoolType]
     object CharType extends ParserBridgePos0[CharType]
