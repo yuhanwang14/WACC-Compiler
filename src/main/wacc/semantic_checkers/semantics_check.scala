@@ -1,36 +1,43 @@
 package semantic_checkers
 
 import AST.statements.*
+import errors.errors.Error
+import type_checker.*
 
 class SemanticError {}
 
 object semantic_checker {
-    def checker(prog: Program): Either[SemanticError, Unit] = {
-        implicit val t = new SymbolTable()
-        checkProgram(prog)
+
+    def checker(prog: Program)(
+        implicit lines: Seq[String],
+        source: String
+    ): Unit = {
+        implicit val symbolTable = new SymbolTable()
+        implicit val errors: Seq[Error] = Seq()
+        symbolTable.enterScope()
+        prog.fs.foreach(checkFunction(_))
+        verifyStmt(prog.s)
     }
 
-    def checkProgram(prog: Program)(implicit t: SymbolTable): Either[SemanticError, Unit] = {
-        // 1. record all function
-        println(t.getFuncTable())
-        prog.fs.foreach(t.addFunction)
+    def checkFunction(f: Func)(
+        implicit st: SymbolTable,
+        errors: Seq[Error],
+        lines: Seq[String],
+        source: String
+    ): Unit = {
+        st.setReturnType(f.t)
+        st.enterScope()
+        
+        // add params to symbol table
+        f.ps match {
+            case Some(ParamList(params)) => 
+                params.foreach((p: Param) => st.addSymbol(p.i.name, p.t))
+            case _ => 
+        }
 
-        println(t.getFuncTable())
-
-        // 2. check functions
-        prog.fs.foreach(checkFunction)
-
-        // 3. check stmt
-        checkStatement(prog.s)
+        verifyStmt(f.s)
+        st.exitScope()
+        st.addFunction(f)
     }
-
-    def checkFunction(func: Func)(implicit t: SymbolTable): Either[SemanticError, Unit] = {
-        t.enterScope()
-        t.exitScope()
-        Right(())
-    }
-
-    def checkStatement(stmt: Stmt)(implicit t: SymbolTable): Either[SemanticError, Unit] = {
-        Right(())
-    }
+        
 }
