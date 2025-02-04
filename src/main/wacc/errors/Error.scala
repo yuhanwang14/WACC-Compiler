@@ -1,7 +1,6 @@
 package errors
 
 case class Error(pos: (Int, Int), source: Option[String], line: LineError) {
-
     def format: String = {
         val errorDesc =
             source.fold(line.errorType)(file => s"${line.errorType} in $file")
