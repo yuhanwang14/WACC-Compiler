@@ -12,26 +12,24 @@ object semanticChecker {
     val defaultPos: (Int, Int) = (-1, -1)
     val anyType: WACCType = AnyType()(defaultPos)
 
-    def compatible(t1: WACCType, t2: WACCType): Boolean =
-        t1 == t2 || ((t1, t2) match {
+    def weakens(tarT: WACCType, srcT: WACCType): Boolean = (tarT, srcT) match
+        case (ArrayType(CharType()), StringType()) => true
+        case (StringType(), ArrayType(CharType())) => true
+        case _ => false
+
+    def compatible(tarT: WACCType, srcT: WACCType): Boolean =
+        tarT == srcT || ((tarT, srcT) match {
             case (UnknownType(), _)                    => true
             case (_, UnknownType())                    => true
             case (ArrayType(CharType()), StringType()) => true
-            case (ArrayType(tt1), ArrayType(tt2)) =>
-                compatible(tt1, tt2) &&
-                tt1 != ArrayType(CharType()(defaultPos))(defaultPos) &&
-                tt2 != StringType()(defaultPos)
+            case (ArrayType(tarElemT), ArrayType(srcElemT)) =>
+                compatible(tarElemT, srcElemT) && !weakens(tarElemT, srcElemT)
             case (
-                  NonErasedPairType(t1_1, t1_2),
-                  NonErasedPairType(t2_1, t2_2)
+                  NonErasedPairType(tarElemT1, tarElemT2),
+                  NonErasedPairType(srcElemT1, srcElemT2)
                 ) =>
-                compatible(t1_1, t2_1) && compatible(t1_2, t2_2) &&
-                t1_1 != ArrayType(
-                  CharType()(defaultPos)
-                ) && t2_1 != StringType()(defaultPos) &&
-                t1_2 != ArrayType(
-                  CharType()(defaultPos)
-                ) && t2_2 != StringType()(defaultPos)
+                compatible(tarElemT1, srcElemT1) && compatible(tarElemT2, srcElemT2) &&
+                !weakens(tarElemT1, srcElemT1) && !weakens(tarElemT2, srcElemT2)
             case (NonErasedPairType(_, _), ErasedPairType()) => true
             case (ErasedPairType(), NonErasedPairType(_, _)) => true
             case (AnyType(), _)                              => true
@@ -51,9 +49,9 @@ object semanticChecker {
             var invalid = false
             breakable {
                 tail.foreach { t =>
-                    if (compatible(t, resultType)) {
+                    if (compatible(resultType, t)) {
                         resultType = t;
-                    } else if (!compatible(resultType, t)) {
+                    } else if (!compatible(t, resultType)) {
                         invalid = true
                         break()
                     }
@@ -70,7 +68,7 @@ object semanticChecker {
                     )
                 NotExistType()(defaultPos)
             } else {
-                resultType
+                ArrayType(resultType)(defaultPos)
             }
         }
     }
@@ -174,26 +172,32 @@ object semanticChecker {
         case Paren(e) => getType(e)
 
         // Unary operators
-        case Not(_)    => BoolType()(defaultPos)
-        case Negate(_) => IntType()(defaultPos)
-        case Len(_)    => IntType()(defaultPos)
-        case Ord(_)    => IntType()(defaultPos)
-        case Chr(_)    => CharType()(defaultPos)
+        case e @ Not(_)    => 
+            verifyUnary(e)
+            BoolType()(defaultPos)
+        case e @ (Negate(_) | Len(_) | Ord(_)) => 
+            verifyUnary(e)
+            IntType()(defaultPos)
+        case e @ Chr(_)    => 
+            verifyUnary(e)
+            CharType()(defaultPos)
 
         // Binary operators producing Int results
-        case Mul(_, _) | Div(_, _) | Mod(_, _) | Add(_, _) | Sub(_, _) =>
+        case e @(Mul(_, _) | Div(_, _) | Mod(_, _) | Add(_, _) | Sub(_, _)) =>
+            verifyBinary(e)
             IntType()(defaultPos)
 
         // Binary operators producing Bool results
-        case Less(_, _) | LessEqual(_, _) | Greater(_, _) | GreaterEqual(_, _) |
-            Equal(_, _) | NotEqual(_, _) | And(_, _) | Or(_, _) =>
+        case e @ (Less(_, _) | LessEqual(_, _) | Greater(_, _) | GreaterEqual(_, _) |
+            Equal(_, _) | NotEqual(_, _) | And(_, _) | Or(_, _)) =>
+            verifyBinary(e)
             BoolType()(defaultPos)
 
         // Identifiers
         case (id @ Ident(name)) =>
             st.lookupSymbol(name) match {
                 case Some(t) => t
-                case _ => {
+                case None => {
                     errors +=
                         genSpecializedError(
                           Seq(
@@ -219,11 +223,11 @@ object semanticChecker {
         lines: Seq[String],
         source: String
     ): Unit =
-        if (expT.forall(!compatible(_, t)))
+        if (expT.forall(!compatible(t, _)))
             errors +=
                 genVanillaError(
                   s"${t.toString()}",
-                  expT.toString(),
+                  expT.mkString(", "),
                   Seq(),
                   pos
                 )
@@ -313,7 +317,7 @@ object semanticChecker {
         lines: Seq[String],
         source: String
     ): Unit = stmt match {
-        case Exit(e) => verifyType(e, BoolType()(defaultPos))
+        case Exit(e) => verifyType(e, IntType()(defaultPos))
         case If(e, s1, s2) =>
             verifyType(e, BoolType()(defaultPos))
             verifyStmt(s1)
@@ -324,9 +328,8 @@ object semanticChecker {
         case Print(e)   => verifyType(e, anyType)
         case Println(e) => verifyType(e, anyType)
         case Read(e)    => verifyType(e, anyType)
-        case Declare(t1, Ident(name), v) => {
-            verifyType(v, t1)
-            if (!st.addSymbol(name, t1)) {
+        case Declare(t, Ident(name), v) => {
+            if (!st.addSymbol(name, t)) {
                 errors +=
                     genSpecializedError(
                       Seq(
@@ -335,6 +338,7 @@ object semanticChecker {
                       stmt.pos
                     )
             }
+            verifyType(v, t)
         }
         case Assign(v1, v2) =>
             (getType(v1), getType(v2)) match {
@@ -347,7 +351,7 @@ object semanticChecker {
                           ),
                           stmt.pos
                         )
-                case (_, _) => verifyType(v2, getType(v1))
+                case (t1, _) => verifyType(v2, t1)
             }
         case Begin(stmt) => verifyStmt(stmt)
         case Block(sts) =>

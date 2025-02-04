@@ -16,7 +16,9 @@ object semantic_checker {
         implicit val symbolTable = new SymbolTable()
         implicit val errors: ListBuffer[Error] = ListBuffer() 
         symbolTable.enterScope()
+        prog.fs.forall(f => symbolTable.addFunction(f))
         prog.fs.foreach(checkFunction(_))
+        symbolTable.exitScope()
         verifyStmt(prog.s)
         errors
     }
@@ -39,7 +41,7 @@ object semantic_checker {
 
         verifyStmt(f.s)
         st.exitScope()
-        st.addFunction(f)
+        st.clearReturnType()
     }
         
 }

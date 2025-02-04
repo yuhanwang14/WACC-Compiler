@@ -4,12 +4,14 @@ import scala.collection.mutable
 import ast.types.*
 import ast.statements.Func
 import semantic_checkers.semanticChecker.anyType
+import scala.util.control.Breaks.{break, breakable}
+import semantic_checkers.semanticChecker.defaultPos
 
 //  scopes are introduced by ‘begin .. end’, functions, if-statements, and while-loops
 
 class SymbolTable {
     // Initialize with a global scope
-    private val varTable = mutable.Stack[mutable.Map[String, WACCType]](mutable.Map())
+    private val varTable = mutable.Stack[mutable.Map[String, WACCType]]()
     private val funcTable = mutable.Map[String, FunctionSignature]()
     private var returnType: WACCType = anyType
 
@@ -30,10 +32,7 @@ class SymbolTable {
 
 
     // Exits the current scope but ensures the global scope is never removed
-    def exitScope(): Unit = {
-        if (varTable.size > 1) varTable.pop()
-        else throw new RuntimeException("Cannot exit global scope")
-    }
+    def exitScope(): Unit = varTable.pop()
 
     // Adds a symbol to the current scope
     def addSymbol(name: String, typ: WACCType): Boolean = // change output to returning SemanticError
@@ -48,12 +47,18 @@ class SymbolTable {
 
     // Looks up a symbol from innermost to outermost scope
     def lookupSymbol(name: String): Option[WACCType] = {
-        for (scope <- varTable) {
-            if (scope.contains(name)) {
-                scope(name)
+        var flag = false
+        var result: WACCType = AnyType()(defaultPos)
+        breakable {
+            for (scope <- varTable) {
+                if (scope.contains(name)) {
+                    result = scope(name)
+                    flag = true
+                    break()
+                }
             }
         }
-        None
+        if (flag) Some(result) else None
     }
     
     def addFunction(f: Func): Boolean = { // change output to returning SemanticError
