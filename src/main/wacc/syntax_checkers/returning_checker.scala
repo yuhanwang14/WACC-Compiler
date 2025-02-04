@@ -1,9 +1,9 @@
 package syntax_checkers
 
-import parsers.statements_parser.*
+import parsers.statementParser.*
 import parsley.lift.*
-import AST.statements.*
-import parsers.expressions_parser.*
+import ast.statements.*
+import parsers.expressionParser.*
 import wacc.lexer.implicits.implicitSymbol
 import parsley.Parsley.*, parsley.Parsley
 

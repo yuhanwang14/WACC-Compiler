@@ -1,12 +1,12 @@
 package parsers
 
-import AST.expressions.*
+import ast.expressions.*
 import wacc.lexer.implicits.implicitSymbol, wacc.lexer.*
 import parsley.Parsley.*, parsley.Parsley
 import parsley.errors.combinator.*
 import parsley.expr.{precedence, SOps, Atoms, InfixL, InfixR, InfixN, Prefix}
 
-object expressions_parser {
+object expressionParser {
     lazy val arrayElem = atomic(ArrayElem(Ident(ident), some("[".hide ~> expr <~ "]".hide)))
     lazy val atom = 
         Atoms(

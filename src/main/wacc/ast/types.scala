@@ -1,7 +1,6 @@
-package AST
+package ast
 
 import utils.*
-import AST.position.Position
 
 object types {
     sealed trait WACCType extends Position
