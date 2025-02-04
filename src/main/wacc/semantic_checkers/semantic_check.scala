@@ -108,6 +108,24 @@ object semanticChecker {
         }
 
         case e: Expr => getType(e)
+
+        case First(insideLVal) =>
+            getType(insideLVal) match {
+                case NonErasedPairType(t, _) => t
+                case ErasedPairType()        => UnknownType()(defaultPos)
+                case t => {
+                    FirstErrorType(t)(defaultPos)
+                }
+            }
+
+        case Second(insideLVal) =>
+            getType(insideLVal) match {
+                case NonErasedPairType(_, t) => t
+                case ErasedPairType()        => UnknownType()(defaultPos)
+                case t => {
+                    SecondErrorType(t)(defaultPos)
+                }
+            }
     }
 
     def getType(lVal: LValue)(implicit
