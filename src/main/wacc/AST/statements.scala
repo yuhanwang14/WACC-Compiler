@@ -49,7 +49,7 @@ object statements {
     case class ArrayLiter(es: List[Expr])(val pos: (Int, Int)) extends RValue
     case class NewPair(e1: Expr, e2: Expr)(val pos: (Int, Int)) extends RValue
     // PairElem
-    case class Call(i: Ident, argL: Option[ArgList])(val pos: (Int, Int)) extends RValue
+    case class Call(i: Ident, argL: ArgList)(val pos: (Int, Int)) extends RValue
 
     // Arguments List
     case class ArgList(es: List[Expr])(val pos: (Int, Int)) extends Position
@@ -81,7 +81,7 @@ object statements {
     
     object ArrayLiter extends ParserBridgePos1[List[Expr], RValue]
     object NewPair extends ParserBridgePos2[Expr, Expr, RValue]
-    object Call extends ParserBridgePos2[Ident, Option[ArgList], RValue]
+    object Call extends ParserBridgePos2[Ident, ArgList, RValue]
 
     object ArgList extends ParserBridgePos1[List[Expr], ArgList]
 }

@@ -2,7 +2,7 @@ package semantic_checkers
 
 import AST.statements.*
 import errors.errors.Error
-import type_checker.*
+import semanticChecker.*
 
 class SemanticError {}
 

@@ -3,7 +3,7 @@ package semantic_checkers
 import scala.collection.mutable
 import AST.types.*
 import AST.statements.Func
-import semantic_checkers.type_checker.anyType
+import semantic_checkers.semanticChecker.anyType
 
 //  scopes are introduced by ‘begin .. end’, functions, if-statements, and while-loops
 
@@ -22,6 +22,8 @@ class SymbolTable {
     def setReturnType(t: WACCType) : Unit = {returnType = t}
 
     def clearReturnType() : Unit = {returnType = anyType}
+    
+    def isGlobalScope(): Boolean = varTable.size == 1
 
     // Enters a new nested scope
     def enterScope(): Unit = varTable.push(mutable.Map())

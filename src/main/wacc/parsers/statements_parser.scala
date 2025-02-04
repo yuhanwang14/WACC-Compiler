@@ -42,6 +42,6 @@ object statements_parser {
     lazy val rValue = expr | arrayLiter | newPair | pairElem | call
     val arrayLiter = ArrayLiter("[" ~> sepBy(expr, ",") <~ "]")
     val newPair = NewPair("newpair" ~> "(" ~> expr, "," ~> expr <~ ")")
-    val call = Call("call" ~> Ident(ident), "(" ~> option(argList) <~ ")")
-    val argList = ArgList(sepBy1(expr, ","))
+    val call = Call("call" ~> Ident(ident), "(" ~> argList <~ ")")
+    val argList = ArgList(sepBy(expr, ","))
 }

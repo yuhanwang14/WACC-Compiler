@@ -340,6 +340,15 @@ object semanticChecker {
               ArrayType(anyType)(defaultPos),
               NonErasedPairType(anyType, anyType)(defaultPos)
             )
-        case Return(e) => verifyType(e, st.getReturnType())
+        case Return(e) => 
+            verifyType(e, st.getReturnType())
+            if (st.isGlobalScope()) 
+                errors :+
+                    genSpecializedError(
+                        Seq(
+                        "Return Placement Error: return outside of function is not allowed"
+                        ),
+                        stmt.pos
+                    )
     }
 }
