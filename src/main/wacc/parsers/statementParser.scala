@@ -1,11 +1,11 @@
 package parsers
 
-import AST.statements.*
+import ast.statements.*
 import parsley.Parsley.*
 import parsers.typeParser.waccType
 import wacc.lexer.implicits.implicitSymbol, wacc.lexer.*
 import parsley.combinator.*
-import AST.expressions.*
+import ast.expressions.*
 import parsers.expressionParser.*
 import parsley.Parsley
 import parsley.errors.combinator.*

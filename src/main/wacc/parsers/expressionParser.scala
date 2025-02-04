@@ -1,6 +1,6 @@
 package parsers
 
-import AST.expressions.*
+import ast.expressions.*
 import wacc.lexer.implicits.implicitSymbol, wacc.lexer.*
 import parsley.Parsley.*, parsley.Parsley
 import parsley.errors.combinator.*

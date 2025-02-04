@@ -1,8 +1,8 @@
 package semantic_checkers
 
 import scala.collection.mutable
-import AST.types.*
-import AST.statements.Func
+import ast.types.*
+import ast.statements.Func
 import semantic_checkers.semanticChecker.anyType
 
 //  scopes are introduced by ‘begin .. end’, functions, if-statements, and while-loops

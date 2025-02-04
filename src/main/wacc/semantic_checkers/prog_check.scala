@@ -1,6 +1,6 @@
 package semantic_checkers
 
-import AST.statements.*
+import ast.statements.*
 import errors.errors.Error
 import semanticChecker.*
 

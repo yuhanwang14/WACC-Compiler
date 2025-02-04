@@ -1,8 +1,8 @@
 package semantic_checkers
 
-import AST.types.*
-import AST.statements.*
-import AST.expressions.*
+import ast.types.*
+import ast.statements.*
+import ast.expressions.*
 import errors.errors.*
 import errors.generator.*
 import scala.util.control.Breaks.{break, breakable}

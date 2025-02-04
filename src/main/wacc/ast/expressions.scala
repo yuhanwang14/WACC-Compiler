@@ -1,8 +1,7 @@
-package AST
+package ast
 
 import utils.*
-import AST.statements.*
-import position.*
+import ast.statements.*
 
 object expressions {
     abstract trait Expr extends RValue
