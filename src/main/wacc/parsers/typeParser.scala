@@ -6,7 +6,7 @@ import parsley.Parsley.*, parsley.Parsley
 import parsley.expr.chain
 
 object typeParser {
-    lazy val WaccType: Parsley[WaccType] = arrayType | nonErasedPairType | baseType 
+    lazy val waccType: Parsley[WaccType] = arrayType | nonErasedPairType | baseType 
     val intType = IntType from "int"
     val boolType = BoolType from "bool"
     val charType = CharType from "char"
