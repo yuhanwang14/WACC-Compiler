@@ -5,11 +5,10 @@ import parsley.Parsley.*
 import parsers.TypeParser.waccType
 import wacc.lexer.implicits.implicitSymbol, wacc.lexer.*
 import parsley.combinator.*
-
+import parsley.lift.*
 import parsers.ExpressionParser.*
 import parsley.Parsley
 import parsley.errors.combinator.*
-import syntaxCheckers.returning_checker._returningBlock
 
 object StatementParser {
     lazy val program = Program("begin" ~> many(func), block <~ "end")
@@ -31,6 +30,14 @@ object StatementParser {
     lazy val ifStmt = If("if" ~> expr, "then" ~> block, "else" ~> block <~ "fi")
     lazy val whileStmt = While("while" ~> expr, "do" ~> block <~ "done")
     lazy val beginStmt = Begin("begin" ~> block <~ "end")
+
+    lazy val _returningIfStmt = If("if" ~> expr, "then" ~> _returningBlock, "else" ~> _returningBlock <~ "fi")
+    lazy val _returningStmts: Parsley[Stmt] = returnStmt | exitStmt | _returningIfStmt
+    lazy val _returningBlock = Block(lift2[List[Stmt], Stmt, List[Stmt]](
+        _ :+ _, 
+        many(atomic(simpleStmt <~ ";")), 
+        _returningStmts
+    ))
 
     val simpleStmt: Parsley[Stmt] = (skipStmt | printlnStmt | printStmt
     | declareStmt | assignStmt | readStmt | freeStmt 
