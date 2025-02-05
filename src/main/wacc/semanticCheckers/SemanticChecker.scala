@@ -17,6 +17,8 @@ object SemanticChecker {
 
     def compatible(tarT: WaccType, srcT: WaccType): Boolean =
         tarT == srcT || ((tarT, srcT) match {
+            case (UnknownType(), _) => true
+            case (_, UnknownType()) => true
             case (ArrayType(CharType()), StringType()) => true
             case (ArrayType(tarElemT), ArrayType(srcElemT)) =>
                 compatible(tarElemT, srcElemT) && !weakens(tarElemT, srcElemT)
@@ -234,8 +236,6 @@ object SemanticChecker {
 
         // Array elements
         case ArrayElem(id, es) =>
-            // TODO: array index and type check and output
-
             def getArrayElemType(t: WaccType, exprs: List[Expr]): WaccType = {
                 (t, exprs) match {
                     case (t, Nil) => t
@@ -371,7 +371,18 @@ object SemanticChecker {
             verifyStmt(s)
         case Print(e)   => verifyType(e, anyType)
         case Println(e) => verifyType(e, anyType)
-        case Read(e)    => verifyType(e, IntType()(defaultPos), CharType()(defaultPos))
+        case Read(e)    => getType(e) match {
+            case UnknownType() => 
+                errors +=
+                    ErrorBuilder.specializedError(
+                        Seq(
+                            "Type error: attempting to read from unknown type",
+                            "reading from a nested pair extraction is not legal due to pair erasure"
+                        ),
+                        stmt.pos
+                    )
+            case _ => verifyType(e, IntType()(defaultPos), CharType()(defaultPos))
+        }
         case Declare(t, Ident(name), v) => {
             if (!st.addSymbol(name, t)) {
                 errors +=

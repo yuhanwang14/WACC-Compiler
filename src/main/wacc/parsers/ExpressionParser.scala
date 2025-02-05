@@ -5,6 +5,7 @@ import wacc.lexer.implicits.implicitSymbol, wacc.lexer.*
 import parsley.Parsley.*, parsley.Parsley
 import parsley.errors.combinator.*
 import parsley.expr.{precedence, SOps, Atoms, InfixL, InfixR, InfixN, Prefix}
+import parsley.character.{digit}
 
 object ExpressionParser {
     lazy val arrayElem = atomic(ArrayElem(Ident(ident), some("[".hide ~> expr <~ "]".hide)))
@@ -34,7 +35,7 @@ object ExpressionParser {
                      Div from "/".label("binary operator"),
                      Mod from "%".label("binary operator")) +:
         SOps(Prefix)(Not from "!".label("unary operator"), 
-                     Negate from "-".label("unary operator"), 
+                     atomic(Negate from "-".label("unary operator") <~ notFollowedBy(digit)), 
                      Len from "len".label("unary operator"), 
                      Ord from "ord".label("unary operator"), 
                      Chr from "chr".label("unary operator")) +:

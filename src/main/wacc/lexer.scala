@@ -16,6 +16,9 @@ object lexer {
       ),
       symbolDesc = SymbolDesc.plain.copy(
         hardKeywords = Set[String](
+          "len",
+          "ord",
+          "chr",
           "int",
           "bool",
           "char",
@@ -46,9 +49,6 @@ object lexer {
         hardOperators = Set[String](
           "!",
           "-",
-          "len",
-          "ord",
-          "chr",
           "*",
           "/",
           "%",
@@ -75,10 +75,10 @@ object lexer {
       )
     )
     private val lexer = Lexer(desc)
-    lazy val intLiter = lexer.lexeme.integer.decimal.filter(x => x.isValidInt)
-    lazy val charLiter = lexer.lexeme.character.ascii
-    lazy val strLiter = lexer.lexeme.string.ascii
-    lazy val ident = lexer.lexeme.names.identifier
+    val intLiter = lexer.lexeme.integer.decimal32
+    val charLiter = lexer.lexeme.character.ascii
+    val strLiter = lexer.lexeme.string.ascii
+    val ident = lexer.lexeme.names.identifier
     val implicits = lexer.lexeme.symbol.implicits
 
     def fully[A](p: Parsley[A]): Parsley[A] = lexer.fully(p)

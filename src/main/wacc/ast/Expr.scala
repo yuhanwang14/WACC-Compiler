@@ -33,7 +33,7 @@ case class Len(x: Expr)(val pos: (Int, Int)) extends UnaryOp
 case class Ord(x: Expr)(val pos: (Int, Int)) extends UnaryOp
 case class Chr(x: Expr)(val pos: (Int, Int)) extends UnaryOp
 
-case class IntLiter(x: BigInt)(val pos: (Int, Int)) extends Expr
+case class IntLiter(x: Int)(val pos: (Int, Int)) extends Expr
 case class BoolLiter(x: Boolean)(val pos: (Int, Int)) extends Expr
 case class CharLiter(c: Char)(val pos: (Int, Int)) extends Expr
 case class StrLiter(s: String)(val pos: (Int, Int)) extends Expr
@@ -69,7 +69,7 @@ object Len extends ParserBridgePos1[Expr, Expr]
 object Ord extends ParserBridgePos1[Expr, Expr]
 object Chr extends ParserBridgePos1[Expr, Expr]
 
-object IntLiter extends ParserBridgePos1[BigInt, IntLiter]
+object IntLiter extends ParserBridgePos1[Int, IntLiter]
 object BoolLiter extends ParserBridgePos1[Boolean, BoolLiter]
 object CharLiter extends ParserBridgePos1[Char, CharLiter]
 object StrLiter extends ParserBridgePos1[String, StrLiter]

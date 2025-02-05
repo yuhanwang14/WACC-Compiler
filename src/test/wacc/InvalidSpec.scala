@@ -33,12 +33,12 @@ class InvalidSpec extends UnitSpec {
                             }
                             case errors       => 
                                 println("#semantic_error#")
-                                errors.map{error => println(error.format)}
+                                // errors.map{error => println(error.format)}
                                 assert(true)
                     
                     case parsley.Failure(error) => 
                         println("#syntax_error#")
-                        println(error.format)
+                        // println(error.format)
                         assert(true)
 
                 case Failure(_) => 
