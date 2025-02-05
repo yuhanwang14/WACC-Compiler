@@ -383,7 +383,7 @@ object SemanticChecker {
                     )
             case _ => verifyType(e, IntType()(defaultPos), CharType()(defaultPos))
         }
-        case Declare(t, Ident(name), v) => {
+        case Declare((t, Ident(name)), v) => {
             if (!st.addSymbol(name, t)) {
                 errors +=
                     ErrorBuilder.specializedError(

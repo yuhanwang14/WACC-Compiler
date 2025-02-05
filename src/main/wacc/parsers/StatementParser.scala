@@ -13,13 +13,20 @@ import parsley.errors.combinator.*
 object StatementParser {
     lazy val program = Program("begin" ~> many(func), block <~ "end")
 
-    lazy val func = atomic(Func(waccType, Ident(ident), "(" ~> option(paramList) <~ ")", "is" ~> _returningBlock <~ "end".hide))
+    val typeAndIdent = waccType <~> Ident(ident)
+
+    lazy val func = 
+        Func(
+            atomic(typeAndIdent <~ "("),
+            option(paramList) <~ ")", 
+            "is" ~> _returningBlock.explain("function is missing a return on all exit paths") <~ "end".hide
+        )
 
     lazy val paramList: Parsley[ParamList] = ParamList(sepBy1(param, ","))
     lazy val param = Param(waccType, Ident(ident))
 
     val skipStmt = Skip from "skip"
-    lazy val declareStmt = Declare(waccType, Ident(ident), "=" ~> rValue)
+    lazy val declareStmt = Declare(typeAndIdent, "=" ~> rValue)
     lazy val assignStmt = Assign(lValue, "=".label("assignment") ~> rValue)
     lazy val readStmt = Read("read" ~> lValue)
     val freeStmt = Free("free" ~> expr)

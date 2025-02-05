@@ -18,7 +18,7 @@ object ProgramChecker {
                 errors +=
                     ErrorBuilder.specializedError(
                         Seq(
-                            s"Function redefinition error: illegal redefinition of function ${f.i.name} "
+                            s"Function redefinition error: illegal redefinition of function ${f.ti._2.name} "
                         ),
                         f.pos
                     )
@@ -37,7 +37,7 @@ object ProgramChecker {
         source: String
     ): Unit = {
         st.setGlobalScope(false)
-        st.setReturnType(f.t)
+        st.setReturnType(f.ti._1)
         st.enterScope()
         
         // add params to symbol table

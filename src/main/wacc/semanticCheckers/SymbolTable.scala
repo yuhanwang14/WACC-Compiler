@@ -64,8 +64,8 @@ class SymbolTable {
     }
     
     def addFunction(f: Func): Boolean = { // change output to returning SemanticError
-        val name = f.i.name
-        val returnType = f.t
+        val name = f.ti._2.name
+        val returnType = f.ti._1
         val paramTypes = f.ps match {
             case Some(paramList) => paramList.ps.map(p => p.t)
             case None => List()
