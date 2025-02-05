@@ -32,7 +32,8 @@ object StatementParser {
     lazy val beginStmt = Begin("begin" ~> block <~ "end")
 
     lazy val _returningIfStmt = If("if" ~> expr, "then" ~> _returningBlock, "else" ~> _returningBlock <~ "fi")
-    lazy val _returningStmts: Parsley[Stmt] = returnStmt | exitStmt | _returningIfStmt
+    lazy val _returningBeginStmt = Begin("begin" ~> _returningBlock <~ "end")
+    lazy val _returningStmts: Parsley[Stmt] = returnStmt | exitStmt | _returningIfStmt | _returningBeginStmt
     lazy val _returningBlock = Block(lift2[List[Stmt], Stmt, List[Stmt]](
         _ :+ _, 
         many(atomic(simpleStmt <~ ";")), 
