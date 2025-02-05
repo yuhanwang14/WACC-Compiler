@@ -98,7 +98,7 @@ object SemanticChecker {
                         ErrorBuilder.vanillaError(
                             s"${es.size} arguments", 
                             s"${ts.size} arguments", 
-                            Seq(s"Function call error:   wrong number of arguments provided to function ${name}"), 
+                            Seq(s"Function call error: wrong number of arguments provided to function ${name}"), 
                             id.pos
                         )
                     }
@@ -246,7 +246,7 @@ object SemanticChecker {
                         errors +=
                             ErrorBuilder.specializedError(
                                 Seq(
-                                    s"index error: bad indexing on ${id.name} of type ${t}"
+                                    s"index error: bad indexing on variable ${id.name} of type ${t}"
                                 ),
                                 id.pos
                             )
@@ -426,7 +426,7 @@ object SemanticChecker {
                 errors +=
                     ErrorBuilder.specializedError(
                       Seq(
-                        "Return Placement Error: return outside of function is not allowed"
+                        "Return placement error: return outside of function is not allowed"
                       ),
                       stmt.pos
                     )
