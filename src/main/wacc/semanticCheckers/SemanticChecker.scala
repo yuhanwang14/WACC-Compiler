@@ -17,8 +17,6 @@ object SemanticChecker {
 
     def compatible(tarT: WaccType, srcT: WaccType): Boolean =
         tarT == srcT || ((tarT, srcT) match {
-            case (UnknownType(), _)                    => true
-            case (_, UnknownType())                    => true
             case (ArrayType(CharType()), StringType()) => true
             case (ArrayType(tarElemT), ArrayType(srcElemT)) =>
                 compatible(tarElemT, srcElemT) && !weakens(tarElemT, srcElemT)
@@ -89,11 +87,34 @@ object SemanticChecker {
             NonErasedPairType(t1, t2)(defaultPos)
         }
 
-        case Call(id @ Ident(name), _) => {
+        case Call(id @ Ident(name), ArgList(es)) => {
 
             st.lookupFunction(name) match {
-                case Some(FunctionSignature(t, _)) => t
-                case _ => {
+                case Some(FunctionSignature(rt, ts)) => {
+                    if (es.size != ts.size) {
+                        errors +=
+                        ErrorBuilder.vanillaError(
+                            s"${es.size} arguments", 
+                            s"${ts.size} arguments", 
+                            Seq(s"Function call error:   wrong number of arguments provided to function ${name}"), 
+                            id.pos
+                        )
+                    }
+                    es.zip(ts).foreach {
+                        case (e, t) =>
+                            if (!compatible(t, getType(e))) {
+                                errors +=
+                                    ErrorBuilder.vanillaError(
+                                    s"${t.toString()}",
+                                    s"${{getType(e).toString()}}",
+                                    Seq(),
+                                    e.pos
+                                    )
+                            }
+                    }
+                    rt
+                }
+                case None => {
                     errors +=
                         ErrorBuilder.specializedError(
                           Seq(
@@ -333,7 +354,7 @@ object SemanticChecker {
             verifyStmt(s)
         case Print(e)   => verifyType(e, anyType)
         case Println(e) => verifyType(e, anyType)
-        case Read(e)    => verifyType(e, anyType)
+        case Read(e)    => verifyType(e, IntType()(defaultPos), CharType()(defaultPos))
         case Declare(t, Ident(name), v) => {
             if (!st.addSymbol(name, t)) {
                 errors +=

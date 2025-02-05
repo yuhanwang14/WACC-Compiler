@@ -14,6 +14,7 @@ class SymbolTable {
     private val varTable = mutable.Stack[mutable.Map[String, WaccType]]()
     private val funcTable = mutable.Map[String, FunctionSignature]()
     private var returnType: WaccType = anyType
+    private var globalScopeFlag: Boolean = true
 
     def getVarTable() = varTable
 
@@ -21,15 +22,16 @@ class SymbolTable {
 
     def getReturnType() = returnType
 
+    def isGlobalScope() = globalScopeFlag
+
+    def setGlobalScope(x: Boolean): Unit = globalScopeFlag = x
+
     def setReturnType(t: WaccType) : Unit = {returnType = t}
 
     def clearReturnType() : Unit = {returnType = anyType}
-    
-    def isGlobalScope(): Boolean = varTable.size == 1
 
     // Enters a new nested scope
     def enterScope(): Unit = varTable.push(mutable.Map())
-
 
     // Exits the current scope but ensures the global scope is never removed
     def exitScope(): Unit = varTable.pop()

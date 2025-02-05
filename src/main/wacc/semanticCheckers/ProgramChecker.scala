@@ -26,6 +26,7 @@ object ProgramChecker {
         lines: Seq[String],
         source: String
     ): Unit = {
+        st.setGlobalScope(false)
         st.setReturnType(f.t)
         st.enterScope()
         
@@ -39,6 +40,7 @@ object ProgramChecker {
         SemanticChecker.verifyStmt(f.s)
         st.exitScope()
         st.clearReturnType()
+        st.setGlobalScope(true)
     }
         
 }
