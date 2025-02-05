@@ -1,7 +1,7 @@
 package semanticCheckers
 
 import ast.*
-import errors.Error
+import errors.*
 import scala.collection.mutable.ListBuffer
 
 object ProgramChecker {
@@ -13,7 +13,17 @@ object ProgramChecker {
         implicit val symbolTable = new SymbolTable()
         implicit val errors: ListBuffer[Error] = ListBuffer() 
         symbolTable.enterScope()
-        prog.fs.forall(f => symbolTable.addFunction(f))
+        prog.fs.foreach{f => 
+            if (!symbolTable.addFunction(f)) {
+                errors +=
+                    ErrorBuilder.specializedError(
+                        Seq(
+                            s"Function redefinition error: illegal redefinition of function ${f.i.name} "
+                        ),
+                        f.pos
+                    )
+            }
+        }
         prog.fs.foreach(checkFunction(_))
         symbolTable.exitScope()
         SemanticChecker.verifyStmt(prog.s)
@@ -33,7 +43,17 @@ object ProgramChecker {
         // add params to symbol table
         f.ps match {
             case Some(ParamList(params)) => 
-                params.foreach((p: Param) => st.addSymbol(p.i.name, p.t))
+                params.foreach{(p: Param) => 
+                    if (!st.addSymbol(p.i.name, p.t)) {
+                        errors +=
+                            ErrorBuilder.specializedError(
+                                Seq(
+                                    s"Scope error: illegal redeclaration of variable ${p.i.name} "
+                                ),
+                                p.pos
+                            )
+                    }
+                }
             case _ => 
         }
 

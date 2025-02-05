@@ -75,7 +75,7 @@ object lexer {
       )
     )
     private val lexer = Lexer(desc)
-
+    // TODO: big int checker
     lazy val intLiter = lexer.lexeme.integer.decimal
     lazy val charLiter = lexer.lexeme.character.ascii
     lazy val strLiter = lexer.lexeme.string.ascii

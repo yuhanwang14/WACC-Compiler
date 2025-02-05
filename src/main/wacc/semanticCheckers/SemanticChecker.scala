@@ -233,7 +233,8 @@ object SemanticChecker {
             }
 
         // Array elements
-        case ArrayElem(id, _) =>
+        case ArrayElem(id, es) =>
+            // TODO: array index and type check and output
             getType(id: Expr) match {
                 case ArrayType(t) => t
                 case t => {
