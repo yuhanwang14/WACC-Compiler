@@ -304,7 +304,7 @@ object SemanticChecker {
         source: String
     ): Unit = expr match {
         case Not(e)    => verifyType(e, BoolType()(defaultPos))
-        case Negate(e) => verifyType(e, BoolType()(defaultPos))
+        case Negate(e) => verifyType(e, IntType()(defaultPos))
         case Len(e)    => verifyType(e, ArrayType(anyType)(defaultPos))
         case Ord(e)    => verifyType(e, CharType()(defaultPos))
         case Chr(e)    => verifyType(e, IntType()(defaultPos))
