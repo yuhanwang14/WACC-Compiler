@@ -9,7 +9,6 @@ case class AnyType()(val pos: (Int, Int)) extends WaccType {
 case class UnknownType()(val pos: (Int, Int)) extends WaccType {
     override def toString(): String = "unknown type"
 }
-case class NotExistType()(val pos: (Int, Int)) extends WaccType
 
 case class FirstErrorType(t: WaccType)(val pos: (Int, Int)) extends WaccType
 case class SecondErrorType(t: WaccType)(val pos: (Int, Int)) extends WaccType
@@ -42,7 +41,6 @@ case class NonErasedPairType(t1: WaccType, t2: WaccType)(val pos: (Int, Int)) ex
 
 object AnyType extends ParserBridgePos0[AnyType]
 object UnknownType extends ParserBridgePos0[UnknownType]
-object NotExistType extends ParserBridgePos0[NotExistType]
 object FirstErrorType extends ParserBridgePos1[WaccType, FirstErrorType]
 object SecondErrorType extends ParserBridgePos1[WaccType, SecondErrorType]
 
