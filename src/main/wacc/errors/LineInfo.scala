@@ -39,13 +39,13 @@ object LineInfo {
         val len: Int = lines.size
         val width: Int = 1
 
-        val rowStartAt: Int = math.min(row - width, 1)
-        val rowEndAt: Int = math.max(row + width, len)
+        val rowStartAt: Int = math.max(row - width, 1)
+        val rowEndAt: Int = math.min(row + width, len)
         val linesBefore: Seq[String] =
-            if (rowStartAt < row) then lines.slice(rowStartAt - 1, row - 2)
+            if (rowStartAt < row) then lines.slice(rowStartAt - 1, row - 1)
             else Seq[String]()
         val linesAfter: Seq[String] =
-            if (row < rowEndAt) then lines.slice(row, rowEndAt - 1)
+            if (row < rowEndAt) then lines.slice(row, rowEndAt)
             else Seq[String]()
 
         new LineInfo(lines(row - 1), linesBefore, linesAfter, row, col)

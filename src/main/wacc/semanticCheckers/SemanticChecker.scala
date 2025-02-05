@@ -235,12 +235,28 @@ object SemanticChecker {
         // Array elements
         case ArrayElem(id, es) =>
             // TODO: array index and type check and output
-            getType(id: Expr) match {
-                case ArrayType(t) => t
-                case t => {
-                    ArrayErrorType(t)(defaultPos)
+
+            def getArrayElemType(t: WaccType, exprs: List[Expr]): WaccType = {
+                (t, exprs) match {
+                    case (t, Nil) => t
+                    case (ArrayType(t), head :: tail) =>
+                        verifyType(head, IntType()(defaultPos)) 
+                        getArrayElemType(t, tail)
+                    case (t, _) => {
+                        errors +=
+                            ErrorBuilder.specializedError(
+                                Seq(
+                                    s"index error: bad indexing on ${id.name} of type ${t}"
+                                ),
+                                id.pos
+                            )
+                        anyType
+                    }
                 }
             }
+            val t: WaccType = getType(id: Expr)
+            getArrayElemType(t, es)
+
     }
     private def verifyTypeHelper(
         t: WaccType,
