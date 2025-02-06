@@ -9,11 +9,9 @@ import parsley.lift.*
 import parsers.ExpressionParser.*
 import parsley.Parsley
 import parsley.errors.combinator.*
-import parsley.errors.patterns.*
 
 object StatementParser {
-    lazy val program = Program("begin" ~> many(func), (block <~ "end")
-        <~ ";".verifiedExplain("semi-colons cannot follow the 'end' of program"))
+    lazy val program = Program("begin" ~> many(func), block <~ "end")
 
     val typeAndIdent = waccType <~> Ident(ident)
 
@@ -52,7 +50,7 @@ object StatementParser {
     val simpleStmt: Parsley[Stmt] = (skipStmt | printlnStmt | printStmt
     | declareStmt | assignStmt | readStmt | freeStmt 
     | returnStmt | exitStmt | ifStmt | whileStmt | beginStmt).label("statement")
-    lazy val block = Block(sepBy1(simpleStmt, ";".hide))
+    lazy val block = Block(sepBy1(simpleStmt, ";"))
 
     lazy val lValue: Parsley[LValue] = arrayElem | Ident(ident) | pairElem
     lazy val pairElem: Parsley[PairElem] = First(("fst" ~> lValue.label("pair"))) | Second(("snd" ~> lValue.label("pair")))

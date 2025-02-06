@@ -6,6 +6,8 @@ import parsley.Parsley.*, parsley.Parsley
 import parsley.errors.combinator.*
 import parsley.expr.{precedence, SOps, Atoms, InfixL, InfixR, InfixN, Prefix}
 import parsley.character.{digit}
+import parsley.errors.patterns.*
+import parsley.errors.VanillaGen
 
 object ExpressionParser {
     lazy val arrayElem = atomic(ArrayElem(Ident(ident), some("[".hide ~> expr <~ "]".hide)))
@@ -17,7 +19,13 @@ object ExpressionParser {
             CharLiter(charLiter), 
             StrLiter(strLiter),
             PairLiter from "null",
-            Ident(ident), 
+            Ident(ident) <~ "(".preventWith(
+                err = new VanillaGen[Unit] {
+                    override def reason(x: Unit) = Some("function calls may not appear in expressions and must use `call`")
+                    override def unexpected(x: Unit) = VanillaGen.NamedItem("opening parenthesis")
+                },
+                labels = "array index or binary operator"
+            ), 
             Paren("(" ~> expr <~ ")")
         )
     lazy val expr: Parsley[Expr] = precedence {
