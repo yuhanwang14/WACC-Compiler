@@ -74,6 +74,88 @@ object SemanticChecker {
         }
     }
 
+    def getType(expr: Expr)(implicit
+        st: SymbolTable,
+        errors: ListBuffer[Error],
+        lines: Seq[String],
+        source: String
+    ): WaccType = expr match {
+        // Literal cases
+        case IntLiter(_)  => IntType()(defaultPos)
+        case BoolLiter(_) => BoolType()(defaultPos)
+        case CharLiter(_) => CharType()(defaultPos)
+        case StrLiter(_)  => StringType()(defaultPos)
+        case PairLiter() =>
+            NonErasedPairType(anyType, anyType)(
+              defaultPos
+            )
+
+        // Parentheses
+        case Paren(e) => getType(e)
+
+        // Unary operators
+        case e @ Not(_) =>
+            verifyUnary(e)
+            BoolType()(defaultPos)
+        case e @ (Negate(_) | Len(_) | Ord(_)) =>
+            verifyUnary(e)
+            IntType()(defaultPos)
+        case e @ Chr(_) =>
+            verifyUnary(e)
+            CharType()(defaultPos)
+
+        // Binary operators producing Int results
+        case e @ (Mul(_, _) | Div(_, _) | Mod(_, _) | Add(_, _) | Sub(_, _)) =>
+            verifyBinary(e)
+            IntType()(defaultPos)
+
+        // Binary operators producing Bool results
+        case e @ (Less(_, _) | LessEqual(_, _) | Greater(_, _) |
+            GreaterEqual(_, _) | Equal(_, _) | NotEqual(_, _) | And(_, _) |
+            Or(_, _)) =>
+            verifyBinary(e)
+            BoolType()(defaultPos)
+
+        // Identifiers
+        case (id @ Ident(name)) =>
+            st.lookupSymbol(name) match {
+                case Some(t) => t
+                case None => {
+                    errors +=
+                        ErrorBuilder.specializedError(
+                          Seq(
+                            s"Scope error: variable $name has not been declared in this scope"
+                          ),
+                          id.pos
+                        )
+                    anyType
+                }
+            }
+
+        // Array elements
+        case ArrayElem(id, es) =>
+            def getArrayElemType(t: WaccType, exprs: List[Expr]): WaccType = {
+                (t, exprs) match {
+                    case (t, Nil) => t
+                    case (ArrayType(t), head :: tail) =>
+                        verifyType(head, IntType()(defaultPos)) 
+                        getArrayElemType(t, tail)
+                    case (t, _) => {
+                        errors +=
+                            ErrorBuilder.specializedError(
+                                Seq(
+                                    s"index error: bad indexing on variable ${id.name} of type ${t}"
+                                ),
+                                id.pos
+                            )
+                        anyType
+                    }
+                }
+            }
+            val t: WaccType = getType(id: Expr)
+            getArrayElemType(t, es)
+    }
+
     def getType(rVal: RValue)(implicit
         st: SymbolTable,
         errors: ListBuffer[Error],
@@ -156,108 +238,9 @@ object SemanticChecker {
         lines: Seq[String],
         source: String
     ): WaccType = lVal match {
-        case First(insideLVal) =>
-            getType(insideLVal) match {
-                case NonErasedPairType(t, _) => t
-                case ErasedPairType()        => UnknownType()(defaultPos)
-                case errT @ (FirstErrorType(_) | SecondErrorType(_)) => FirstErrorType(errT)(errT.pos)
-                case t => {
-                    FirstErrorType(t)(insideLVal.pos)
-                }
-            }
-
-        case Second(insideLVal) =>
-            getType(insideLVal) match {
-                case NonErasedPairType(_, t) => t
-                case ErasedPairType()        => UnknownType()(defaultPos)
-                case errT @ (FirstErrorType(_) | SecondErrorType(_)) => SecondErrorType(errT)(errT.pos)
-                case t => SecondErrorType(t)(insideLVal.pos)
-            }
-        case e: Expr => getType(e: Expr)
+        case v: RValue => getType(v: RValue)
     }
 
-    def getType(expr: Expr)(implicit
-        st: SymbolTable,
-        errors: ListBuffer[Error],
-        lines: Seq[String],
-        source: String
-    ): WaccType = expr match {
-        // Literal cases
-        case IntLiter(_)  => IntType()(defaultPos)
-        case BoolLiter(_) => BoolType()(defaultPos)
-        case CharLiter(_) => CharType()(defaultPos)
-        case StrLiter(_)  => StringType()(defaultPos)
-        case PairLiter() =>
-            NonErasedPairType(anyType, anyType)(
-              defaultPos
-            )
-
-        // Parentheses
-        case Paren(e) => getType(e)
-
-        // Unary operators
-        case e @ Not(_) =>
-            verifyUnary(e)
-            BoolType()(defaultPos)
-        case e @ (Negate(_) | Len(_) | Ord(_)) =>
-            verifyUnary(e)
-            IntType()(defaultPos)
-        case e @ Chr(_) =>
-            verifyUnary(e)
-            CharType()(defaultPos)
-
-        // Binary operators producing Int results
-        case e @ (Mul(_, _) | Div(_, _) | Mod(_, _) | Add(_, _) | Sub(_, _)) =>
-            verifyBinary(e)
-            IntType()(defaultPos)
-
-        // Binary operators producing Bool results
-        case e @ (Less(_, _) | LessEqual(_, _) | Greater(_, _) |
-            GreaterEqual(_, _) | Equal(_, _) | NotEqual(_, _) | And(_, _) |
-            Or(_, _)) =>
-            verifyBinary(e)
-            BoolType()(defaultPos)
-
-        // Identifiers
-        case (id @ Ident(name)) =>
-            st.lookupSymbol(name) match {
-                case Some(t) => t
-                case None => {
-                    errors +=
-                        ErrorBuilder.specializedError(
-                          Seq(
-                            s"Scope error: variable $name has not been declared in this scope"
-                          ),
-                          id.pos
-                        )
-                    anyType
-                }
-            }
-
-        // Array elements
-        case ArrayElem(id, es) =>
-            def getArrayElemType(t: WaccType, exprs: List[Expr]): WaccType = {
-                (t, exprs) match {
-                    case (t, Nil) => t
-                    case (ArrayType(t), head :: tail) =>
-                        verifyType(head, IntType()(defaultPos)) 
-                        getArrayElemType(t, tail)
-                    case (t, _) => {
-                        errors +=
-                            ErrorBuilder.specializedError(
-                                Seq(
-                                    s"index error: bad indexing on variable ${id.name} of type ${t}"
-                                ),
-                                id.pos
-                            )
-                        anyType
-                    }
-                }
-            }
-            val t: WaccType = getType(id: Expr)
-            getArrayElemType(t, es)
-
-    }
     private def verifyTypeHelper(
         t: WaccType,
         expT: Seq[WaccType],
@@ -275,20 +258,6 @@ object SemanticChecker {
                   Seq(),
                   pos
                 )
-
-    private def verifyType(e: LValue, expT: WaccType*)(implicit
-        st: SymbolTable,
-        errors: ListBuffer[Error],
-        lines: Seq[String],
-        source: String
-    ): Unit = verifyTypeHelper(getType(e), expT, e.pos)
-
-    private def verifyType(e: RValue, expT: WaccType*)(implicit
-        st: SymbolTable,
-        errors: ListBuffer[Error],
-        lines: Seq[String],
-        source: String
-    ): Unit = verifyTypeHelper(getType(e), expT, e.pos)
 
     private def verifyType(e: Expr, expT: WaccType*)(implicit
         st: SymbolTable,
@@ -357,13 +326,11 @@ object SemanticChecker {
 
     def errorTypePrettyPrint(t: WaccType, innerType: WaccType): (String, String) = t match {
         case FirstErrorType(inner) => inner match {
-            // If inner is itself an error type, recurse with flipped = true
             case _: FirstErrorType | _: SecondErrorType =>
                 val (base, innerExpected) = errorTypePrettyPrint(inner, innerType)
                 val exp = s"pair($innerExpected, any type)"
                 (base, exp)
             case _ =>
-            // inner is a “normal” type
                 val base = inner.toString
                 val exp = s"pair(${innerType.toString}, any type)" 
                 (base, exp)
@@ -379,7 +346,6 @@ object SemanticChecker {
                 (base, exp)
         }
         case other =>
-            // For non-error types, just use toString
             (other.toString, other.toString)
         }
 
@@ -420,7 +386,15 @@ object SemanticChecker {
                         Seq(), 
                         errT.pos
                     )
-            case _ => verifyType(e, IntType()(defaultPos), CharType()(defaultPos))
+            case t => 
+                if (!compatible(t, IntType()(defaultPos)) && !compatible(t, CharType()(defaultPos))) 
+                    errors +=
+                        ErrorBuilder.vanillaError(
+                            t.toString(), 
+                            s"int or char", 
+                            Seq(), 
+                            stmt.pos
+                        )
         }
         case Declare((t, Ident(name)), v) => {
             if (!st.addSymbol(name, t)) {
@@ -442,7 +416,14 @@ object SemanticChecker {
                             Seq(), 
                             errT.pos
                         )
-                case _ => verifyType(v, t)
+                case vt => if (!compatible(vt, t)) 
+                    errors +=
+                        ErrorBuilder.vanillaError(
+                            vt.toString(), 
+                            t.toString,
+                            Seq(), 
+                            stmt.pos
+                        )
             }
         }
         case Assign(v1, v2) =>
@@ -460,7 +441,6 @@ object SemanticChecker {
                     FirstErrorType(_) | SecondErrorType(_), 
                     FirstErrorType(_) | SecondErrorType(_)
                 ) => 
-                    // TODO: This is different from the references
                     errors +=
                         ErrorBuilder.specializedError(
                           Seq(
@@ -487,7 +467,14 @@ object SemanticChecker {
                             Seq(), 
                             errT.pos
                         )
-                case (t1, _) => verifyType(v2, t1)
+                case (t1, t2) => if (!compatible(t1, t2)) 
+                    errors +=
+                        ErrorBuilder.vanillaError(
+                            t2.toString(), 
+                            t1.toString,
+                            Seq(), 
+                            stmt.pos
+                        )
             }
         case Begin(stmt) => verifyStmt(stmt)
         case Block(sts) =>
