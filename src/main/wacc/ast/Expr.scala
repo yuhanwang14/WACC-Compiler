@@ -2,8 +2,10 @@ package ast
 
 import utils.*
 
+// Expressions
 abstract trait Expr extends RValue
 
+// Binary Operations
 sealed trait BinaryOp extends Expr
 
 case class Or(x: Expr, y: Expr)(val pos: (Int, Int)) extends BinaryOp
@@ -25,6 +27,7 @@ case class Mul(x: Expr, y: Expr)(val pos: (Int, Int)) extends BinaryOp
 case class Div(x: Expr, y: Expr)(val pos: (Int, Int)) extends BinaryOp
 case class Mod(x: Expr, y: Expr)(val pos: (Int, Int)) extends BinaryOp
 
+// Unary Operations
 sealed trait UnaryOp extends Expr
 
 case class Not(x: Expr)(val pos: (Int, Int)) extends UnaryOp
@@ -33,15 +36,14 @@ case class Len(x: Expr)(val pos: (Int, Int)) extends UnaryOp
 case class Ord(x: Expr)(val pos: (Int, Int)) extends UnaryOp
 case class Chr(x: Expr)(val pos: (Int, Int)) extends UnaryOp
 
+// Atoms
 case class IntLiter(x: Int)(val pos: (Int, Int)) extends Expr
 case class BoolLiter(x: Boolean)(val pos: (Int, Int)) extends Expr
 case class CharLiter(c: Char)(val pos: (Int, Int)) extends Expr
 case class StrLiter(s: String)(val pos: (Int, Int)) extends Expr
 case class PairLiter()(val pos: (Int, Int)) extends Expr
 case class Ident(name: String)(val pos: (Int, Int)) extends Expr with LValue
-case class ArrayElem(ident: Ident, exprs: List[Expr])(val pos: (Int, Int))
-    extends Expr
-    with LValue
+case class ArrayElem(identName: Ident, exprs: List[Expr])(val pos: (Int, Int)) extends Expr with LValue
 case class Paren(x: Expr)(val pos: (Int, Int)) extends Expr
 
 object Or extends ParserBridgePos2[Expr, Expr, Expr]

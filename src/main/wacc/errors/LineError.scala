@@ -1,23 +1,23 @@
 package errors
 
 sealed trait LineError {
-    val errorType: String
-    val msgs: Seq[String]
-    val lines: Seq[String]
+  val errorType: String
+  val msgs: Seq[String]
+  val lines: Seq[String]
 
-    protected def mergeExpectation(
-        unexpected: Option[String],
-        expected: Option[String],
-        reasons: Seq[String]
-    ): Seq[String] = {
-        (unexpected, expected) match {
-            case (None, None) => reasons
-            case _ =>
-                unexpected.fold(Nil){(x: String) => Seq(s"unexpected " + x)} ++
-                expected.fold(Nil){(x: String) => Seq(s"expected " + x)} ++
-                reasons
-        }
+  protected def mergeExpectation(
+      unexpected: Option[String],
+      expected: Option[String],
+      reasons: Seq[String]
+  ): Seq[String] = {
+    (unexpected, expected) match {
+      case (None, None) => reasons
+      case _ =>
+        unexpected.fold(Nil) { (x: String) => Seq(s"unexpected " + x) } ++
+          expected.fold(Nil) { (x: String) => Seq(s"expected " + x) } ++
+          reasons
     }
+  }
 }
 
 case class SyntaxError(
@@ -26,10 +26,10 @@ case class SyntaxError(
     reasons: Seq[String],
     lineInfo: LineInfo
 ) extends LineError {
-    override val errorType: String = "syntax error"
-    override val msgs: Seq[String] =
-        mergeExpectation(unexpected, expected, reasons)
-    override val lines: Seq[String] = lineInfo.format
+  override val errorType: String = "syntax error"
+  override val msgs: Seq[String] =
+    mergeExpectation(unexpected, expected, reasons)
+  override val lines: Seq[String] = lineInfo.format
 }
 
 case class SemanticError(
@@ -38,9 +38,8 @@ case class SemanticError(
     reasons: Seq[String],
     lineinfo: LineInfo
 ) extends LineError {
-    override val errorType: String = "semantic error"
-    override val msgs: Seq[String] =
-        mergeExpectation(unexpected, expected, reasons)
-    override val lines: Seq[String] = lineinfo.format
+  override val errorType: String = "semantic error"
+  override val msgs: Seq[String] =
+    mergeExpectation(unexpected, expected, reasons)
+  override val lines: Seq[String] = lineinfo.format
 }
-

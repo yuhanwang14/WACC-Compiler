@@ -2,15 +2,16 @@ package ast
 
 import utils.*
 
+// Abstract trait to track the positions
 abstract trait Position {
-    val pos: (Int, Int)
+  val pos: (Int, Int)
 }
 
+// Type alias of declarations for functions and variables
 type TypeAndIdent = (WaccType, Ident)
 
 // Program
-case class Program(fs: List[Func], s: Stmt)(val pos: (Int, Int))
-    extends Position
+case class Program(fs: List[Func], s: Stmt)(val pos: (Int, Int)) extends Position
 
 // Function
 case class Func(ti: TypeAndIdent, ps: Option[ParamList], s: Stmt)(
@@ -26,8 +27,7 @@ case class Param(t: WaccType, i: Ident)(val pos: (Int, Int)) extends Position
 // Statement
 sealed trait Stmt extends Position
 case class Skip()(val pos: (Int, Int)) extends Stmt
-case class Declare(ti: TypeAndIdent, r: RValue)(val pos: (Int, Int))
-    extends Stmt
+case class Declare(ti: TypeAndIdent, r: RValue)(val pos: (Int, Int)) extends Stmt
 case class Assign(l: LValue, r: RValue)(val pos: (Int, Int)) extends Stmt
 case class Read(l: LValue)(val pos: (Int, Int)) extends Stmt
 case class Free(e: Expr)(val pos: (Int, Int)) extends Stmt
@@ -62,8 +62,7 @@ case class ArgList(es: List[Expr])(val pos: (Int, Int)) extends Position
 
 object Program extends ParserBridgePos2[List[Func], Stmt, Program]
 
-object Func
-    extends ParserBridgePos3[TypeAndIdent, Option[ParamList], Stmt, Func]
+object Func extends ParserBridgePos3[TypeAndIdent, Option[ParamList], Stmt, Func]
 
 object ParamList extends ParserBridgePos1[List[Param], ParamList]
 
