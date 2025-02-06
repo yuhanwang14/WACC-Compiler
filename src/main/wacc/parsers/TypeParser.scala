@@ -7,7 +7,7 @@ import parsley.expr.chain
 import parsley.errors.combinator.*
 
 object TypeParser {
-    lazy val waccType: Parsley[WaccType] = arrayType | nonErasedPairType | baseType 
+    lazy val waccType: Parsley[WaccType] = (arrayType | nonErasedPairType | baseType).label("type")
     val intType = IntType from "int"
     val boolType = BoolType from "bool"
     val charType = CharType from "char"
