@@ -3,12 +3,15 @@ package semanticCheckers
 import ast.*
 
 import errors.*
-import scala.util.control.Breaks.{break, breakable}
 import scala.collection.mutable.ListBuffer
 
 object SemanticChecker {
     val defaultPos: (Int, Int) = (-1, -1)
     val anyType: WaccType = AnyType()(defaultPos)
+    private val intType: WaccType = IntType()(defaultPos)
+    private val boolType: WaccType = BoolType()(defaultPos)
+    private val charType: WaccType = CharType()(defaultPos)
+    private val stringType: WaccType = StringType()(defaultPos)
 
     def weakens(tarT: WaccType, srcT: WaccType): Boolean = (tarT, srcT) match
         case (ArrayType(CharType()), StringType()) => true
@@ -45,33 +48,26 @@ object SemanticChecker {
         source: String
     ): WaccType = es.map(getType).distinct match {
         case Nil => ArrayType(anyType)(defaultPos)
-        case ts @ (head :: tail) => {
-            var resultType = head
-            var invalid = false
-            breakable {
-                tail.foreach { t =>
-                    if (compatible(resultType, t)) {
-                        resultType = t;
-                    } else if (!compatible(t, resultType)) {
-                        invalid = true
-                        break()
-                    }
-                }
+        case ts @ (head :: tail) =>
+            val (resultType, invalid) = tail.foldLeft((head, false)) {
+                case ((currentType, isInvalid), t) =>
+                    if (isInvalid) (currentType, true)
+                    else if (compatible(currentType, t)) (t, false)
+                    else if (compatible(t, currentType)) (currentType, false)
+                    else (currentType, true)
             }
             if (invalid) {
-                errors +=
-                    ErrorBuilder.specializedError(
-                      Seq(
-                        "Type Error: array literal mismatch",
-                        s"literal contains mix of ${ts.mkString(", ")}"
-                      ),
-                      es.head.pos
-                    )
-                AnyType()(defaultPos)
+                errors += ErrorBuilder.specializedError(
+                  Seq(
+                    "Type Error: array literal mismatch",
+                    s"literal contains mix of ${ts.mkString(", ")}"
+                  ),
+                  es.head.pos
+                )
+                anyType
             } else {
                 ArrayType(resultType)(defaultPos)
             }
-        }
     }
 
     def getType(expr: Expr)(implicit
@@ -81,10 +77,10 @@ object SemanticChecker {
         source: String
     ): WaccType = expr match {
         // Literal cases
-        case IntLiter(_)  => IntType()(defaultPos)
-        case BoolLiter(_) => BoolType()(defaultPos)
-        case CharLiter(_) => CharType()(defaultPos)
-        case StrLiter(_)  => StringType()(defaultPos)
+        case IntLiter(_)  => intType
+        case BoolLiter(_) => boolType
+        case CharLiter(_) => charType
+        case StrLiter(_)  => stringType
         case PairLiter() =>
             NonErasedPairType(anyType, anyType)(
               defaultPos
@@ -96,25 +92,25 @@ object SemanticChecker {
         // Unary operators
         case e @ Not(_) =>
             verifyUnary(e)
-            BoolType()(defaultPos)
+            boolType
         case e @ (Negate(_) | Len(_) | Ord(_)) =>
             verifyUnary(e)
-            IntType()(defaultPos)
+            intType
         case e @ Chr(_) =>
             verifyUnary(e)
-            CharType()(defaultPos)
+            charType
 
         // Binary operators producing Int results
         case e @ (Mul(_, _) | Div(_, _) | Mod(_, _) | Add(_, _) | Sub(_, _)) =>
             verifyBinary(e)
-            IntType()(defaultPos)
+            intType
 
         // Binary operators producing Bool results
         case e @ (Less(_, _) | LessEqual(_, _) | Greater(_, _) |
             GreaterEqual(_, _) | Equal(_, _) | NotEqual(_, _) | And(_, _) |
             Or(_, _)) =>
             verifyBinary(e)
-            BoolType()(defaultPos)
+            boolType
 
         // Identifiers
         case (id @ Ident(name)) =>
@@ -138,7 +134,7 @@ object SemanticChecker {
                 (t, exprs) match {
                     case (t, Nil) => t
                     case (ArrayType(t), head :: tail) =>
-                        verifyType(head, IntType()(defaultPos))
+                        verifyType(head, intType)
                         getArrayElemType(t, tail)
                     case (t, _) => {
                         errors +=
@@ -275,11 +271,11 @@ object SemanticChecker {
         lines: Seq[String],
         source: String
     ): Unit = expr match {
-        case Not(e)    => verifyType(e, BoolType()(defaultPos))
-        case Negate(e) => verifyType(e, IntType()(defaultPos))
+        case Not(e)    => verifyType(e, boolType)
+        case Negate(e) => verifyType(e, intType)
         case Len(e)    => verifyType(e, ArrayType(anyType)(defaultPos))
-        case Ord(e)    => verifyType(e, CharType()(defaultPos))
-        case Chr(e)    => verifyType(e, IntType()(defaultPos))
+        case Ord(e)    => verifyType(e, charType)
+        case Chr(e)    => verifyType(e, intType)
     }
 
     def verifyBinary(expr: BinaryOp)(implicit
@@ -289,42 +285,42 @@ object SemanticChecker {
         source: String
     ): Unit = expr match {
         case Mul(e1, e2) =>
-            verifyType(e1, IntType()(defaultPos))
-            verifyType(e2, IntType()(defaultPos))
+            verifyType(e1, intType)
+            verifyType(e2, intType)
         case Div(e1, e2) =>
-            verifyType(e1, IntType()(defaultPos))
-            verifyType(e2, IntType()(defaultPos))
+            verifyType(e1, intType)
+            verifyType(e2, intType)
         case Mod(e1, e2) =>
-            verifyType(e1, IntType()(defaultPos))
-            verifyType(e2, IntType()(defaultPos))
+            verifyType(e1, intType)
+            verifyType(e2, intType)
         case Add(e1, e2) =>
-            verifyType(e1, IntType()(defaultPos))
-            verifyType(e2, IntType()(defaultPos))
+            verifyType(e1, intType)
+            verifyType(e2, intType)
         case Sub(e1, e2) =>
-            verifyType(e1, IntType()(defaultPos))
-            verifyType(e2, IntType()(defaultPos))
+            verifyType(e1, intType)
+            verifyType(e2, intType)
         case Greater(e1, e2) =>
-            verifyType(e1, IntType()(defaultPos), CharType()(defaultPos))
-            verifyType(e2, IntType()(defaultPos), CharType()(defaultPos))
+            verifyType(e1, intType, charType)
+            verifyType(e2, intType, charType)
         case GreaterEqual(e1, e2) =>
-            verifyType(e1, IntType()(defaultPos), CharType()(defaultPos))
-            verifyType(e2, IntType()(defaultPos), CharType()(defaultPos))
+            verifyType(e1, intType, charType)
+            verifyType(e2, intType, charType)
         case Less(e1, e2) =>
-            verifyType(e1, IntType()(defaultPos), CharType()(defaultPos))
-            verifyType(e2, IntType()(defaultPos), CharType()(defaultPos))
+            verifyType(e1, intType, charType)
+            verifyType(e2, intType, charType)
         case LessEqual(e1, e2) =>
-            verifyType(e1, IntType()(defaultPos), CharType()(defaultPos))
-            verifyType(e2, IntType()(defaultPos), CharType()(defaultPos))
+            verifyType(e1, intType, charType)
+            verifyType(e2, intType, charType)
         case Equal(e1, e2) =>
             verifyType(e2, getType(e1))
         case NotEqual(e1, e2) =>
             verifyType(e2, getType(e1))
         case And(e1, e2) =>
-            verifyType(e1, BoolType()(defaultPos))
-            verifyType(e2, BoolType()(defaultPos))
+            verifyType(e1, boolType)
+            verifyType(e2, boolType)
         case Or(e1, e2) =>
-            verifyType(e1, BoolType()(defaultPos))
-            verifyType(e2, BoolType()(defaultPos))
+            verifyType(e1, boolType)
+            verifyType(e2, boolType)
     }
 
     def errorTypePrettyPrint(
@@ -365,13 +361,13 @@ object SemanticChecker {
         lines: Seq[String],
         source: String
     ): Unit = stmt match {
-        case Exit(e) => verifyType(e, IntType()(defaultPos))
+        case Exit(e) => verifyType(e, intType)
         case If(e, s1, s2) =>
-            verifyType(e, BoolType()(defaultPos))
+            verifyType(e, boolType)
             verifyStmt(s1)
             verifyStmt(s2)
         case While(e, s) =>
-            verifyType(e, BoolType()(defaultPos))
+            verifyType(e, boolType)
             verifyStmt(s)
         case Print(e)   => verifyType(e, anyType)
         case Println(e) => verifyType(e, anyType)
@@ -388,9 +384,9 @@ object SemanticChecker {
                         )
                 case errT @ (FirstErrorType(_) | SecondErrorType(_)) =>
                     val (unMsg, msgChar) =
-                        errorTypePrettyPrint(errT, CharType()(defaultPos))
+                        errorTypePrettyPrint(errT, charType)
                     val (_, msgInt) =
-                        errorTypePrettyPrint(errT, IntType()(defaultPos))
+                        errorTypePrettyPrint(errT, intType)
                     errors +=
                         ErrorBuilder.vanillaError(
                           unMsg,
@@ -400,9 +396,9 @@ object SemanticChecker {
                         )
                 case t =>
                     if (
-                      !compatible(t, IntType()(defaultPos)) && !compatible(
+                      !compatible(t, intType) && !compatible(
                         t,
-                        CharType()(defaultPos)
+                        charType
                       )
                     )
                         errors +=
