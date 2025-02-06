@@ -17,8 +17,8 @@ object SemanticChecker {
 
     def compatible(tarT: WaccType, srcT: WaccType): Boolean =
         tarT == srcT || ((tarT, srcT) match {
-            case (UnknownType(), _) => true
-            case (_, UnknownType()) => true
+            case (UnknownType(), _)                    => true
+            case (_, UnknownType())                    => true
             case (ArrayType(CharType()), StringType()) => true
             case (ArrayType(tarElemT), ArrayType(srcElemT)) =>
                 compatible(tarElemT, srcElemT) && !weakens(tarElemT, srcElemT)
@@ -138,15 +138,15 @@ object SemanticChecker {
                 (t, exprs) match {
                     case (t, Nil) => t
                     case (ArrayType(t), head :: tail) =>
-                        verifyType(head, IntType()(defaultPos)) 
+                        verifyType(head, IntType()(defaultPos))
                         getArrayElemType(t, tail)
                     case (t, _) => {
                         errors +=
                             ErrorBuilder.specializedError(
-                                Seq(
-                                    s"index error: bad indexing on variable ${id.name} of type ${t}"
-                                ),
-                                id.pos
+                              Seq(
+                                s"index error: bad indexing on variable ${id.name} of type ${t}"
+                              ),
+                              id.pos
                             )
                         anyType
                     }
@@ -178,23 +178,24 @@ object SemanticChecker {
                     if (es.size != ts.size) {
                         errors +=
                             ErrorBuilder.vanillaError(
-                                s"${es.size} arguments", 
-                                s"${ts.size} arguments", 
-                                Seq(s"Function call error: wrong number of arguments provided to function ${name}"), 
-                                id.pos
+                              s"${es.size} arguments",
+                              s"${ts.size} arguments",
+                              Seq(
+                                s"Function call error: wrong number of arguments provided to function ${name}"
+                              ),
+                              id.pos
                             )
                     }
-                    es.zip(ts).foreach {
-                        case (e, t) =>
-                            if (!compatible(t, getType(e))) {
-                                errors +=
-                                    ErrorBuilder.vanillaError(
-                                    s"${t.toString()}",
-                                    s"${{getType(e).toString()}}",
-                                    Seq(),
-                                    e.pos
-                                    )
-                            }
+                    es.zip(ts).foreach { case (e, t) =>
+                        if (!compatible(t, getType(e))) {
+                            errors +=
+                                ErrorBuilder.vanillaError(
+                                  s"${t.toString()}",
+                                  s"${{ getType(e).toString() }}",
+                                  Seq(),
+                                  e.pos
+                                )
+                        }
                     }
                     rt
                 }
@@ -217,7 +218,8 @@ object SemanticChecker {
             getType(insideLVal) match {
                 case NonErasedPairType(t, _) => t
                 case ErasedPairType()        => UnknownType()(defaultPos)
-                case errT @ (FirstErrorType(_) | SecondErrorType(_)) => FirstErrorType(errT)(errT.pos)
+                case errT @ (FirstErrorType(_) | SecondErrorType(_)) =>
+                    FirstErrorType(errT)(errT.pos)
                 case t => {
                     FirstErrorType(t)(insideLVal.pos)
                 }
@@ -227,7 +229,8 @@ object SemanticChecker {
             getType(insideLVal) match {
                 case NonErasedPairType(_, t) => t
                 case ErasedPairType()        => UnknownType()(defaultPos)
-                case errT @ (FirstErrorType(_) | SecondErrorType(_)) => SecondErrorType(errT)(errT.pos)
+                case errT @ (FirstErrorType(_) | SecondErrorType(_)) =>
+                    SecondErrorType(errT)(errT.pos)
                 case t => SecondErrorType(t)(insideLVal.pos)
             }
     }
@@ -324,31 +327,37 @@ object SemanticChecker {
             verifyType(e2, BoolType()(defaultPos))
     }
 
-    def errorTypePrettyPrint(t: WaccType, innerType: WaccType): (String, String) = t match {
-        case FirstErrorType(inner) => inner match {
-            case _: FirstErrorType | _: SecondErrorType =>
-                val (base, innerExpected) = errorTypePrettyPrint(inner, innerType)
-                val exp = s"pair($innerExpected, any type)"
-                (base, exp)
-            case _ =>
-                val base = inner.toString
-                val exp = s"pair(${innerType.toString}, any type)" 
-                (base, exp)
-        }
-        case SecondErrorType(inner) => inner match {
-            case _: FirstErrorType | _: SecondErrorType =>
-                val (base, innerExpected) = errorTypePrettyPrint(inner, innerType)
-                val exp = s"pair(any type, $innerExpected)"
-                (base, exp)
-            case _ =>
-                val base = inner.toString
-                val exp = s"pair(any type, ${innerType.toString})" 
-                (base, exp)
-        }
+    def errorTypePrettyPrint(
+        t: WaccType,
+        innerType: WaccType
+    ): (String, String) = t match {
+        case FirstErrorType(inner) =>
+            inner match {
+                case _: FirstErrorType | _: SecondErrorType =>
+                    val (base, innerExpected) =
+                        errorTypePrettyPrint(inner, innerType)
+                    val exp = s"pair($innerExpected, any type)"
+                    (base, exp)
+                case _ =>
+                    val base = inner.toString
+                    val exp = s"pair(${innerType.toString}, any type)"
+                    (base, exp)
+            }
+        case SecondErrorType(inner) =>
+            inner match {
+                case _: FirstErrorType | _: SecondErrorType =>
+                    val (base, innerExpected) =
+                        errorTypePrettyPrint(inner, innerType)
+                    val exp = s"pair(any type, $innerExpected)"
+                    (base, exp)
+                case _ =>
+                    val base = inner.toString
+                    val exp = s"pair(any type, ${innerType.toString})"
+                    (base, exp)
+            }
         case other =>
             (other.toString, other.toString)
-        }
-
+    }
 
     def verifyStmt(stmt: Stmt)(implicit
         st: SymbolTable,
@@ -366,36 +375,44 @@ object SemanticChecker {
             verifyStmt(s)
         case Print(e)   => verifyType(e, anyType)
         case Println(e) => verifyType(e, anyType)
-        case Read(e)    => getType(e) match {
-            case UnknownType() => 
-                errors +=
-                    ErrorBuilder.specializedError(
-                        Seq(
+        case Read(e) =>
+            getType(e) match {
+                case UnknownType() =>
+                    errors +=
+                        ErrorBuilder.specializedError(
+                          Seq(
                             "Type error: attempting to read from unknown type",
                             "reading from a nested pair extraction is not legal due to pair erasure"
-                        ),
-                        stmt.pos
-                    )
-            case errT @ (FirstErrorType(_) | SecondErrorType(_)) => 
-                val (unMsg, msgChar) = errorTypePrettyPrint(errT, CharType()(defaultPos))
-                val (_, msgInt) = errorTypePrettyPrint(errT, IntType()(defaultPos))
-                errors +=
-                    ErrorBuilder.vanillaError(
-                        unMsg, 
-                        s"$msgChar or $msgInt", 
-                        Seq(), 
-                        errT.pos
-                    )
-            case t => 
-                if (!compatible(t, IntType()(defaultPos)) && !compatible(t, CharType()(defaultPos))) 
+                          ),
+                          stmt.pos
+                        )
+                case errT @ (FirstErrorType(_) | SecondErrorType(_)) =>
+                    val (unMsg, msgChar) =
+                        errorTypePrettyPrint(errT, CharType()(defaultPos))
+                    val (_, msgInt) =
+                        errorTypePrettyPrint(errT, IntType()(defaultPos))
                     errors +=
                         ErrorBuilder.vanillaError(
-                            t.toString(), 
-                            s"int or char", 
-                            Seq(), 
-                            stmt.pos
+                          unMsg,
+                          s"$msgChar or $msgInt",
+                          Seq(),
+                          errT.pos
                         )
-        }
+                case t =>
+                    if (
+                      !compatible(t, IntType()(defaultPos)) && !compatible(
+                        t,
+                        CharType()(defaultPos)
+                      )
+                    )
+                        errors +=
+                            ErrorBuilder.vanillaError(
+                              t.toString(),
+                              s"int or char",
+                              Seq(),
+                              stmt.pos
+                            )
+            }
         case Declare((t, Ident(name)), v) => {
             if (!st.addSymbol(name, t)) {
                 errors +=
@@ -407,23 +424,24 @@ object SemanticChecker {
                     )
             }
             getType(v) match {
-                case errT @ (FirstErrorType(_) | SecondErrorType(_)) => 
+                case errT @ (FirstErrorType(_) | SecondErrorType(_)) =>
                     val (unMsg, msg) = errorTypePrettyPrint(errT, t)
                     errors +=
                         ErrorBuilder.vanillaError(
-                            unMsg, 
-                            msg,
-                            Seq(), 
-                            errT.pos
+                          unMsg,
+                          msg,
+                          Seq(),
+                          errT.pos
                         )
-                case vt => if (!compatible(vt, t)) 
-                    errors +=
-                        ErrorBuilder.vanillaError(
-                            vt.toString(), 
-                            t.toString,
-                            Seq(), 
-                            stmt.pos
-                        )
+                case vt =>
+                    if (!compatible(vt, t))
+                        errors +=
+                            ErrorBuilder.vanillaError(
+                              vt.toString(),
+                              t.toString,
+                              Seq(),
+                              stmt.pos
+                            )
             }
         }
         case Assign(v1, v2) =>
@@ -438,9 +456,9 @@ object SemanticChecker {
                           stmt.pos
                         )
                 case (
-                    FirstErrorType(_) | SecondErrorType(_), 
-                    FirstErrorType(_) | SecondErrorType(_)
-                ) => 
+                      FirstErrorType(_) | SecondErrorType(_),
+                      FirstErrorType(_) | SecondErrorType(_)
+                    ) =>
                     errors +=
                         ErrorBuilder.specializedError(
                           Seq(
@@ -449,32 +467,33 @@ object SemanticChecker {
                           ),
                           stmt.pos
                         )
-                case (errT @ (FirstErrorType(_) | SecondErrorType(_)), t) => 
+                case (errT @ (FirstErrorType(_) | SecondErrorType(_)), t) =>
                     val (unMsg, msg) = errorTypePrettyPrint(errT, t)
                     errors +=
                         ErrorBuilder.vanillaError(
-                            unMsg, 
-                            msg,
-                            Seq(), 
-                            errT.pos
+                          unMsg,
+                          msg,
+                          Seq(),
+                          errT.pos
                         )
-                case (t, errT @ (FirstErrorType(_) | SecondErrorType(_))) => 
+                case (t, errT @ (FirstErrorType(_) | SecondErrorType(_))) =>
                     val (unMsg, msg) = errorTypePrettyPrint(errT, t)
                     errors +=
                         ErrorBuilder.vanillaError(
-                            unMsg, 
-                            msg,
-                            Seq(), 
-                            errT.pos
+                          unMsg,
+                          msg,
+                          Seq(),
+                          errT.pos
                         )
-                case (t1, t2) => if (!compatible(t1, t2)) 
-                    errors +=
-                        ErrorBuilder.vanillaError(
-                            t2.toString(), 
-                            t1.toString,
-                            Seq(), 
-                            stmt.pos
-                        )
+                case (t1, t2) =>
+                    if (!compatible(t1, t2))
+                        errors +=
+                            ErrorBuilder.vanillaError(
+                              t2.toString(),
+                              t1.toString,
+                              Seq(),
+                              stmt.pos
+                            )
             }
         case Begin(stmt) => verifyStmt(stmt)
         case Block(sts) =>

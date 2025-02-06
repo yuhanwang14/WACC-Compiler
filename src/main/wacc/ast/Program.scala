@@ -9,10 +9,13 @@ abstract trait Position {
 type TypeAndIdent = (WaccType, Ident)
 
 // Program
-case class Program(fs: List[Func], s: Stmt)(val pos: (Int, Int)) extends Position
+case class Program(fs: List[Func], s: Stmt)(val pos: (Int, Int))
+    extends Position
 
 // Function
-case class Func(ti: TypeAndIdent, ps: Option[ParamList], s: Stmt)(val pos: (Int, Int)) extends Position
+case class Func(ti: TypeAndIdent, ps: Option[ParamList], s: Stmt)(
+    val pos: (Int, Int)
+) extends Position
 
 // Parameter List
 case class ParamList(ps: List[Param])(val pos: (Int, Int)) extends Position
@@ -23,7 +26,8 @@ case class Param(t: WaccType, i: Ident)(val pos: (Int, Int)) extends Position
 // Statement
 sealed trait Stmt extends Position
 case class Skip()(val pos: (Int, Int)) extends Stmt
-case class Declare(ti: TypeAndIdent, r: RValue)(val pos: (Int, Int)) extends Stmt
+case class Declare(ti: TypeAndIdent, r: RValue)(val pos: (Int, Int))
+    extends Stmt
 case class Assign(l: LValue, r: RValue)(val pos: (Int, Int)) extends Stmt
 case class Read(l: LValue)(val pos: (Int, Int)) extends Stmt
 case class Free(e: Expr)(val pos: (Int, Int)) extends Stmt
@@ -58,7 +62,8 @@ case class ArgList(es: List[Expr])(val pos: (Int, Int)) extends Position
 
 object Program extends ParserBridgePos2[List[Func], Stmt, Program]
 
-object Func extends ParserBridgePos3[TypeAndIdent, Option[ParamList], Stmt, Func]
+object Func
+    extends ParserBridgePos3[TypeAndIdent, Option[ParamList], Stmt, Func]
 
 object ParamList extends ParserBridgePos1[List[Param], ParamList]
 
@@ -69,7 +74,7 @@ object Declare extends ParserBridgePos2[TypeAndIdent, RValue, Stmt]
 object Assign extends ParserBridgePos2[LValue, RValue, Stmt]
 object Read extends ParserBridgePos1[LValue, Stmt]
 object Free extends ParserBridgePos1[Expr, Stmt]
-object Return extends ParserBridgePos1[Expr, Stmt] 
+object Return extends ParserBridgePos1[Expr, Stmt]
 object Exit extends ParserBridgePos1[Expr, Stmt]
 object Print extends ParserBridgePos1[Expr, Stmt]
 object Println extends ParserBridgePos1[Expr, Stmt]

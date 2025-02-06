@@ -35,7 +35,8 @@ case class ArrayType(t: WaccType)(val pos: (Int, Int)) extends WaccType {
 case class ErasedPairType()(val pos: (Int, Int)) extends WaccType {
     override def toString(): String = "pair"
 }
-case class NonErasedPairType(t1: WaccType, t2: WaccType)(val pos: (Int, Int)) extends WaccType {
+case class NonErasedPairType(t1: WaccType, t2: WaccType)(val pos: (Int, Int))
+    extends WaccType {
     override def toString(): String = s"pair<${t1}, ${t2}>"
 }
 
@@ -51,4 +52,5 @@ object StringType extends ParserBridgePos0[StringType]
 
 object ArrayType extends ParserBridgePos1[WaccType, ArrayType]
 object ErasedPairType extends ParserBridgePos0[ErasedPairType]
-object NonErasedPairType extends ParserBridgePos2[WaccType, WaccType, NonErasedPairType]
+object NonErasedPairType
+    extends ParserBridgePos2[WaccType, WaccType, NonErasedPairType]

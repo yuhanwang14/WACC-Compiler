@@ -6,21 +6,21 @@ import scala.collection.mutable.ListBuffer
 
 object ProgramChecker {
 
-    def check(prog: Program)(
-        implicit lines: Seq[String],
+    def check(prog: Program)(implicit
+        lines: Seq[String],
         source: String
     ): ListBuffer[Error] = {
         implicit val symbolTable = new SymbolTable()
-        implicit val errors: ListBuffer[Error] = ListBuffer() 
+        implicit val errors: ListBuffer[Error] = ListBuffer()
         symbolTable.enterScope()
-        prog.fs.foreach{f => 
+        prog.fs.foreach { f =>
             if (!symbolTable.addFunction(f)) {
                 errors +=
                     ErrorBuilder.specializedError(
-                        Seq(
-                            s"Function redefinition error: illegal redefinition of function ${f.ti._2.name} "
-                        ),
-                        f.pos
+                      Seq(
+                        s"Function redefinition error: illegal redefinition of function ${f.ti._2.name} "
+                      ),
+                      f.pos
                     )
             }
         }
@@ -30,8 +30,8 @@ object ProgramChecker {
         errors
     }
 
-    private def checkFunction(f: Func)(
-        implicit st: SymbolTable,
+    private def checkFunction(f: Func)(implicit
+        st: SymbolTable,
         errors: ListBuffer[Error],
         lines: Seq[String],
         source: String
@@ -39,22 +39,22 @@ object ProgramChecker {
         st.setGlobalScope(false)
         st.setReturnType(f.ti._1)
         st.enterScope()
-        
+
         // add params to symbol table
         f.ps match {
-            case Some(ParamList(params)) => 
-                params.foreach{(p: Param) => 
+            case Some(ParamList(params)) =>
+                params.foreach { (p: Param) =>
                     if (!st.addSymbol(p.i.name, p.t)) {
                         errors +=
                             ErrorBuilder.specializedError(
-                                Seq(
-                                    s"Scope error: illegal redeclaration of variable ${p.i.name} "
-                                ),
-                                p.pos
+                              Seq(
+                                s"Scope error: illegal redeclaration of variable ${p.i.name} "
+                              ),
+                              p.pos
                             )
                     }
                 }
-            case _ => 
+            case _ =>
         }
 
         SemanticChecker.verifyStmt(f.s)
@@ -62,5 +62,5 @@ object ProgramChecker {
         st.clearReturnType()
         st.setGlobalScope(true)
     }
-        
+
 }

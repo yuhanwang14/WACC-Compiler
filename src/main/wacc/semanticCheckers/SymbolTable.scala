@@ -26,9 +26,9 @@ class SymbolTable {
 
     def setGlobalScope(x: Boolean): Unit = globalScopeFlag = x
 
-    def setReturnType(t: WaccType) : Unit = {returnType = t}
+    def setReturnType(t: WaccType): Unit = { returnType = t }
 
-    def clearReturnType() : Unit = {returnType = anyType}
+    def clearReturnType(): Unit = { returnType = anyType }
 
     // Enters a new nested scope
     def enterScope(): Unit = varTable.push(mutable.Map())
@@ -37,12 +37,14 @@ class SymbolTable {
     def exitScope(): Unit = varTable.pop()
 
     // Adds a symbol to the current scope
-    def addSymbol(name: String, typ: WaccType): Boolean = // change output to returning SemanticError
+    def addSymbol(
+        name: String,
+        typ: WaccType
+    ): Boolean = // change output to returning SemanticError
         if (varTable.head.contains(name)) { // Already declared in current scope
             varTable.head(name) = typ
             false
-        }
-        else {
+        } else {
             varTable.head(name) = typ
             true
         }
@@ -62,25 +64,25 @@ class SymbolTable {
         }
         if (flag) Some(result) else None
     }
-    
+
     def addFunction(f: Func): Boolean = { // change output to returning SemanticError
         val name = f.ti._2.name
         val returnType = f.ti._1
         val paramTypes = f.ps match {
             case Some(paramList) => paramList.ps.map(p => p.t)
-            case None => List()
+            case None            => List()
         }
 
         if (funcTable.contains(name)) { // Function already exists
             false
-        } 
-        else {
+        } else {
             funcTable(name) = FunctionSignature(returnType, paramTypes)
             true
         }
     }
 
-    def lookupFunction(name: String): Option[FunctionSignature] = funcTable.get(name)
+    def lookupFunction(name: String): Option[FunctionSignature] =
+        funcTable.get(name)
 }
 
 case class FunctionSignature(returnType: WaccType, paramTypes: List[WaccType])
