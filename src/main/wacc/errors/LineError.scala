@@ -13,9 +13,9 @@ sealed trait LineError {
         (unexpected, expected) match {
             case (None, None) => reasons
             case _ =>
-                ("unexpected " + unexpected.getOrElse("")) +:
-                    ("expected " + expected.getOrElse("")) +:
-                    reasons
+                unexpected.fold(Nil){(x: String) => Seq(s"unexpected " + x)} ++
+                expected.fold(Nil){(x: String) => Seq(s"expected " + x)} ++
+                reasons
         }
     }
 }

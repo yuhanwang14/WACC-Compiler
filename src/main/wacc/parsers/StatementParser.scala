@@ -9,9 +9,11 @@ import parsley.lift.*
 import parsers.ExpressionParser.*
 import parsley.Parsley
 import parsley.errors.combinator.*
+import parsley.errors.patterns.*
 
 object StatementParser {
-    lazy val program = Program("begin" ~> many(func), block <~ "end")
+    lazy val program = Program("begin" ~> many(func), (block <~ "end")
+        <~ ";".verifiedExplain("semi-colons cannot follow the 'end' of program"))
 
     val typeAndIdent = waccType <~> Ident(ident)
 
@@ -20,7 +22,7 @@ object StatementParser {
             atomic(typeAndIdent <~ "("),
             option(paramList) <~ ")", 
             "is" ~> _returningBlock.explain("function is missing a return on all exit paths") <~ "end".hide
-        )
+        ).label("function")
 
     lazy val paramList: Parsley[ParamList] = ParamList(sepBy1(param, ","))
     lazy val param = Param(waccType, Ident(ident))
