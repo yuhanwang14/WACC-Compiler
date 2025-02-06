@@ -48,6 +48,6 @@ object LineInfo {
             if (row < rowEndAt) then lines.slice(row, rowEndAt)
             else Seq[String]()
 
-        new LineInfo(lines(row - 1), linesBefore, linesAfter, row, col)
+        new LineInfo(lines(row - 1), linesBefore, linesAfter, row, col - 1)
     }
 }

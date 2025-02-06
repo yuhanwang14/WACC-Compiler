@@ -34,7 +34,7 @@ object Main {
                 result match
                     case parsley.Success(prog) =>
                         ProgramChecker.check(prog)(
-                          source = fileName,
+                          source = fileName.split('/').last,
                           lines = Source.fromFile(src).getLines().toSeq
                         ) match
                             case MutableSeq() => println("Success.")
