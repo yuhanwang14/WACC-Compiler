@@ -5,6 +5,7 @@ import semanticCheckers.*
 import java.io.File
 import scala.util.*
 import scala.io.Source
+import scala.collection.mutable.ListBuffer
 
 object Main {
   val exitStatusSuccess = 0
@@ -35,7 +36,7 @@ object Main {
               source = fileName.split('/').last,
               lines = Source.fromFile(src).getLines().toSeq
             ) match
-              case Seq() => println("Success.")
+              case ListBuffer() => println("Success.")
               case errors =>
                 println("#semantic_error#")
                 errors.map { error => println(error.format) }
