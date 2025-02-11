@@ -3,3 +3,9 @@
 .scala-build/
 .vscode/
 wacc-compiler
+.idea/misc.xml
+.idea/modules.xml
+.idea/vcs.xml
+.idea/WACC_26.iml
+.idea/codeStyles/codeStyleConfig.xml
+.idea/codeStyles/Project.xml

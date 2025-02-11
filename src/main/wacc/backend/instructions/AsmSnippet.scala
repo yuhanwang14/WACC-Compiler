@@ -1,24 +1,36 @@
 package instructions
 
-sealed class AsmSnippet(code: String) {
-  override def toString: String = code
+sealed class AsmSnippet(code: String)(implicit indent: Int) {
+  override def toString: String = code.indent(indent)
 }
 
-class Header(code: String) extends AsmSnippet(code)
+case class Comment(comment: String)(implicit indent: Int) extends AsmSnippet(f"// $comment")
 
-case class DataHeader() extends Header(".data")
+class MultiLineAsmSnippet(lines: List[AsmSnippet])(implicit indent: Int)
+    extends AsmSnippet(lines.mkString("\n"))
 
-case class TextHeader() extends Header(".text")
+class Header(code: String)(implicit indent: Int) extends AsmSnippet(code)
 
-case class BssHeader() extends Header(".bss")
+case class DataHeader() extends Header(".data")(0)
 
-case class SectionHeader(name: String) extends Header(f".section $name")
+case class TextHeader() extends Header(".text")(0)
 
-case class ByteConst(value: Byte) extends Header(f".byte $value")
+case class SectionHeader(name: String) extends Header(f".section $name")(0)
 
-case class WordHeader(value: Int) extends Header(f".word $value")
+case class ByteConst(value: Byte) extends Header(f".byte $value")(4)
 
-case class StringHeader(value: String) extends Header(f".asciz \"$value\"")
+case class WordConst(value: Int) extends Header(f".word $value")(4)
 
-case class Label(identifier: String) extends AsmSnippet(f"$identifier:")
+case class StringConst(value: String) extends Header(f".asciz \"$value\"")(4)
 
+case class LabelledStringConst(value: String, label: String)
+    extends MultiLineAsmSnippet(
+      List(
+        Comment(f"// length of .L.$label")(0),
+        WordConst(value.length()),
+        Label(f".L.$label"),
+        StringConst(value)
+      )
+    )(0)
+
+case class Label(identifier: String) extends AsmSnippet(f"$identifier:")(0)
