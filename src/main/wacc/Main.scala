@@ -6,6 +6,7 @@ import java.io.File
 import scala.util.*
 import scala.io.Source
 import scala.collection.mutable.ListBuffer
+import wacc.lexer.implicits
 
 object Main {
   val exitStatusSuccess = 0
@@ -36,7 +37,11 @@ object Main {
               source = fileName.split('/').last,
               lines = Source.fromFile(src).getLines().toSeq
             ) match
-              case ListBuffer() => println("Success.")
+              case ListBuffer() => {
+                implicit val asmLine: ListBuffer[String] = ListBuffer[String]()
+                Generator.generate(prog)
+                asmLine.foreach(it => println(it))
+              }
               case errors =>
                 println("#semantic_error#")
                 errors.map { error => println(error.format) }

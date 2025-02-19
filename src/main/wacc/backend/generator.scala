@@ -1,41 +1,52 @@
+package wacc
+
+import instructions.*
+import instructions.Register.*
 import ast.*
 import semanticCheckers.SymbolTable
 import scala.collection.mutable.ListBuffer
 
-object generator {
+object Generator {
 
-    def generate(prog: Program)(implicit
-        symbolTable: SymbolTable,
-        asmLine: ListBuffer[StringBuilder]
-    ): Unit = {
-        generateBlock(prog.s)
-        prog.fs.foreach(generateFunc(_))
-        ???
-    }
+  def generate(prog: Program)(implicit
+      // symbolTable: SymbolTable,
+      asmLine: ListBuffer[String]
+  ): Unit = {
+    generateBlock(prog.s)
+    prog.fs.foreach(generateFunc(_))
+  }
 
-    private def generateBlock(block: Stmt)(implicit
-        symbolTable: SymbolTable,
-        asmLine: ListBuffer[StringBuilder]): Unit = {
-        
-        val stmts: List[Stmt] = block match {
-            case Block(sts) => sts
-            case _ => return
-        }
-        stmts.foreach(generateStmt(_))
-        
-    }
+  private def generateBlock(block: Stmt)(implicit
+      // symbolTable: SymbolTable,
+      asmLine: ListBuffer[String]
+  ): Unit = {
 
-    private def generateStmt(stmt: Stmt)(implicit
-        symbolTable: SymbolTable,
-        asmLine: ListBuffer[StringBuilder]): Unit = {
-        ???
+    val stmts: List[Stmt] = block match {
+      case Block(sts) => sts
+      case _          => return
     }
+    stmts.foreach(generateStmt(_))
 
-    private def generateFunc(func: Func)(implicit
-        symbolTable: SymbolTable,
-        asmLine: ListBuffer[StringBuilder]): Unit = {
-        ???
+  }
+
+  private def generateStmt(stmt: Stmt)(implicit
+      // symbolTable: SymbolTable,
+      asmLine: ListBuffer[String]
+  ): Unit = stmt match {
+    case Skip() => {
+      asmLine += DataHeader().toString()
+      asmLine += STP(FP, LR, SP, new ImmVal(-16), PreIndex).toString()
+      asmLine += MOVReg(FP, SP).toString()
+      asmLine += MOVImm(XRegister(0), new ImmVal(0)).toString()
+      asmLine += LDP(FP, LR, SP, new ImmVal(16), PostIndex).toString()
+      asmLine += RET.toString()
     }
-    
+    case _ => 
+  }
+
+  private def generateFunc(func: Func)(implicit
+      // symbolTable: SymbolTable,
+      asmLine: ListBuffer[String]
+  ): Unit = {}
 
 }
