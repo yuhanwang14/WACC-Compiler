@@ -1,7 +1,7 @@
 package instructions
 
 class AsmSnippet(code: String)(implicit indent: Int) {
-  override def toString: String = code.indent(indent)
+  override def toString: String = " " * indent + code.replace("\n", "\n" + " " * indent)
 }
 
 case class Comment(comment: String)(implicit indent: Int) extends AsmSnippet(f"// $comment")

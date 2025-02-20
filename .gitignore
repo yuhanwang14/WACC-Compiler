@@ -9,3 +9,6 @@ wacc-compiler
 .idea/WACC_26.iml
 .idea/codeStyles/codeStyleConfig.xml
 .idea/codeStyles/Project.xml
+wacc.Main
+.idea/kotlinc.xml
+.idea/libraries/KotlinJavaRuntime.xml
