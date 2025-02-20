@@ -1,13 +1,13 @@
 package instructions
 
 sealed class AsmSnippet(code: String)(implicit indent: Int) {
-  override def toString: String = code.indent(indent)
+  override def toString: String = " " * indent + code.replace("\n", "\n" + " " * indent)
 }
 
 case class Comment(comment: String)(implicit indent: Int) extends AsmSnippet(f"// $comment")
 
 class MultiLineAsmSnippet(lines: List[AsmSnippet])(implicit indent: Int)
-    extends AsmSnippet(lines.mkString("\n"))
+  extends AsmSnippet(lines.mkString("\n"))
 
 class Header(code: String)(implicit indent: Int) extends AsmSnippet(code)
 
