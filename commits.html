@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>commits</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.2/dist/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js"></script>
+    <style> .container { display: flex; justify-content: center; align-items: center; } .item { margin: auto; } </style>
+  </head>
+  <body>
+      <div class="container">
+        <div class="item" id="chart" style="width: 1440px; height: 512px"></div>
+      </div>
+      
+      <script type="text/javascript">
+          
+          var chart = echarts.init(document.getElementById('chart'), 'dark', { renderer: 'canvas' });
+          var option = {
+  "xAxis": [
+    {
+      "type": "time"
+    }
+  ],
+  "yAxis": [
+    {
+      "type": "value"
+    }
+  ],
+  "dataZoom": [
+    {
+      "brushSelect": true
+    }
+  ],
+  "series": [
+    {
+      "type": "bar",
+      "itemStyle": {
+        "color": "#0475FF"
+      },
+      "data": [
+        [
+          "2025/01/19T00:00:00",
+          "1"
+        ],
+        [
+          "2025/01/20T00:00:00",
+          "14"
+        ],
+        [
+          "2025/01/21T00:00:00",
+          "7"
+        ],
+        [
+          "2025/01/22T00:00:00",
+          "1"
+        ],
+        [
+          "2025/01/23T00:00:00",
+          "10"
+        ],
+        [
+          "2025/01/28T00:00:00",
+          "1"
+        ],
+        [
+          "2025/01/29T00:00:00",
+          "5"
+        ],
+        [
+          "2025/01/30T00:00:00",
+          "1"
+        ],
+        [
+          "2025/01/31T00:00:00",
+          "5"
+        ],
+        [
+          "2025/02/01T00:00:00",
+          "11"
+        ],
+        [
+          "2025/02/02T00:00:00",
+          "11"
+        ],
+        [
+          "2025/02/03T00:00:00",
+          "12"
+        ],
+        [
+          "2025/02/04T00:00:00",
+          "17"
+        ],
+        [
+          "2025/02/05T00:00:00",
+          "11"
+        ],
+        [
+          "2025/02/06T00:00:00",
+          "10"
+        ],
+        [
+          "2025/02/10T00:00:00",
+          "1"
+        ],
+        [
+          "2025/02/11T00:00:00",
+          "5"
+        ]
+      ]
+    }
+  ]
+};
+          chart.setOption(option);
+      </script>
+  </body>
+</html>

@@ -1,4 +1,4 @@
-package wacc
+package backend
 
 import instructions.*
 import instructions.Register.*
@@ -32,16 +32,16 @@ object Generator {
   private def generateStmt(stmt: Stmt)(implicit
       // symbolTable: SymbolTable,
       asmLine: ListBuffer[String]
-  ): Unit = stmt match {
-    case Skip() => {
-      asmLine += DataHeader().toString()
-      asmLine += STP(FP, LR, SP, new ImmVal(-16), PreIndex).toString()
-      asmLine += MOVReg(FP, SP).toString()
-      asmLine += MOVImm(XRegister(0), new ImmVal(0)).toString()
-      asmLine += LDP(FP, LR, SP, new ImmVal(16), PostIndex).toString()
-      asmLine += RET.toString()
-    }
-    case _ => 
+  ): Unit =  {
+    // case Skip() => {
+    //   asmLine += DataHeader().toString()
+    //   asmLine += STP(FP, LR, SP, new ImmVal(-16), PreIndex).toString()
+    //   asmLine += MOVReg(FP, SP).toString()
+    //   asmLine += MOVImm(XRegister(0), new ImmVal(0)).toString()
+    //   asmLine += LDP(FP, LR, SP, new ImmVal(16), PostIndex).toString()
+    //   asmLine += RET.toString()
+    // }
+    // case _ => 
   }
 
   private def generateFunc(func: Func)(implicit

@@ -1,8 +1,8 @@
 package parsers
 
 import ast.*
-import wacc.lexer.* 
-import wacc.lexer.implicits.implicitSymbol
+import frontend.lexer.* 
+import frontend.lexer.implicits.implicitSymbol
 import parsley.Parsley.*, parsley.Parsley
 import parsley.errors.combinator.*
 import parsley.errors.patterns.*

@@ -1,6 +1,6 @@
 package instructions
 
-sealed class AsmSnippet(code: String)(implicit indent: Int) {
+class AsmSnippet(code: String)(implicit indent: Int) {
   override def toString: String = code.indent(indent)
 }
 
@@ -26,11 +26,11 @@ case class StringConst(value: String) extends Header(f".asciz \"$value\"")(4)
 case class LabelledStringConst(value: String, label: String)
     extends MultiLineAsmSnippet(
       List(
-        Comment(f"// length of .L.$label")(0),
+        Comment(f"// length of ${LocalLabel(label)}")(0),
         WordConst(value.length()),
-        Label(f".L.$label"),
+        LabelHeader(LocalLabel(label).toString),
         StringConst(value)
       )
     )(0)
 
-case class Label(identifier: String) extends AsmSnippet(f"$identifier:")(0)
+case class LabelHeader(identifier: String) extends AsmSnippet(f"$identifier:")(0)

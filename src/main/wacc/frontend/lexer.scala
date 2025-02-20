@@ -1,4 +1,4 @@
-package wacc
+package frontend
 
 import parsley.Parsley
 import parsley.token.*

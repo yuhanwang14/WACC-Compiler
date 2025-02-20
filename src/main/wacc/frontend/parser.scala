@@ -1,4 +1,4 @@
-package wacc
+package frontend
 
 import lexer.*
 import parsers.StatementParser.*

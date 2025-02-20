@@ -1,12 +1,12 @@
 package wacc
 
-import parser.*
+import frontend.*, frontend.parser.*
+import backend.* 
 import semanticCheckers.*
 import java.io.File
 import scala.util.*
 import scala.io.Source
 import scala.collection.mutable.ListBuffer
-import wacc.lexer.implicits
 
 object Main {
   val exitStatusSuccess = 0
