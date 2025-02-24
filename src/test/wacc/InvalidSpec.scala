@@ -1,6 +1,6 @@
 package wacc
 
-import parser.*
+import frontend.parser.*
 import semanticCheckers.*
 import java.nio.file.{Files, Paths}
 import java.io.File
