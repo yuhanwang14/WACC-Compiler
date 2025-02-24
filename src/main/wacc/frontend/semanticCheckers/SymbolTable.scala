@@ -5,8 +5,6 @@ import SemanticChecker.anyType
 import scala.collection.mutable
 import scala.util.control.Breaks.{break, breakable}
 
-//  scopes are introduced by ‘begin .. end’, functions, if-statements, and while-loops
-
 class SymbolTable {
   // Initialize with a global scope
   private val varTable = mutable.Stack[mutable.Map[String, WaccType]]()
