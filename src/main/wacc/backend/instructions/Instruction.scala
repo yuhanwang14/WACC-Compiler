@@ -19,6 +19,8 @@ case class CMPReg(Rd: Register, Rm: Register) extends Instruction(f"cmp $Rd, $Rm
 
 case class CMPImm(Rd: Register, immVal: ImmVal) extends Instruction(f"cmp $Rd, $immVal")
 
+case class CBZ(Rd: Register, label: Label) extends Instruction(f"cbz $Rd, #label")
+
 case class ADR(Rd: Register, label: Label) extends Instruction(f"adr $Rd, $label")
 
 case class B(label: Label) extends Instruction(f"b $label")

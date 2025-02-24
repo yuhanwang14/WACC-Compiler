@@ -34,7 +34,7 @@ final case class WRegister(number: Int, isZero: Boolean = false) extends Registe
     case (29, _) => "wfp" 
     case (30, _) => "wlr" 
     case (31, false) => "sp"  
-    case (31, true) => "wzr"
+    case (31, ture) => "wzr"
     case _  => s"w$number"
   }
 }
