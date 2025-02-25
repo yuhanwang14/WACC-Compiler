@@ -30,7 +30,7 @@ class RegisterAllocator(
     
     private var varOffset = 0
     // start after stored fp, lr and registers about to use
-    private var paramOffset = 16 + 8 * math.floorDiv(numOfVariables + 1, 2)
+    private var paramOffset = 16 + 16 * math.floorDiv(math.max(numOfVariables, 10) + 1, 2)
     private var currentParamRegister = 0
 
     private val CalleeRegister: ListBuffer[Register] = ListBuffer.empty[Register]
