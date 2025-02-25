@@ -18,6 +18,7 @@ trait Scope {
   val returnType: Option[WaccType] = None
   val parent: Option[Scope] = None
   var shadower: Shadower = Shadower()
+  var localVariableCount: Int = 0
 
   /** Adds a new [[ChildScope]] to [[children]] with the given `identifier`.
     *
@@ -40,6 +41,7 @@ trait Scope {
       false
     else {
       varTable(prefixedId) = varType
+      localVariableCount += 1
       true
     }
   }
