@@ -451,14 +451,14 @@ object SemanticChecker {
         NonErasedPairType(anyType, anyType)(defaultPos)
       )
     case Return(e) =>
-      if (!st.isGlobalScope())
-        verifyType(e, st.returnType.get)
-      else
-        errors +=
-          ErrorBuilder.specializedError(
-            Seq("Return placement error: return outside of function is not allowed"),
-            stmt.pos
-          )
-        
+      st.returnType match
+        case None =>
+          errors +=
+            ErrorBuilder.specializedError(
+              Seq("Return placement error: return outside of function is not allowed"),
+              stmt.pos
+            )
+        case Some(returnType) =>
+          verifyType(e, returnType)
   }
 }

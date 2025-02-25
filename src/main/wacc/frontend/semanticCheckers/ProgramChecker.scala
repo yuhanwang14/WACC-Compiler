@@ -26,7 +26,7 @@ object ProgramChecker {
       }
     }
     prog.fs.foreach(checkFunction(_))
-    symbolTable.exitScope()
+    symbolTable.exitToGlobalScope()
     SemanticChecker.verifyStmt(prog.s)
     errors
   }
@@ -57,7 +57,6 @@ object ProgramChecker {
     }
 
     SemanticChecker.verifyStmt(f.s)
-    st.exitScope()
   }
 
 }

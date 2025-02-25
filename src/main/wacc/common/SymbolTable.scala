@@ -14,7 +14,6 @@ class SymbolTable {
   val funcScopes: ArrayBuffer[FunctionScope] = ArrayBuffer()
   val globalScope: Scope = GlobalScope()
   var currentScope: Scope = globalScope
-  var shadower: Shadower = Shadower(currentScope)
 
   def returnType = currentScope.returnType
 
@@ -23,7 +22,10 @@ class SymbolTable {
   /** Enter a new nested scope. */
   def enterScope(): Unit = {
     currentScope = currentScope.addChild()
-    shadower = Shadower(currentScope)
+  }
+
+  def exitToGlobalScope(): Unit = {
+    currentScope = globalScope
   }
 
   /** Exit the current scope.
@@ -35,7 +37,6 @@ class SymbolTable {
     currentScope = currentScope.parent.getOrElse(
       throw IllegalStateException("Attempting to exit from a global / function scope.")
     )
-    shadower = Shadower(currentScope)
   }
 
   // Adds a symbol to the current scope
@@ -43,10 +44,10 @@ class SymbolTable {
       identifier: String,
       varType: WaccType
   ): Boolean =
-    shadower := (identifier, varType)
+    currentScope.addSymbol(identifier, varType)
 
   // Looks up a symbol from innermost to outermost scope
-  def lookupSymbol(identifier: String): Option[WaccType] = shadower(identifier)
+  def lookupSymbol(identifier: String): Option[WaccType] = currentScope(identifier)
 
   def addFunction(f: Func): Boolean =
     if (funcTable.contains(f.ti(1).name)) { false }
@@ -80,7 +81,6 @@ class SymbolTable {
     */
   def enterFunctionScope(identifier: String): Unit = {
     currentScope = funcTable.getOrElse(identifier, throw IllegalArgumentException())(1)
-    shadower = Shadower(currentScope)
   }
 
 }
