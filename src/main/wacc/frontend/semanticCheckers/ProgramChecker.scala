@@ -3,6 +3,7 @@ package semanticCheckers
 import ast.*
 import errors.*
 import scala.collection.mutable.ListBuffer
+import common.SymbolTable
 
 object ProgramChecker {
 
@@ -36,9 +37,7 @@ object ProgramChecker {
       lines: Seq[String],
       source: String
   ): Unit = {
-    st.setGlobalScope(false)
-    st.setReturnType(f.ti._1)
-    st.enterScope()
+    st.enterFunctionScope(f.ti._2.name)
 
     // add params to symbol table
     f.ps match {
@@ -59,8 +58,6 @@ object ProgramChecker {
 
     SemanticChecker.verifyStmt(f.s)
     st.exitScope()
-    st.clearReturnType()
-    st.setGlobalScope(true)
   }
 
 }

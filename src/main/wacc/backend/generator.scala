@@ -1,5 +1,5 @@
 import ast.*
-import semanticCheckers.SymbolTable
+import common.SymbolTable
 import scala.collection.mutable.ListBuffer
 
 object generator {
