@@ -17,7 +17,7 @@ trait Scope {
   val varTable: Map[String, WaccType] = Map()
   val returnType: Option[WaccType] = None
   val parent: Option[Scope] = None
-  val shadower: Shadower = Shadower()
+  var shadower: Shadower = Shadower()
 
   /** Adds a new [[ChildScope]] to [[children]] with the given `identifier`.
     *
@@ -50,9 +50,14 @@ trait Scope {
     shadower(identifier) = prefix + PrefixSeparator + identifier
   }
 
-  def lookupSymbol(identifier: String): Option[WaccType] = shadower(identifier).flatMap(varTable.get)
+  def lookupSymbol(identifier: String): Option[WaccType] =
+    shadower(identifier).flatMap(varTable.get)
 
   def apply(prefixedId: String): Option[WaccType] = lookupSymbol(prefixedId)
+
+  def resetShadow(): Unit = parent match
+    case Some(parentScope) => shadower = parentScope.shadower.clone()
+    case None              =>
 }
 
 object Scope {
@@ -65,10 +70,10 @@ object Scope {
 
 class ChildScope(parentScope: Scope, identifier: String = Scope.ScopeDefaultName) extends Scope {
   override val parent: Option[Scope] = Some(parentScope)
-  override val prefix: String = parent.get.prefix + Scope.PrefixSeparator + identifier
-  override val varTable: Map[String, WaccType] = parent.get.varTable.clone()
-  override val returnType: Option[WaccType] = parent.get.returnType
-  override val shadower: Shadower = parentScope.shadower.clone()
+  override val prefix: String = parentScope.prefix + Scope.PrefixSeparator + identifier
+  override val varTable: Map[String, WaccType] = parentScope.varTable.clone()
+  override val returnType: Option[WaccType] = parentScope.returnType
+  shadower = parentScope.shadower.clone()
 }
 
 class GlobalScope extends Scope {

@@ -25,6 +25,7 @@ class SymbolTable {
   }
 
   def exitToGlobalScope(): Unit = {
+    currentScope.resetShadow()
     currentScope = globalScope
   }
 
@@ -34,6 +35,7 @@ class SymbolTable {
     *   if the current scope is the global scope or a function scope.
     */
   def exitScope(): Unit = {
+    currentScope.resetShadow()
     currentScope = currentScope.parent.getOrElse(
       throw IllegalStateException("Attempting to exit from a global / function scope.")
     )
