@@ -1,4 +1,4 @@
-package wacc
+package frontend
 
 import parser.*
 import semanticCheckers.*
@@ -10,10 +10,10 @@ import scala.util.Failure
 import scala.io.Source
 import scala.collection.mutable.ListBuffer
 
-class InvalidSpec extends UnitSpec {
+class ValidSpec extends UnitSpec {
 
   val fileList = Files
-    .readAllLines(Paths.get("./src/test/wacc/file_lists/invalid_files"))
+    .readAllLines(Paths.get("./src/test/wacc/file_lists/valid_files"))
     .asScala
 
   fileList.foreach { fileName =>
@@ -30,24 +30,24 @@ class InvalidSpec extends UnitSpec {
                 fileName
               ProgramChecker.check(prog) match
                 case ListBuffer() => {
-                  println("Success.")
-                  assert(false)
+                  println(prog)
+                  assert(true)
                 }
                 case errors =>
                   println("#semantic_error#")
                   errors.map { error =>
                     println(error.format)
                   }
-                  assert(true)
+                  assert(false)
 
             case parsley.Failure(error) =>
               println("#syntax_error#")
               println(error.format)
-              assert(true)
+              assert(false)
 
         case Failure(_) =>
           println(s"Can't find or read source file at $fileName")
-          assert(true)
+          assert(false)
     }
   }
 }

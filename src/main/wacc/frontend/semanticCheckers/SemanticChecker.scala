@@ -3,15 +3,9 @@ package semanticCheckers
 import ast.*
 import errors.*
 import scala.collection.mutable.ListBuffer
+import common.SymbolTable
 
 object SemanticChecker {
-  val defaultPos: (Int, Int) = (-1, -1)
-  val anyType: WaccType = AnyType()(defaultPos)
-  val intType: WaccType = IntType()(defaultPos)
-  val boolType: WaccType = BoolType()(defaultPos)
-  val charType: WaccType = CharType()(defaultPos)
-  val stringType: WaccType = StringType()(defaultPos)
-  val unknownType: WaccType = UnknownType()(defaultPos)
 
   private def weakens(tarT: WaccType, srcT: WaccType): Boolean = (tarT, srcT) match
     case (ArrayType(CharType()), StringType()) => true
@@ -165,19 +159,19 @@ object SemanticChecker {
     case Call(id @ Ident(name), ArgList(es)) => {
 
       st.lookupFunction(name) match {
-        case Some(FunctionSignature(rt, ts)) => {
-          if (es.size != ts.size) {
+        case Some(f) => {
+          if (es.size != f.paramTypes.size) {
             errors +=
               ErrorBuilder.vanillaError(
                 s"${es.size} arguments",
-                s"${ts.size} arguments",
+                s"${f.paramTypes.size} arguments",
                 Seq(
                   s"Function call error: wrong number of arguments provided to function ${name}"
                 ),
                 id.pos
               )
           }
-          es.zip(ts).foreach { case (e, t) =>
+          es.zip(f.paramTypes).foreach { case (e, t) =>
             if (!compatible(t, getType(e))) {
               errors +=
                 ErrorBuilder.vanillaError(
@@ -188,7 +182,7 @@ object SemanticChecker {
                 )
             }
           }
-          rt
+          f.returnType
         }
         case None => {
           errors +=
@@ -457,12 +451,14 @@ object SemanticChecker {
         NonErasedPairType(anyType, anyType)(defaultPos)
       )
     case Return(e) =>
-      verifyType(e, st.getReturnType())
-      if (st.isGlobalScope())
-        errors +=
-          ErrorBuilder.specializedError(
-            Seq("Return placement error: return outside of function is not allowed"),
-            stmt.pos
-          )
+      st.returnType match
+        case None =>
+          errors +=
+            ErrorBuilder.specializedError(
+              Seq("Return placement error: return outside of function is not allowed"),
+              stmt.pos
+            )
+        case Some(returnType) =>
+          verifyType(e, returnType)
   }
 }

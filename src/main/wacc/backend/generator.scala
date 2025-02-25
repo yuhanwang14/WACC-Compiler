@@ -1,9 +1,6 @@
 package backend
 
-import instructions.*
-import instructions.Register.*
 import ast.*
-import semanticCheckers.SymbolTable
 import scala.collection.mutable.ListBuffer
 
 object Generator {

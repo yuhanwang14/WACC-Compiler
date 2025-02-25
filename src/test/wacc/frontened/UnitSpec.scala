@@ -1,4 +1,4 @@
-package wacc
+package frontend
 
 import org.scalatest.*
 import org.scalatest.funsuite.AnyFunSuite
