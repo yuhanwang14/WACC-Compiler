@@ -18,7 +18,15 @@ trait Scope {
   val returnType: Option[WaccType] = None
   val parent: Option[Scope] = None
   var shadower: Shadower = Shadower()
-  var localVariableCount: Int = 0
+  def totalVar: Int = childScopeMaxVarCount + varTable.size
+  protected var childScopeMaxVarCount: Int = 0
+
+  protected def updateParentScopeVarCount(): Unit = parent match
+    case None =>
+    case Some(parentScope) =>
+      if (totalVar > parentScope.childScopeMaxVarCount)
+        parentScope.childScopeMaxVarCount = totalVar
+        parentScope.updateParentScopeVarCount()
 
   /** Adds a new [[ChildScope]] to [[children]] with the given `identifier`.
     *
@@ -41,7 +49,6 @@ trait Scope {
       false
     else {
       varTable(prefixedId) = varType
-      localVariableCount += 1
       true
     }
   }
@@ -58,8 +65,9 @@ trait Scope {
   def apply(prefixedId: String): Option[WaccType] = lookupSymbol(prefixedId)
 
   def resetShadow(): Unit = parent match
-    case Some(parentScope) => shadower = parentScope.shadower.clone()
-    case None              =>
+    case None =>
+    case Some(parentScope) =>
+      shadower = parentScope.shadower.clone()
 }
 
 object Scope {
