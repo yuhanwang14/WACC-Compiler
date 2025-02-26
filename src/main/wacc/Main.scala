@@ -37,12 +37,13 @@ object Main {
               source = fileName.split('/').last,
               lines = Source.fromFile(src).getLines().toSeq
             ) match
-              case ListBuffer() => {
+              case Right(table) => {
                 implicit val asmLine: ListBuffer[String] = ListBuffer[String]()
+                implicit val SymbolTable = table
                 Generator.generate(prog)
                 asmLine.foreach(it => println(it))
               }
-              case errors =>
+              case Left(errors) =>
                 println("#semantic_error#")
                 errors.map { error => println(error.format) }
                 System.exit(exitStatusSemanticError)

@@ -1,12 +1,13 @@
 package backend
 
 import ast.*
+import common.SymbolTable
 import scala.collection.mutable.ListBuffer
 
 object Generator {
 
   def generate(prog: Program)(implicit
-      // symbolTable: SymbolTable,
+      symbolTable: SymbolTable,
       asmLine: ListBuffer[String]
   ): Unit = {
     generateBlock(prog.s)

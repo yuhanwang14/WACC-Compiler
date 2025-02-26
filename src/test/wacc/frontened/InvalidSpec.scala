@@ -29,11 +29,11 @@ class InvalidSpec extends UnitSpec {
               implicit val sourceName: String =
                 fileName
               ProgramChecker.check(prog) match
-                case ListBuffer() => {
+                case Right(_) => {
                   println("Success.")
                   assert(false)
                 }
-                case errors =>
+                case Left(errors) =>
                   println("#semantic_error#")
                   errors.map { error =>
                     println(error.format)

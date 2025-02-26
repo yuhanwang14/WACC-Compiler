@@ -10,7 +10,7 @@ object ProgramChecker {
   def check(prog: Program)(implicit
       lines: Seq[String],
       source: String
-  ): ListBuffer[Error] = {
+  ): Either[ListBuffer[Error], SymbolTable] = {
     implicit val symbolTable = new SymbolTable()
     implicit val errors: ListBuffer[Error] = ListBuffer()
     symbolTable.enterScope()
@@ -28,7 +28,7 @@ object ProgramChecker {
     prog.fs.foreach(checkFunction(_))
     symbolTable.exitToGlobalScope()
     SemanticChecker.verifyStmt(prog.s)
-    errors
+    return if errors.isEmpty then Right(symbolTable) else Left(errors)
   }
 
   private def checkFunction(f: Func)(implicit
