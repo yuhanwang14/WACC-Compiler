@@ -3,7 +3,7 @@ package ast
 import utils.*
 
 // Abstract trait to track the positions
-abstract trait Position {
+abstract trait Positional {
   val pos: (Int, Int)
 }
 
@@ -11,21 +11,21 @@ abstract trait Position {
 type TypeAndIdent = (WaccType, Ident)
 
 // Program
-case class Program(fs: List[Func], s: Stmt)(val pos: (Int, Int)) extends Position
+case class Program(fs: List[Func], s: Stmt)(val pos: (Int, Int)) extends Positional
 
 // Function
 case class Func(ti: TypeAndIdent, ps: Option[ParamList], s: Stmt)(
     val pos: (Int, Int)
-) extends Position
+) extends Positional
 
 // Parameter List
-case class ParamList(ps: List[Param])(val pos: (Int, Int)) extends Position
+case class ParamList(ps: List[Param])(val pos: (Int, Int)) extends Positional
 
 // Parameter
-case class Param(t: WaccType, i: Ident)(val pos: (Int, Int)) extends Position
+case class Param(t: WaccType, i: Ident)(val pos: (Int, Int)) extends Positional
 
 // Statement
-sealed trait Stmt extends Position
+sealed trait Stmt extends Positional
 case class Skip()(val pos: (Int, Int)) extends Stmt
 case class Declare(ti: TypeAndIdent, r: RValue)(val pos: (Int, Int)) extends Stmt
 case class Assign(l: LValue, r: RValue)(val pos: (Int, Int)) extends Stmt
@@ -42,7 +42,7 @@ case class Begin(s: Stmt)(val pos: (Int, Int)) extends Stmt
 case class Block(sts: List[Stmt])(val pos: (Int, Int)) extends Stmt
 
 // Left Value
-abstract trait LValue extends Position
+abstract trait LValue extends Positional
 // Ident
 // ArrayElem
 trait PairElem extends LValue with RValue
@@ -50,7 +50,7 @@ case class First(v: LValue)(val pos: (Int, Int)) extends PairElem
 case class Second(v: LValue)(val pos: (Int, Int)) extends PairElem
 
 // Right Value
-abstract trait RValue extends Position
+abstract trait RValue extends Positional
 // Expr
 case class ArrayLiter(es: List[Expr])(val pos: (Int, Int)) extends RValue
 case class NewPair(e1: Expr, e2: Expr)(val pos: (Int, Int)) extends RValue
@@ -58,7 +58,7 @@ case class NewPair(e1: Expr, e2: Expr)(val pos: (Int, Int)) extends RValue
 case class Call(i: Ident, argL: ArgList)(val pos: (Int, Int)) extends RValue
 
 // Arguments List
-case class ArgList(es: List[Expr])(val pos: (Int, Int)) extends Position
+case class ArgList(es: List[Expr])(val pos: (Int, Int)) extends Positional
 
 object Program extends ParserBridgePos2[List[Func], Stmt, Program]
 
