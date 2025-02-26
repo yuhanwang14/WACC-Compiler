@@ -18,15 +18,21 @@ trait Scope {
   val returnType: Option[WaccType] = None
   val parent: Option[Scope] = None
   var shadower: Shadower = Shadower()
-  def totalVar: Int = childScopeMaxVarCount + varTable.size
-  protected var childScopeMaxVarCount: Int = 0
+  
+  /**
+    * For register allocator's use.
+    */
+  val localVars: ArrayBuffer[String] = ArrayBuffer()
 
-  protected def updateParentScopeVarCount(): Unit = parent match
-    case None =>
-    case Some(parentScope) =>
-      if (totalVar > parentScope.childScopeMaxVarCount)
-        parentScope.childScopeMaxVarCount = totalVar
-        parentScope.updateParentScopeVarCount()
+  protected def localStackSize: Int = localVars.size
+  protected var childMaxStackSize: Int = 0
+
+  def stackSize: Int = localStackSize + childMaxStackSize
+
+  protected def updateVarCount(childStackSize: Int): Unit =
+    if childStackSize > childMaxStackSize then
+      childMaxStackSize = childStackSize
+      parent.map(_.updateVarCount(stackSize))
 
   /** Adds a new [[ChildScope]] to [[children]] with the given `identifier`.
     *
@@ -48,6 +54,7 @@ trait Scope {
       varTable(prefixedId) = varType
       false
     else {
+      localVars.addOne(prefixedId)
       varTable(prefixedId) = varType
       true
     }
