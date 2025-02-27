@@ -96,6 +96,8 @@ class FunctionScope(
 ) extends Scope {
   override val prefix = Scope.FunctionIdentifierPrefix + identifer
   paramList.map((identifier, varType) =>
-    varTable(prefix + Scope.FunctionParameterPrefix + Scope.PrefixSeparator + identifier) = varType
+    val prefixedId = prefix + Scope.FunctionParameterPrefix + Scope.PrefixSeparator + identifier
+    shadower(identifier) = prefixedId
+    varTable(prefixedId) = varType
   )
 }
