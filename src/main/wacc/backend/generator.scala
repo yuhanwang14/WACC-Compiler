@@ -2,6 +2,7 @@ package backend
 
 import ast.*
 import common.SymbolTable
+import common.types.{WaccType, TypeBridge}
 import backend.RegisterAllocator
 import instructions.*
 import instructions.Register.*
@@ -35,36 +36,37 @@ object Generator {
   private def generateStmt(stmt: Stmt, allocator: RegisterAllocator)(implicit
       // symbolTable: SymbolTable,
       asmLine: ListBuffer[String]
-  ): Unit =  {
-    // case Skip() => {
-    //   asmLine += DataHeader().toString()
-    //   asmLine += STP(FP, LR, SP, new ImmVal(-16), PreIndex).toString()
-    //   asmLine += MOVReg(FP, SP).toString()
-    //   asmLine += MOVImm(XRegister(0), new ImmVal(0)).toString()
-    //   asmLine += LDP(FP, LR, SP, new ImmVal(16), PostIndex).toString()
-    //   asmLine += RET.toString()
-    // }
-    // case _ => 
-  }
+  ): Unit =  {}
 
   private def generateFunc(func: Func)(implicit
-      // symbolTable: SymbolTable,
+      symbolTable: SymbolTable,
       asmLine: ListBuffer[String]
   ): Unit = {
 
-    asmLine += s"wacc_${func.ti._2.name}:"
+    val funcName: String = func.ti._2.name
+    symbolTable.enterFunctionScope(funcName)
+    asmLine += s"wacc_${funcName}:"
 
     asmLine += STP(FP, LR, SP, ImmVal(-16), PreIndex).toString()
-    
+
     // temporarily push all registers saved by Callee
-    val (pushCode, popCode) = pushAndPopCalleeRegisters()
+    val numOfVariables = 10
+    val (pushCode, popCode) = pushAndPopCalleeRegisters(numOfVariables)
 
     asmLine += pushCode
     asmLine += MOVReg(FP, SP).toString()
 
+    // extract all parameters from symbolTable, allocate register or memory
+    val params = 
+      symbolTable.currentScope.varTable.filter(x => x._1.startsWith(s"_func_${funcName}_params"))
+    val numOfParams: Int = params.size
+    val allocator: RegisterAllocator = RegisterAllocator(numOfVariables, numOfParams)
+    for ((name, paramType) <- params) {
+      allocator.addParam(name, TypeBridge.fromAst(paramType).byteSize)
+    }
+    
     asmLine += popCode
     asmLine += LDP(FP, LR, SP, ImmVal(16), PostIndex).toString()
-
   }
   
   /**

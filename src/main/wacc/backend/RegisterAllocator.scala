@@ -18,21 +18,21 @@ import scala.math
  */
 
 class RegisterAllocator(
-    numOfVariables: Int,
-    numOfParams: Int
+    numOfVariables: Int = 10,
+    numOfParams: Int = 0
 ) {
 
     case class Variable(location: Either[Register, Int], size: Int)
     
     type Offset = Int
     type Location = Either[Register, Offset]
-    private val varMap: Map[String, Variable] = Map.empty[String, Variable]
+    val varMap: Map[String, Variable] = Map.empty[String, Variable]
     private var availableRegisters: List[Register] 
         = ((19 to 28) ++ (numOfParams to 7) ++ (10 to 15)).toList.map(n => XRegister(n))
     
     private var varOffset = 0
     // start after stored fp, lr and registers about to use
-    private var paramOffset = 16 + 16 * math.floorDiv(math.max(numOfVariables, 10) + 1, 2)
+    private var paramOffset = 16 + 16 * math.floorDiv(math.min(numOfVariables, 10) + 1, 2)
     private var currentParamRegister = 0
 
     private val CalleeRegister: ListBuffer[Register] = ListBuffer.empty[Register]
