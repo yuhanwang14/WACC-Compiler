@@ -1,3 +1,5 @@
+package backend
+
 import instructions.*
 import scala.collection.mutable.{Map, ListBuffer}
 import scala.math
@@ -15,13 +17,13 @@ import scala.math
    offset to retrieve function params and negative offset to retrieve local variables
  */
 
-case class Variable(location: Either[Register, Int], size: Int)
-
 class RegisterAllocator(
     numOfVariables: Int,
     numOfParams: Int
 ) {
 
+    case class Variable(location: Either[Register, Int], size: Int)
+    
     type Offset = Int
     type Location = Either[Register, Offset]
     private val varMap: Map[String, Variable] = Map.empty[String, Variable]
