@@ -1,4 +1,4 @@
-package common
+package common.types
 
 sealed trait WaccType(override val toString: String)(override val byteSize: Int) extends Sizeable
 

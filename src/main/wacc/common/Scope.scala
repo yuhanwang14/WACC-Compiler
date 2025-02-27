@@ -1,8 +1,8 @@
 package common
 
 import scala.collection.mutable.{ArrayBuffer, Map}
-import ast.WaccType
-import common.Scope.PrefixSeparator
+import ast.WaccType as FrontEndType
+import types.{WaccType, TypeBridge}
 
 /** A `Scope` instance stores all variables and their respective types in a scope. This includes
   * variables from higher scopes.
@@ -14,25 +14,17 @@ import common.Scope.PrefixSeparator
 trait Scope {
   val prefix: String
   val children: ArrayBuffer[Scope] = ArrayBuffer()
-  val varTable: Map[String, WaccType] = Map()
-  val returnType: Option[WaccType] = None
+  val varTable: Map[String, FrontEndType] = Map()
+  val returnType: Option[FrontEndType] = None
   val parent: Option[Scope] = None
   var shadower: Shadower = Shadower()
   
   /**
     * For register allocator's use.
     */
-  val localVars: ArrayBuffer[String] = ArrayBuffer()
+  val localVars: ArrayBuffer[(String, WaccType)] = ArrayBuffer()
 
-  protected def localStackSize: Int = localVars.size
-  protected var childMaxStackSize: Int = 0
-
-  def stackSize: Int = localStackSize + childMaxStackSize
-
-  protected def updateVarCount(childStackSize: Int): Unit =
-    if childStackSize > childMaxStackSize then
-      childMaxStackSize = childStackSize
-      parent.map(_.updateVarCount(stackSize))
+  def localStackSize: Int = localVars.map(_._2.byteSize).sum()
 
   /** Adds a new [[ChildScope]] to [[children]] with the given `identifier`.
     *
@@ -47,14 +39,14 @@ trait Scope {
     newChild
   }
 
-  def addSymbol(identifier: String, varType: WaccType): Boolean = {
+  def addSymbol(identifier: String, varType: FrontEndType): Boolean = {
     val prefixedId = prefix + Scope.PrefixSeparator + identifier
     shadower(identifier) = prefixedId
     if (varTable.contains(prefixedId))
       varTable(prefixedId) = varType
       false
     else {
-      localVars.addOne(prefixedId)
+      localVars.addOne(prefixedId, TypeBridge.fromAst(varType))
       varTable(prefixedId) = varType
       true
     }
@@ -63,13 +55,13 @@ trait Scope {
   /** Shadow an identifier with local variable. Assumes `identifier` already added into `varTable`.
     */
   def shadow(identifier: String): Unit = {
-    shadower(identifier) = prefix + PrefixSeparator + identifier
+    shadower(identifier) = prefix + Scope.PrefixSeparator + identifier
   }
 
-  def lookupSymbol(identifier: String): Option[WaccType] =
+  def lookupSymbol(identifier: String): Option[FrontEndType] =
     shadower(identifier).flatMap(varTable.get)
 
-  def apply(prefixedId: String): Option[WaccType] = lookupSymbol(prefixedId)
+  def apply(prefixedId: String): Option[FrontEndType] = lookupSymbol(prefixedId)
 
   def resetShadow(): Unit = parent match
     case None =>
@@ -88,8 +80,8 @@ object Scope {
 class ChildScope(parentScope: Scope, identifier: String = Scope.ScopeDefaultName) extends Scope {
   override val parent: Option[Scope] = Some(parentScope)
   override val prefix: String = parentScope.prefix + Scope.PrefixSeparator + identifier
-  override val varTable: Map[String, WaccType] = parentScope.varTable.clone()
-  override val returnType: Option[WaccType] = parentScope.returnType
+  override val varTable: Map[String, FrontEndType] = parentScope.varTable.clone()
+  override val returnType: Option[FrontEndType] = parentScope.returnType
   shadower = parentScope.shadower.clone()
 }
 
@@ -99,8 +91,8 @@ class GlobalScope extends Scope {
 
 class FunctionScope(
     identifer: String,
-    override val returnType: Option[WaccType],
-    paramList: Iterable[(String, WaccType)]
+    override val returnType: Option[FrontEndType],
+    paramList: Iterable[(String, FrontEndType)]
 ) extends Scope {
   override val prefix = Scope.FunctionIdentifierPrefix + identifer
   paramList.map((identifier, varType) =>

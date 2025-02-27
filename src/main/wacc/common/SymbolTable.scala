@@ -1,15 +1,13 @@
 package common
 
-import ast.*
 import scala.collection.mutable.{ArrayBuffer, Map}
+import types.FunctionSignature
 
 /** A `SymbolTable` instance stores all already-added variables and function signature.
   *
   * The instance also stores the current scope.
   */
 class SymbolTable {
-  case class FunctionSignature(returnType: WaccType, paramTypes: Seq[WaccType])
-
   val funcTable: Map[String, (FunctionSignature, FunctionScope)] = Map()
   val funcScopes: ArrayBuffer[FunctionScope] = ArrayBuffer()
   val globalScope: Scope = GlobalScope()
@@ -44,20 +42,20 @@ class SymbolTable {
   // Adds a symbol to the current scope
   def addSymbol(
       identifier: String,
-      varType: WaccType
+      varType: ast.WaccType
   ): Boolean =
     currentScope.addSymbol(identifier, varType)
 
   // Looks up a symbol from innermost to outermost scope
-  def lookupSymbol(identifier: String): Option[WaccType] = currentScope(identifier)
+  def lookupSymbol(identifier: String): Option[ast.WaccType] = currentScope(identifier)
 
-  def addFunction(f: Func): Boolean =
+  def addFunction(f: ast.Func): Boolean =
     if (funcTable.contains(f.ti(1).name)) { false }
     else {
       // Deconstruct a `Func` instance
       val identifier: String = f.ti(1).name
-      val returnType: WaccType = f.ti(0)
-      val paramList: List[(String, WaccType)] =
+      val returnType: ast.WaccType = f.ti(0)
+      val paramList: List[(String, ast.WaccType)] =
         f.ps.map(_.ps.map(p => (p.i.name, p.t))).getOrElse(List())
       val fScope = FunctionScope(
         identifier,
