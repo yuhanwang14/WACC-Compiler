@@ -71,4 +71,8 @@ class RegisterAllocator(
         varMap(name) = variable
         variable
     }
+
+    def getLocation(name: String): Either[Register, Int] = {
+        varMap.get(name).fold(Right(0))(x => x.location)
+    }
 }

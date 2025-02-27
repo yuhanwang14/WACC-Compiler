@@ -2,11 +2,11 @@ package backend
 
 import ast.*
 import common.SymbolTable
-import common.types.{WaccType, TypeBridge}
-import backend.RegisterAllocator
+import common.types.TypeBridge
 import instructions.*
 import instructions.Register.*
 import scala.collection.mutable.ListBuffer
+import common.Scope
 
 object Generator {
 
@@ -20,8 +20,12 @@ object Generator {
     prog.fs.foreach(generateFunc(_))
   }
 
-  private def generateBlock(block: Stmt, allocator: RegisterAllocator)(implicit
-      // symbolTable: SymbolTable,
+  private def generateBlock(
+      block: Stmt, 
+      allocator: RegisterAllocator, 
+      scope: Scope
+  )(implicit
+      symbolTable: SymbolTable,
       asmLine: ListBuffer[String]
   ): Unit = {
 
@@ -29,14 +33,18 @@ object Generator {
       case Block(sts) => sts
       case _          => return
     }
-    stmts.foreach(generateStmt(_, allocator))
+
+    var subScopes = scope.children
+    scope.localVars.foreach(x => allocator.allocate(x._1, x._2.byteSize))
+    
+    for (stmt <- stmts) {
+      stmt match {
+        case Skip() =>   
+        case _ =>
+      }
+    }
 
   }
-
-  private def generateStmt(stmt: Stmt, allocator: RegisterAllocator)(implicit
-      // symbolTable: SymbolTable,
-      asmLine: ListBuffer[String]
-  ): Unit =  {}
 
   private def generateFunc(func: Func)(implicit
       symbolTable: SymbolTable,
@@ -64,6 +72,9 @@ object Generator {
     for ((name, paramType) <- params) {
       allocator.addParam(name, TypeBridge.fromAst(paramType).byteSize)
     }
+
+    // the current scope is for parameters
+    generateBlock(func.s, allocator, symbolTable.currentScope.children.head)
     
     asmLine += popCode
     asmLine += LDP(FP, LR, SP, ImmVal(16), PostIndex).toString()
@@ -71,7 +82,7 @@ object Generator {
   
   /**
    * Generate code to push and pop all registers saved by Callee (x19-x28) that are about to use.
-   * Assume that `numReg` > 0
+   * Assume that 0 < `numReg` <= 10
    */
   private def pushAndPopCalleeRegisters(numReg: Int = 10): (String, String) = {
 
