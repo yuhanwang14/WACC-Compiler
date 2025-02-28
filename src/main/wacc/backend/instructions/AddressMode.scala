@@ -5,7 +5,9 @@ case object Offset extends AddressMode
 case object PreIndex extends AddressMode
 case object PostIndex extends AddressMode
 
-case class ImmVal(value: Int) {
+trait Operand
+
+case class ImmVal(value: Int) extends Operand {
   override def toString: String = s"#${value}"
 }
 

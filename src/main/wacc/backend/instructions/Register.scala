@@ -1,6 +1,6 @@
 package instructions
 
-sealed trait Register {
+sealed trait Register extends Operand {
   def number: Int
 }
 
