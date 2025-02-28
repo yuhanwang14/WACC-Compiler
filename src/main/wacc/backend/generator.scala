@@ -48,6 +48,10 @@ object Generator {
           generateBlock(b2, newAllocator, subScopes.head)
           subScopes = subScopes.tail
         }
+        case Declare(ti, rvalue) => {
+          val name: String = ti._2.name
+          scope.shadow(name)
+        }
         case _ =>
       }
     }

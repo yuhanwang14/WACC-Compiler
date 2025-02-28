@@ -13,7 +13,6 @@ object ProgramChecker {
   ): Either[ListBuffer[Error], SymbolTable] = {
     implicit val symbolTable = new SymbolTable()
     implicit val errors: ListBuffer[Error] = ListBuffer()
-    symbolTable.enterScope()
     prog.fs.foreach { f =>
       if (!symbolTable.addFunction(f)) {
         errors +=
@@ -43,7 +42,7 @@ object ProgramChecker {
     f.ps match {
       case Some(ParamList(params)) =>
         params.foreach { (p: Param) =>
-          if (!st.addSymbol(p.i.name, p.t)) {
+          if (!st.addSymbol("::check_" ++ p.i.name, p.t)) {
             errors +=
               ErrorBuilder.specializedError(
                 Seq(
