@@ -17,32 +17,32 @@ import scala.math
    offset to retrieve function params and negative offset to retrieve local variables
  */
 
+case class Variable(location: Either[Register, Int], size: Int)
+
 class RegisterAllocator(
     numOfVariables: Int = 10,
     numOfParams: Int = 0
 ) {
-
-    case class Variable(location: Either[Register, Int], size: Int)
     
     type Offset = Int
     type Location = Either[Register, Offset]
     val varMap: Map[String, Variable] = Map.empty[String, Variable]
-    private var availableRegisters: List[Register] 
-        = ((19 to 28) ++ (numOfParams to 7) ++ (10 to 15)).toList.map(n => XRegister(n))
+    var availableRegisters: List[Register] 
+        = ((19 to 28) ++ (numOfParams to 7) ++ (10 to 15) :+ 18).toList.map(n => XRegister(n))
     
-    private var varOffset = 0
+    var varOffset = 0
     // start after stored fp, lr and registers about to use
-    private var paramOffset = 16 + 16 * math.floorDiv(math.min(numOfVariables, 10) + 1, 2)
-    private var currentParamRegister = 0
+    var paramOffset = 16 + 16 * math.floorDiv(math.min(numOfVariables, 10) + 1, 2)
+    var currentParamRegister = 0
 
-    private val CalleeRegister: ListBuffer[Register] = ListBuffer.empty[Register]
-    private val CallerRegister: ListBuffer[Register] = ListBuffer.empty[Register]
+    val calleeRegister: ListBuffer[Register] = ListBuffer.empty[Register]
+    val callerRegister: ListBuffer[Register] = ListBuffer.empty[Register]
 
     private def addRegister(reg: Register): Unit = {
         if (19 <= reg.number && reg.number <= 28)
-            CalleeRegister += reg
+            calleeRegister += reg
         else
-            CallerRegister += reg
+            callerRegister += reg
     }
 
     def addParam(name: String, size: Int): Variable = {
@@ -74,5 +74,17 @@ class RegisterAllocator(
 
     def getLocation(name: String): Either[Register, Int] = {
         varMap.get(name).fold(Right(0))(x => x.location)
+    }
+
+    override def clone(): RegisterAllocator = {
+        val cloned = RegisterAllocator(numOfVariables, numOfParams)
+        cloned.calleeRegister.addAll(calleeRegister)
+        cloned.callerRegister.addAll(callerRegister)
+        cloned.availableRegisters = availableRegisters
+        cloned.varMap.addAll(varMap)
+        cloned.paramOffset = paramOffset
+        cloned.varOffset = varOffset
+        cloned.currentParamRegister = currentParamRegister
+        cloned
     }
 }

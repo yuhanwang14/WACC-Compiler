@@ -40,6 +40,14 @@ object Generator {
     for (stmt <- stmts) {
       stmt match {
         case Skip() =>   
+        case If(cond, b1, b2) => {
+          var newAllocator: RegisterAllocator = allocator.clone()
+          generateBlock(b1, newAllocator, subScopes.head)
+          subScopes = subScopes.tail
+          newAllocator = allocator.clone()
+          generateBlock(b2, newAllocator, subScopes.head)
+          subScopes = subScopes.tail
+        }
         case _ =>
       }
     }
