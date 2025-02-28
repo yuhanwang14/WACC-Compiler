@@ -341,8 +341,8 @@ object SemanticChecker {
     case Exit(e) => verifyType(e, intType)
     case If(e, s1, s2) =>
       verifyType(e, boolType)
-      verifyStmt(s1)
       verifyStmt(s2)
+      verifyStmt(s1)
     case While(e, s) =>
       verifyType(e, boolType)
       verifyStmt(s)

@@ -19,9 +19,9 @@ case class CMPReg(Rd: Register, Rm: Register) extends Instruction(f"cmp $Rd, $Rm
 
 case class CMPImm(Rd: Register, immVal: ImmVal) extends Instruction(f"cmp $Rd, $immVal")
 
-case class ADDS(Rd: Register, src: Operand) extends Instruction(f"adds $Rd, $src")
+case class ADDS(Rd: Register, Rn: Register, opr: Operand) extends Instruction(f"adds $Rd, $Rn, $opr")
 
-case class SUBS(Rd: Register, src: Operand) extends Instruction(f"subs $Rd, $src")
+case class SUBS(Rd: Register, Rn: Register, opr: Operand) extends Instruction(f"subs $Rd, $Rn, $opr")
 
 case class CBZ(Rd: Register, label: Label) extends Instruction(f"cbz $Rd, #label")
 

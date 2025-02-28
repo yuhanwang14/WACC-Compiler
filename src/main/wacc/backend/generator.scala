@@ -39,18 +39,22 @@ object Generator {
     var subScopes = scope.children
 
     // calculate the extra stack space needed for local variables within current scope
-    val offsetBefore: Int = -math.floorDiv(-allocator.varOffset, 16) * 16
+    val offsetBefore: Int = math.floorDiv(allocator.varOffset, 16) * 16
     scope.localVars.foreach(x => allocator.allocate(x._1, x._2.byteSize))
-    val offsetAfter: Int = -math.floorDiv(-allocator.varOffset, 16) * 16
+    val offsetAfter: Int = math.floorDiv(allocator.varOffset, 16) * 16
     val extraStackSpace: Int = offsetBefore - offsetAfter
 
     if (extraStackSpace > 0)
-      asmLine += ADDS(SP, ImmVal(extraStackSpace)).toString()
+      asmLine += SUBS(SP, SP, ImmVal(extraStackSpace)).toString()
     
     for (stmt <- stmts) {
       stmt match {
         case Skip() =>   
         case If(cond, b1, b2) => {
+
+          val thenLabel = LocalLabel(f"${localLabelCount}")
+          val afterLabel = LocalLabel(f"${localLabelCount + 1}")
+          localLabelCount += 2
 
           // generate `else`` block
           var newAllocator: RegisterAllocator = allocator.clone()
@@ -59,12 +63,12 @@ object Generator {
 
           // generate `then` block
           newAllocator = allocator.clone()
-          asmLine += LocalLabel(f"${localLabelCount}").toString()
+          asmLine += thenLabel.toString()
           generateBlock(b1, newAllocator, subScopes.head)
           subScopes = subScopes.tail
 
-          asmLine += LocalLabel(f"${localLabelCount + 1}").toString()
-          localLabelCount += 2
+          asmLine += afterLabel.toString()
+
         }
         case Declare(ti, rvalue) => {
           val name: String = ti._2.name
@@ -75,7 +79,7 @@ object Generator {
     }
 
     if (extraStackSpace > 0)
-      asmLine += SUBS(SP, ImmVal(extraStackSpace)).toString()
+      asmLine += ADDS(SP, SP, ImmVal(extraStackSpace)).toString()
 
   }
 
