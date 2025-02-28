@@ -90,8 +90,10 @@ object Generator {
     // the current scope is for parameters
     generateBlock(func.s, allocator, symbolTable.currentScope.children.head)
     
+    // pop saved registers
     asmLine += popCode
     asmLine += LDP(FP, LR, SP, ImmVal(16), PostIndex).toString()
+    asmLine += RET.toString()
   }
 
   /**
@@ -106,20 +108,20 @@ object Generator {
     val offset = math.floorDiv(numReg + 1, 2) * 16
 
     if (numReg == 1) {
-      val push = STP(regs(0), XZR, SP, ImmVal(-offset), PreIndex).toString()
-      val pop  = LDP(regs(0), XZR, SP, ImmVal(offset), PostIndex).toString()
-      (push, pop)
+      val pushCode = STP(regs(0), XZR, SP, ImmVal(-offset), PreIndex).toString()
+      val popCode  = LDP(regs(0), XZR, SP, ImmVal(offset), PostIndex).toString()
+      (pushCode, popCode)
     } else {
 
-      val firstPush = STP(regs(0), regs(1), SP, ImmVal(-offset), PreIndex).toString()
-      val lastPop   = LDP(regs(0), regs(1), SP, ImmVal(offset), PostIndex).toString()
+      val firstPush = STP(regs(0), regs(1), SP, ImmVal(-offset), PreIndex)
+      val lastPop   = LDP(regs(0), regs(1), SP, ImmVal(offset), PostIndex)
 
       val pairedInstrs = (2 until numReg by 2).map { pushedNum =>
         val r1 = regs(pushedNum)
         val r2 = if (pushedNum + 1 < numReg) regs(pushedNum + 1) else XZR
         (
-          STP(r1, r2, SP, ImmVal(8 * pushedNum), Offset).toString(),
-          LDP(r1, r2, SP, ImmVal(8 * pushedNum), Offset).toString()
+          STP(r1, r2, SP, ImmVal(8 * pushedNum), Offset),
+          LDP(r1, r2, SP, ImmVal(8 * pushedNum), Offset)
         )
       }
       val pushCode = (firstPush +: pairedInstrs.map(_._1)).mkString("\n")
@@ -128,5 +130,5 @@ object Generator {
 
     }
   }
-  
+
 }
