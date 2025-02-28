@@ -7,6 +7,7 @@ import instructions.*
 import instructions.Register.*
 import scala.collection.mutable.ListBuffer
 import common.Scope
+import scala.collection.mutable.ArrayBuffer
 
 object Generator {
 
@@ -71,7 +72,8 @@ object Generator {
 
     // temporarily push all registers saved by Callee
     val numOfVariables = 10
-    val (pushCode, popCode) = pushAndPopCalleeRegisters(numOfVariables)
+    val calleeRegisters: ArrayBuffer[Register] = (19 to 28).map(n => XRegister(n)).to(ArrayBuffer)
+    val (pushCode, popCode) = pushAndPopRegisters(calleeRegisters)
 
     asmLine += pushCode
     asmLine += MOVReg(FP, SP).toString()
@@ -91,27 +93,30 @@ object Generator {
     asmLine += popCode
     asmLine += LDP(FP, LR, SP, ImmVal(16), PostIndex).toString()
   }
-  
-  /**
-   * Generate code to push and pop all registers saved by Callee (x19-x28) that are about to use.
-   * Assume that 0 < `numReg` <= 10
-   */
-  private def pushAndPopCalleeRegisters(numReg: Int = 10): (String, String) = {
 
+  /**
+   * Generate code to push and pop all registers in `regs` to the stack.
+   * Assume that `regs` is non-empty.
+   * The generated code works if only if the stack pointers (sp) after the push and before 
+   * the pop are the same. 
+   */
+  private def pushAndPopRegisters(regs: ArrayBuffer[Register]): (String, String) = {
+
+    val numReg: Int = regs.size
     val offset = math.floorDiv(numReg + 1, 2) * 16
 
     if (numReg == 1) {
-      val push = STP(XRegister(19), XZR, SP, ImmVal(-offset), PreIndex).toString()
-      val pop  = LDP(XRegister(19), XZR, SP, ImmVal(offset), PostIndex).toString()
+      val push = STP(regs(0), XZR, SP, ImmVal(-offset), PreIndex).toString()
+      val pop  = LDP(regs(0), XZR, SP, ImmVal(offset), PostIndex).toString()
       (push, pop)
     } else {
 
-      val firstPush = STP(XRegister(19), XRegister(20), SP, ImmVal(-offset), PreIndex).toString()
-      val lastPop   = LDP(XRegister(19), XRegister(20), SP, ImmVal(offset), PostIndex).toString()
+      val firstPush = STP(regs(0), regs(1), SP, ImmVal(-offset), PreIndex).toString()
+      val lastPop   = LDP(regs(0), regs(1), SP, ImmVal(offset), PostIndex).toString()
 
       val pairedInstrs = (2 until numReg by 2).map { pushedNum =>
-        val r1 = XRegister(19 + pushedNum)
-        val r2 = if (pushedNum + 1 < numReg) XRegister(20 + pushedNum) else XZR
+        val r1 = regs(pushedNum)
+        val r2 = if (pushedNum + 1 < numReg) regs(pushedNum + 1) else XZR
         (
           STP(r1, r2, SP, ImmVal(8 * pushedNum), Offset).toString(),
           LDP(r1, r2, SP, ImmVal(8 * pushedNum), Offset).toString()
@@ -120,7 +125,8 @@ object Generator {
       val pushCode = (firstPush +: pairedInstrs.map(_._1)).mkString("\n")
       val popCode  = (pairedInstrs.map(_._2) :+ lastPop).mkString("\n")
       (pushCode, popCode)
+
     }
   }
-
+  
 }

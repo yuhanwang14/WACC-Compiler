@@ -1,7 +1,7 @@
 package backend
 
 import instructions.*
-import scala.collection.mutable.{Map, ListBuffer}
+import scala.collection.mutable.{Map, ArrayBuffer}
 import scala.math
 
 /* aarch64 convention for registers:
@@ -35,8 +35,8 @@ class RegisterAllocator(
     var paramOffset = 16 + 16 * math.floorDiv(math.min(numOfVariables, 10) + 1, 2)
     var currentParamRegister = 0
 
-    val calleeRegister: ListBuffer[Register] = ListBuffer.empty[Register]
-    val callerRegister: ListBuffer[Register] = ListBuffer.empty[Register]
+    val calleeRegister: ArrayBuffer[Register] = ArrayBuffer.empty[Register]
+    val callerRegister: ArrayBuffer[Register] = ArrayBuffer.empty[Register]
 
     private def addRegister(reg: Register): Unit = {
         if (19 <= reg.number && reg.number <= 28)
