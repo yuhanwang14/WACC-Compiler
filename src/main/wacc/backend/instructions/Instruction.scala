@@ -11,6 +11,9 @@ case class LDP(Rt: Register, Rt2: Register, Rn: Register, immVal: ImmVal, indexM
 case class LDUR(Rt: Register, Rn: Register, immVal: ImmVal, indexMode: AddressMode = Offset)
     extends Instruction(f"ldur $Rt, ${{ Address(Rn, indexMode, immVal) }}")
 
+case class STR(Rt: Register, Rn: Register, immVal: ImmVal, indexMode: AddressMode)
+    extends Instruction(f"str $Rt, ${{ Address(Rn, indexMode, immVal) }}")
+
 case class MOVReg(Rd: Register, Rm: Register) extends Instruction(f"mov $Rd, $Rm")
 
 case class MOVImm(Rd: Register, immVal: ImmVal) extends Instruction(f"mov $Rd, $immVal")

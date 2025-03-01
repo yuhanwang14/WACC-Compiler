@@ -49,6 +49,7 @@ class RegisterAllocator(
         val variable: Variable = if (currentParamRegister < 8) {
             val reg = XRegister(currentParamRegister)
             currentParamRegister += 1
+            callerRegister += reg
             Variable(Left(reg), size)
         } else {
             paramOffset += size
