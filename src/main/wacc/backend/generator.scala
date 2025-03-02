@@ -52,8 +52,8 @@ object Generator {
     for (stmt <- stmts) {
       stmt match {
         case Skip() =>
-        case If(cond, b1, b2) => {
 
+        case If(cond, b1, b2) => {
           val thenLabel = LocalLabel(f"${localLabelCount}")
           val afterLabel = LocalLabel(f"${localLabelCount + 1}")
           var newAllocator: RegisterAllocator = allocator.clone()
@@ -73,11 +73,9 @@ object Generator {
           subScopes = subScopes.tail
 
           asmLine += afterLabel.toString
-
         }
 
         case While(cond, block) => {
-
           val afterLabel = LocalLabel(f"${localLabelCount}")
           val loopLabel = LocalLabel(f"${localLabelCount + 1}")
           val newAllocator: RegisterAllocator = allocator.clone()
@@ -90,7 +88,12 @@ object Generator {
 
           asmLine += afterLabel.toString
           asmLine += Comment(s"TODO: evaluate $cond and bcond to $loopLabel")(4).toString
+        }
 
+        case Begin(block) => {
+          val newAllocator: RegisterAllocator = allocator.clone()
+          generateBlock(block, newAllocator, subScopes.head)
+          subScopes = subScopes.tail
         }
 
 
