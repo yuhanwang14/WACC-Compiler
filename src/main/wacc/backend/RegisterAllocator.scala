@@ -28,4 +28,6 @@ class RegisterAllocator(
     val varMap: MutableMap[String, (Location, Int)] = MutableMap.from(inheritedMap)
     
     def +:(vars: Seq[(String, WaccType)]): RegisterAllocator = RegisterAllocator(this.vars ++ vars, varMap)
+
+    def apply(identifier: String): Location = ???
 }
