@@ -9,6 +9,7 @@ import scala.collection.mutable.ListBuffer
 import common.Scope
 import scala.collection.mutable.ArrayBuffer
 import scala.math
+import parsers.StatementParser.rValue
 
 object Generator {
 
@@ -53,8 +54,8 @@ object Generator {
     // TODO: implement all statement cases
     for (stmt <- stmts) {
       stmt match {
-        case Skip() =>
 
+        // TODO: implement branching
         case If(cond, b1, b2) => {
           val thenLabel = asmLocal ~ localLabelCount
           val afterLabel = asmLocal ~ (localLabelCount + 1)
@@ -77,6 +78,7 @@ object Generator {
           asmLines += AsmSnippet(afterLabel)(0)
         }
 
+        // TODO: implement branching
         case While(cond, block) => {
           val afterLabel = asmLocal ~ localLabelCount
           val loopLabel = asmLocal ~ (localLabelCount + 1)
@@ -97,6 +99,62 @@ object Generator {
           asmLines += generateBlock(block, newAllocator, subScopes.head)
           subScopes = subScopes.tail
         }
+
+        case Exit(expr) => {
+          asmLines += generateExpr(expr, allocator, scope, XRegister(0))
+          asmLines += BL("exit")
+        }
+
+        case Declare(ti, rvalue) => {
+          asmLines += generateRValue(rvalue, allocator, scope)
+          val name: String = ti._2.name
+          val varType = ti._1
+          scope.shadow(name)
+          val prefixedName = scope.shadower(name).getOrElse("")
+          val location = allocator.getLocation(prefixedName)
+          location match {
+            case Left(reg) => asmLines += MOV(reg, XRegister(8))
+            case Right(offset) => {
+              varType match {
+                case BoolType() | CharType() => STURB(XRegister(8), Offset(fp, ImmVal(offset)))
+                case _ => STUR(XRegister(8), Offset(fp, ImmVal(offset)))
+              }
+            }
+          }
+        }
+
+        // TODO: need to implement generateLValue
+        case Assign(lValue, rValue) => ???
+
+        // TODO: need the type of expr to decide the location of result (x0 or x8)
+        case Return(expr) => {
+          asmLines += generateExpr(expr, allocator, scope)
+        }
+
+        // TODO: need the type of expr to decide the function called for print
+        case Print(expr) => {
+          val (pushCode, popCode) = pushAndPopRegisters(allocator.callerRegister)
+          asmLines += pushCode
+          asmLines += generateExpr(expr, allocator, scope, XRegister(0))
+          // asmLines += ???
+          asmLines += popCode
+        }
+
+        // TODO: need the type of expr to decide the function called for print
+        case Println(expr) => {
+          val (pushCode, popCode) = pushAndPopRegisters(allocator.callerRegister)
+          asmLines += pushCode
+          asmLines += generateExpr(expr, allocator, scope, XRegister(0))
+          // asmLines += ???
+          asmLines += AsmSnippet("_println")(0)
+          asmLines += popCode
+        }
+
+        // TODO: need the type of expr to decide the content of freeing
+        case Free(expr) => ???
+
+        // TODO: need to implement generateLValue
+        case Read(lvalue) => ???
 
         case _ =>
       }
