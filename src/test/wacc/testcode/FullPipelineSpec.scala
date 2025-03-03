@@ -1,16 +1,17 @@
-package integration
+package testcode
 
 import org.scalatest.funsuite.AnyFunSuite
 import scala.sys.process._
 import java.nio.file.{Files, Paths}
+import test.wacc.TestFiles
 
 class FullPipelineSpec extends AnyFunSuite {
 
   // Update test lists before running
   UpdateTestFile.updateFileLists()
 
-  val validFiles = Files.readAllLines(Paths.get("waccExamples/valid_files")).asScala.toSeq
-  val invalidFiles = Files.readAllLines(Paths.get("waccExamples/invalid_files")).asScala.toSeq
+  val validFiles = TestFiles.validFiles
+  val invalidFiles = TestFiles.validFiles
 
   test("Run all valid and invalid WACC programs") {
     validFiles.foreach { file =>

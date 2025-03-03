@@ -1,9 +1,8 @@
-package frontend
+package testcode
 
 import parser.*
 import semanticCheckers.*
 import org.scalatest.funsuite.AnyFunSuite
-import java.nio.file.{Files, Paths}
 import java.io.File
 import scala.jdk.CollectionConverters.*
 import scala.util.{Success, Failure}
@@ -12,10 +11,10 @@ import scala.io.Source
 class FrontendSpec extends AnyFunSuite {
 
   // Update test lists before running
-  UpdateTestFile.updateFileLists()
+  TestFiles.updateFileLists()
 
-  val validFiles = Files.readAllLines(Paths.get("waccExamples/valid_files")).asScala.toSeq
-  val invalidFiles = Files.readAllLines(Paths.get("waccExamples/invalid_files")).asScala.toSeq
+  val validFiles = TestFiles.validFiles
+  val invalidFiles = TEstFiles.invalidFiles
 
   def testFile(fileName: String, shouldPass: Boolean): Unit = {
     val src = new File(fileName)
