@@ -1,8 +1,10 @@
 package backend
 
 import instructions.*
-import scala.collection.mutable.{Map, ArrayBuffer}
+import scala.collection.mutable.{Set as MutableSet, Map as MutableMap}
 import scala.math
+import common.types.WaccType
+import javax.imageio.spi.RegisterableService
 
 /* aarch64 convention for registers:
 
@@ -17,75 +19,13 @@ import scala.math
    offset to retrieve function params and negative offset to retrieve local variables
  */
 
-case class Variable(location: Either[Register, Int], size: Int)
+type Location = Register | Int
 
 class RegisterAllocator(
-    numOfVariables: Int = 10,
-    numOfParams: Int = 0
-) {
+    vars: Seq[(String, WaccType)],
+    inheritedMap: Iterable[(String, (Location, Int))]
+)(implicit registerIterator: LocationIterator = LocationIterator()) {
+    val varMap: MutableMap[String, (Location, Int)] = MutableMap.from(inheritedMap)
     
-    type Offset = Int
-    type Location = Either[Register, Offset]
-    val varMap: Map[String, Variable] = Map.empty[String, Variable]
-    var availableRegisters: List[Register] 
-        = ((19 to 28) ++ (numOfParams to 7) ++ (10 to 15) :+ 18).toList.map(n => XRegister(n))
-    
-    var varOffset = 0
-    // start after stored fp, lr and registers about to use
-    var paramOffset = 16 + 16 * math.floorDiv(math.min(numOfVariables, 10) + 1, 2)
-    var currentParamRegister = 0
-
-    val calleeRegister: ArrayBuffer[Register] = ArrayBuffer.empty[Register]
-    val callerRegister: ArrayBuffer[Register] = ArrayBuffer.empty[Register]
-
-    private def addRegister(reg: Register): Unit = {
-        if (19 <= reg.number && reg.number <= 28)
-            calleeRegister += reg
-        else
-            callerRegister += reg
-    }
-
-    def addParam(name: String, size: Int): Variable = {
-        val variable: Variable = if (currentParamRegister < 8) {
-            val reg = XRegister(currentParamRegister)
-            currentParamRegister += 1
-            callerRegister += reg
-            Variable(Left(reg), size)
-        } else {
-            paramOffset += size
-            Variable(Right(paramOffset - size), size)
-        }
-        varMap(name) = variable
-        variable
-    }
-
-    def allocate(name: String, size: Int): Variable = {
-        val variable = if (availableRegisters.nonEmpty) {
-            val reg = availableRegisters.head
-            availableRegisters = availableRegisters.tail
-            addRegister(reg)
-            Variable(Left(reg), size)
-        } else {
-            varOffset -= size
-            Variable(Right(varOffset), size)
-        }
-        varMap(name) = variable
-        variable
-    }
-
-    def getLocation(name: String): Either[Register, Int] = {
-        varMap.get(name).fold(Right(0))(x => x.location)
-    }
-
-    override def clone(): RegisterAllocator = {
-        val cloned = RegisterAllocator(numOfVariables, numOfParams)
-        cloned.calleeRegister.addAll(calleeRegister)
-        cloned.callerRegister.addAll(callerRegister)
-        cloned.availableRegisters = availableRegisters
-        cloned.varMap.addAll(varMap)
-        cloned.paramOffset = paramOffset
-        cloned.varOffset = varOffset
-        cloned.currentParamRegister = currentParamRegister
-        cloned
-    }
+    def +:(vars: Seq[(String, WaccType)]): RegisterAllocator = RegisterAllocator(this.vars ++ vars, varMap)
 }
