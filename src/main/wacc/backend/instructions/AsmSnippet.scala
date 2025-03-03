@@ -1,12 +1,14 @@
 package instructions
 
+import scala.annotation.varargs
+
 class AsmSnippet(code: String)(implicit indent: Int) {
   override def toString: String = " " * indent + code.replace("\n", "\n" + " " * indent)
 }
 
 case class Comment(comment: String)(implicit indent: Int) extends AsmSnippet(f"// $comment")
 
-class MultiLineAsmSnippet(lines: List[AsmSnippet])(implicit indent: Int)
+class MultiLineAsmSnippet(lines: AsmSnippet*)(implicit indent: Int)
     extends AsmSnippet(lines.mkString("\n"))
 
 class Header(code: String)(implicit indent: Int) extends AsmSnippet(code)
@@ -25,12 +27,10 @@ case class StringConst(value: String) extends Header(f".asciz \"$value\"")(4)
 
 case class LabelledStringConst(label: String, value: String)
     extends MultiLineAsmSnippet(
-      List(
-        Comment(f"// length of ${label}")(0),
-        WordConst(value.length()),
-        LabelHeader(label),
-        StringConst(value)
-      )
+      Comment(f"// length of ${label}")(0),
+      WordConst(value.length()),
+      LabelHeader(label),
+      StringConst(value)
     )(0)
 
 case class LabelHeader(identifier: String) extends AsmSnippet(f"$identifier:")(0)
