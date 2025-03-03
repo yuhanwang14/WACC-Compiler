@@ -1,14 +1,16 @@
 package instructions
 
-trait Register
+sealed trait Register extends Operand {
+  val number: Int
+}
 
-class XRegister(number: Int) {
+class XRegister(override val number: Int) extends Register {
   override def toString(): String = f"x$number"
 
   def asW: WRegister = WRegister(number)
 }
 
-class WRegister(number: Int) {
+class WRegister(override val number: Int) extends Register {
   override def toString(): String = f"w$number"
 
   def asX: XRegister = XRegister(number)

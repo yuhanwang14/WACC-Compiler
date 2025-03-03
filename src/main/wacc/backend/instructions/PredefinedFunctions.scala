@@ -1,6 +1,5 @@
 package instructions
 
-import Register.*
 import AsmLabeling.*
 
 // TODO: .align 4, .word n
@@ -44,112 +43,112 @@ object PredefinedFunctions {
   def _readc() = AsmFunction(
     LabelledStringConst(asmLocal ~ "._readc_str0", "%c"),
     InstrLabel("_readc"),
-    STP(LR, XZR, PreIndex(SP, ImmVal(-16))),
-    MOV(XRegister(1), SP),
+    STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
+    MOV(XRegister(1), sp),
     ADR(XRegister(0), asmLocal ~ "._readc_str0"),
     BL(asmGlobal ~ "scanf"),
-    LDP(XRegister(0), LR, PostIndex(SP, ImmVal(16))),
+    LDP(XRegister(0), lr, PostIndex(sp, ImmVal(16))),
     RET
   )
 
   def _readi() = AsmFunction(
     LabelledStringConst(asmLocal ~ "._readi_str0", "%d"),
     InstrLabel("_readi"),
-    STP(LR, XZR, PreIndex(SP, ImmVal(-16))),
-    MOV(XRegister(1), SP),
+    STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
+    MOV(XRegister(1), sp),
     ADR(XRegister(0), asmLocal ~ "_readi_str0"),
     BL(asmGlobal ~ "scanf"),
-    LDP(XRegister(0), LR, PostIndex(SP, ImmVal(16))),
+    LDP(XRegister(0), lr, PostIndex(sp, ImmVal(16))),
     RET
   )
 
   def _freepair() = AsmFunction(
     InstrLabel("_freepair"),
-    STP(LR, XZR, PreIndex(SP, ImmVal(-16))),
+    STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
     CBZ(XRegister(0), asmGlobal ~ "_errNull"),
     BL(asmGlobal ~ "free"),
-    LDP(LR, XZR, PostIndex(SP, ImmVal(16))),
+    LDP(lr, xzr, PostIndex(sp, ImmVal(16))),
     RET
   )
 
   def _malloc() = AsmFunction(
     InstrLabel("_malloc"),
-    STP(LR, XZR, PreIndex(SP, ImmVal(-16))),
+    STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
     BL(asmGlobal ~ "malloc"),
     CBZ(XRegister(0), asmGlobal ~ "_errOutOfMemory"),
-    LDP(LR, XZR, PostIndex(SP, ImmVal(16))),
+    LDP(lr, xzr, PostIndex(sp, ImmVal(16))),
     RET
   )
 
   def _printp() = AsmFunction(
     LabelledStringConst(asmLocal ~ "._printp_str0", "%p"),
     InstrLabel("_printp"),
-    STP(LR, XZR, PreIndex(SP, ImmVal(-16))),
+    STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
     MOV(XRegister(1), XRegister(0)),
     ADR(XRegister(0), asmLocal ~ "._printp_str0"),
     BL(asmGlobal ~ "printf"),
     MOV(XRegister(0), ImmVal(0)),
     BL(asmGlobal ~ "fflush"),
-    LDP(LR, XZR, PostIndex(SP, ImmVal(16))),
+    LDP(lr, xzr, PostIndex(sp, ImmVal(16))),
     RET
   )
 
   def _println() = AsmFunction(
     LabelledStringConst(asmLocal ~ "._println_str0", ""),
     InstrLabel("_println"),
-    STP(LR, XZR, PreIndex(SP, ImmVal(-16))),
+    STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
     ADR(XRegister(0), asmLocal ~ "._println_str0"),
     BL(asmGlobal ~ "puts"),
     MOV(XRegister(0), ImmVal(0)),
     BL(asmGlobal ~ "fflush"),
-    LDP(LR, XZR, PostIndex(SP, ImmVal(16))),
+    LDP(lr, xzr, PostIndex(sp, ImmVal(16))),
     RET
   )
 
   def _printi() = AsmFunction(
     LabelledStringConst(asmLocal ~ "._printi_str0", "%d"),
     InstrLabel("_printi"),
-    STP(LR, XZR, PreIndex(SP, ImmVal(-16))),
+    STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
     MOV(XRegister(1), XRegister(0)),
     ADR(XRegister(0), asmLocal ~ "._printi_str0"),
     BL(asmGlobal ~ "printf"),
     MOV(XRegister(0), ImmVal(0)),
     BL(asmGlobal ~ "fflush"),
-    LDP(LR, XZR, PostIndex(SP, ImmVal(16))),
+    LDP(lr, xzr, PostIndex(sp, ImmVal(16))),
     RET
   )
 
   def _printc() = AsmFunction(
     LabelledStringConst(asmLocal ~ "._printc_str0", "%c"),
     InstrLabel("_printc"),
-    STP(LR, XZR, PreIndex(SP, ImmVal(-16))),
+    STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
     MOV(XRegister(1), XRegister(0)),
     ADR(XRegister(0), asmLocal ~ "._printc_str0"),
     BL(asmGlobal ~ "printf"),
     MOV(XRegister(0), ImmVal(0)),
     BL(asmGlobal ~ "fflush"),
-    LDP(LR, XZR, PostIndex(SP, ImmVal(16))),
+    LDP(lr, xzr, PostIndex(sp, ImmVal(16))),
     RET
   )
 
   def _prints() = AsmFunction(
     LabelledStringConst(asmLocal ~ "._prints_str0", "%s"),
     InstrLabel("_prints"),
-    STP(LR, XZR, PreIndex(SP, ImmVal(-16))),
+    STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
     MOV(XRegister(2), XRegister(0)),
     LDUR(WRegister(1), Offset(XRegister(0), ImmVal(-4))),
     ADR(XRegister(0), asmLocal ~ "._prints_str0"),
     BL(asmGlobal ~ "printf"),
     MOV(XRegister(0), ImmVal(0)),
     BL(asmGlobal ~ "fflush"),
-    LDP(LR, XZR, PostIndex(SP, ImmVal(16))),
+    LDP(lr, xzr, PostIndex(sp, ImmVal(16))),
     RET
   )
 
   def _printb() = AsmFunction(
     LabelledStringConst(asmLocal ~ "._printb_str0", "false"),
     InstrLabel("_printb"),
-    STP(LR, XZR, PreIndex(SP, ImmVal(-16))),
+    STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
     CMPImm(WRegister(0), ImmVal(0)),
     BCond(asmGlobal ~ "L_printb0", Cond.NE),
     ADR(XRegister(2), asmLocal ~ "._preintb_str0"),
@@ -170,7 +169,7 @@ object PredefinedFunctions {
     BL(asmGlobal ~ "printf"),
     MOV(XRegister(0), ImmVal(0)),
     BL(asmGlobal ~ "fflush"),
-    LDP(LR, XZR, PostIndex(SP, ImmVal(16))),
+    LDP(lr, xzr, PostIndex(sp, ImmVal(16))),
     RET
   )
 }
