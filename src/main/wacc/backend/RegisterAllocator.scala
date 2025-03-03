@@ -24,7 +24,7 @@ type Location = Register | Int
 class RegisterAllocator(
     vars: Seq[(String, WaccType)],
     inheritedMap: Iterable[(String, (Location, Int))]
-)(implicit registerIterator: LocationIterator = LocationIterator()) {
+)(implicit registerIterator: LocationIterator) {
     val varMap: MutableMap[String, (Location, Int)] = MutableMap.from(inheritedMap)
     
     def +:(vars: Seq[(String, WaccType)]): RegisterAllocator = RegisterAllocator(this.vars ++ vars, varMap)
