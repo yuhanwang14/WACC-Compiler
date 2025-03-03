@@ -1,40 +1,38 @@
 package instructions
 
-sealed trait Register extends Operand {
-  def number: Int
+trait Register
+
+class XRegister(number: Int) {
+  override def toString(): String = f"x$number"
+
+  def asW: WRegister = WRegister(number)
 }
 
-object Register {
-  val IP0: XRegister = XRegister(16)
-  val IP1: XRegister = XRegister(17)
-  val PR:  XRegister = XRegister(18)
-  
-  val FP:  XRegister = XRegister(29) 
-  val LR:  XRegister = XRegister(30)
-  val SP:  XRegister = XRegister(31) 
-  val XZR: XRegister = XRegister(31, isZero = true)  // Zero Register
+class WRegister(number: Int) {
+  override def toString(): String = f"w$number"
+
+  def asX: XRegister = XRegister(number)
 }
 
-final case class XRegister(number: Int, isZero: Boolean = false) extends Register {
-  def asW: WRegister = WRegister(number, isZero)
+case object ip0 extends XRegister(16)
+case object ip1 extends XRegister(17)
+case object pr extends XRegister(18)
 
-  override def toString: String = (number, isZero) match {
-    case (29, _) => "fp"  
-    case (30, _) => "lr"  
-    case (31, false) => "sp" 
-    case (31, true) => "xzr"
-    case _  => s"x$number"
-  }
+case object fp extends XRegister(29) {
+  override def toString(): String = "fp"
+}
+case object lr extends XRegister(30) {
+  override def toString(): String = "lr"
 }
 
-final case class WRegister(number: Int, isZero: Boolean = false) extends Register {
-  def asX: XRegister = XRegister(number, isZero)
+case object sp extends XRegister(31) {
+  override def toString(): String = "sp"
+}
 
-  override def toString: String = (number, isZero) match {
-    case (29, _) => "wfp" 
-    case (30, _) => "wlr" 
-    case (31, false) => "sp"  
-    case (31, true) => "wzr"
-    case _  => s"w$number"
-  }
+case object xzr extends XRegister(32) {
+  override def toString(): String = "xzr"
+}
+
+case object wzr extends WRegister(32) {
+  override def toString(): String = "wzr"
 }
