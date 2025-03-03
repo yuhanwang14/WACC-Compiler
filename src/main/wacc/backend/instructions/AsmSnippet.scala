@@ -9,7 +9,9 @@ class AsmSnippet(code: String)(implicit indent: Int) {
 case class Comment(comment: String)(implicit indent: Int) extends AsmSnippet(f"// $comment")
 
 class MultiLineAsmSnippet(lines: AsmSnippet*)(implicit indent: Int)
-    extends AsmSnippet(lines.mkString("\n"))
+extends AsmSnippet(lines.mkString("\n"))
+
+case class AsmFunction(lines: AsmSnippet*) extends MultiLineAsmSnippet(lines*)(0)
 
 class Header(code: String)(implicit indent: Int) extends AsmSnippet(code)
 
