@@ -2,17 +2,17 @@ package instructions
 
 sealed class Instruction(code: String) extends AsmSnippet(code)(4)
 
-case class STP(Rt: Register, Rt2: Register, Rn: Register, immVal: ImmVal, indexMode: AddressMode)
-    extends Instruction(f"stp $Rt, $Rt2, ${{ Address(Rn, indexMode, immVal) }}")
+case class STP(Rt: Register, Rt2: Register, address: Address)
+    extends Instruction(f"stp $Rt, $Rt2, $address")
 
-case class LDP(Rt: Register, Rt2: Register, Rn: Register, immVal: ImmVal, indexMode: AddressMode)
-    extends Instruction(f"ldp $Rt, $Rt2, ${{ Address(Rn, indexMode, immVal) }}")
+case class LDP(Rt: Register, Rt2: Register, address: Address)
+    extends Instruction(f"ldp $Rt, $Rt2, $address")
 
-case class LDUR(Rt: Register, Rn: Register, immVal: ImmVal, indexMode: AddressMode = Offset)
-    extends Instruction(f"ldur $Rt, ${{ Address(Rn, indexMode, immVal) }}")
+case class LDUR(Rt: Register, address: Address)
+    extends Instruction(f"ldur $Rt, $address")
 
-case class STR(Rt: Register, Rn: Register, immVal: ImmVal, indexMode: AddressMode)
-    extends Instruction(f"str $Rt, ${{ Address(Rn, indexMode, immVal) }}")
+case class STR(Rt: Register, address: Address)
+    extends Instruction(f"str $Rt, $address")
 
 case class MOVReg(Rd: Register, Rm: Register) extends Instruction(f"mov $Rd, $Rm")
 
