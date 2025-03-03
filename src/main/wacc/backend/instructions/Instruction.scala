@@ -11,8 +11,17 @@ case class LDP(Rt: Register, Rt2: Register, address: Address)
 case class LDUR(Rt: Register, address: Address)
     extends Instruction(f"ldur $Rt, $address")
 
+case class LDURB(Rt: Register, address: Address)
+    extends Instruction(f"ldurb $Rt, $address")
+
 case class STR(Rt: Register, address: Address)
     extends Instruction(f"str $Rt, $address")
+
+case class STUR(Rt: Register, address: Address)
+    extends Instruction(f"stur $Rt, $address")
+
+case class STURB(Rt: Register, address: Address)
+    extends Instruction(f"sturb $Rt, $address")
 
 case class MOV(Rd: Register, opr: Operand) extends Instruction(f"mov $Rd, $opr")
 
