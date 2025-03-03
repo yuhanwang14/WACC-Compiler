@@ -2,11 +2,11 @@ package instructions
 
 object AsmLabeling {
   object asmLocal {
-    def ~(label: String) = f".L$label"
+    def ~(label: String | Int) = f".L$label"
   }
 
   object asmGlobal {
-    def ~(label: String) = f"$label"
+    def ~(label: String | Int) = f"$label"
   }
 }
 

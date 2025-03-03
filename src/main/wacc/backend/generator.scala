@@ -4,7 +4,6 @@ import ast.*
 import common.SymbolTable
 import common.types.TypeBridge
 import instructions.*
-import instructions.Register.*
 import instructions.AsmLabeling.*
 import scala.collection.mutable.ListBuffer
 import common.Scope
@@ -17,10 +16,11 @@ object Generator {
 
   def generate(prog: Program)(implicit
       symbolTable: SymbolTable,
-      asmLine: ListBuffer[String]
-  ): Unit = {
+  ): AsmSnippet = {
     // generateBlock(prog.s)
-    prog.fs.foreach(generateFunc(_))
+    val asmLines: ListBuffer[AsmSnippet] = ListBuffer()
+    prog.fs.foreach(x => asmLines += generateFunc(x))
+    AsmFunction(asmLines.to(Seq)*)
   }
 
   private def generateBlock(
@@ -29,12 +29,11 @@ object Generator {
       scope: Scope
   )(implicit
       symbolTable: SymbolTable,
-      asmLine: ListBuffer[String]
-  ): Unit = {
+  ): AsmSnippet = {
 
     val stmts: List[Stmt] = block match {
       case Block(sts) => sts
-      case _          => return
+      case _          => List()
     }
 
     var subScopes = scope.children
@@ -46,8 +45,10 @@ object Generator {
     val offsetAfter: Int = math.floorDiv(allocator.varOffset, 16) * 16
     val extraStackSpace: Int = offsetBefore - offsetAfter
 
+    val asmLines: ListBuffer[AsmSnippet] = ListBuffer()
+
     if (extraStackSpace > 0)
-      asmLine += SUBS(SP, SP, ImmVal(extraStackSpace)).toString
+      asmLines += SUBS(sp, sp, ImmVal(extraStackSpace))
 
     // TODO: implement all statement cases
     for (stmt <- stmts) {
@@ -56,52 +57,45 @@ object Generator {
 
         case If(cond, b1, b2) => {
           val thenLabel = asmLocal ~ localLabelCount
-          val afterLabel = LocalLabel(f"${localLabelCount + 1}")
+          val afterLabel = asmLocal ~ (localLabelCount + 1)
           var newAllocator: RegisterAllocator = allocator.clone()
-          localLabelCount += 2
 
-          asmLine += Comment(s"TODO: evaluate $cond and bcond to $thenLabel")(4).toString
+          localLabelCount += 2
+          asmLines += Comment(s"TODO: evaluate $cond and bcond to $thenLabel")(4)
 
           // generate `else` block
-          generateBlock(b2, newAllocator, subScopes.head)
+          asmLines += generateBlock(b2, newAllocator, subScopes.head)
           subScopes = subScopes.tail
-          asmLine += B(afterLabel).toString
+          asmLines += B(afterLabel)
 
           // generate `then` block
           newAllocator = allocator.clone()
-          asmLine += thenLabel.toString
-          generateBlock(b1, newAllocator, subScopes.head)
+          asmLines += AsmSnippet(thenLabel)(0)
+          asmLines += generateBlock(b1, newAllocator, subScopes.head)
           subScopes = subScopes.tail
 
-          asmLine += afterLabel.toString
+          asmLines += AsmSnippet(afterLabel)(0)
         }
 
         case While(cond, block) => {
-          val afterLabel = LocalLabel(f"${localLabelCount}")
-          val loopLabel = LocalLabel(f"${localLabelCount + 1}")
+          val afterLabel = asmLocal ~ localLabelCount
+          val loopLabel = asmLocal ~ (localLabelCount + 1)
           val newAllocator: RegisterAllocator = allocator.clone()
           localLabelCount += 2
 
-          asmLine += B(loopLabel).toString
-          asmLine += loopLabel.toString
-          generateBlock(block, newAllocator, subScopes.head)
+          asmLines += B(loopLabel)
+          asmLines += AsmSnippet(loopLabel)(0)
+          asmLines += generateBlock(block, newAllocator, subScopes.head)
           subScopes = subScopes.tail
 
-          asmLine += afterLabel.toString
-          asmLine += Comment(s"TODO: evaluate $cond and bcond to $loopLabel")(4).toString
+          asmLines += AsmSnippet(afterLabel)(0)
+          asmLines += Comment(s"TODO: evaluate $cond and bcond to $loopLabel")(4)
         }
 
         case Begin(block) => {
           val newAllocator: RegisterAllocator = allocator.clone()
-          generateBlock(block, newAllocator, subScopes.head)
+          asmLines += generateBlock(block, newAllocator, subScopes.head)
           subScopes = subScopes.tail
-        }
-
-
-        case Declare(ti, rvalue) => {
-          val name: String = ti._2.name
-          scope.shadow(name)
-          asmLine ++= generateRValue(rvalue, allocator, scope)
         }
 
         case _ =>
@@ -109,29 +103,23 @@ object Generator {
     }
 
     if (extraStackSpace > 0)
-      asmLine += ADDS(SP, SP, ImmVal(extraStackSpace)).toString
+      asmLines += ADDS(sp, sp, ImmVal(extraStackSpace))
 
+    AsmFunction(asmLines.to(Seq)*)
   }
 
   private def generateFunc(func: Func)(implicit
       symbolTable: SymbolTable,
-      asmLine: ListBuffer[String]
-  ): Unit = {
+  ): AsmSnippet = {
 
     val funcName: String = func.ti._2.name
+    val asmLines: ListBuffer[AsmSnippet] = ListBuffer()
     symbolTable.enterFunctionScope(funcName)
-    asmLine += s"wacc_${funcName}:"
-
-    asmLine += Comment("push {fp, lr}")(4).toString
-    asmLine += STP(FP, LR, SP, ImmVal(-16), PreIndex).toString
 
     // temporarily push all registers saved by Callee
     val numOfVariables = 10
     val calleeRegisters: ArrayBuffer[Register] = (19 to 28).map(n => XRegister(n)).to(ArrayBuffer)
     val (pushCode, popCode) = pushAndPopRegisters(calleeRegisters)
-
-    asmLine ++= pushCode
-    asmLine += MOVReg(FP, SP).toString
 
     // extract all parameters from symbolTable, allocate register or memory
     // a naive way of retrieving all parameters, can be modified
@@ -143,14 +131,20 @@ object Generator {
       allocator.addParam(name, TypeBridge.fromAst(paramType).byteSize)
     }
 
-    // the current scope is for parameters
-    generateBlock(func.s, allocator, symbolTable.currentScope.children.head)
-
-    // pop saved registers
-    asmLine ++= popCode
-    asmLine += Comment("pop {fp, lr}")(4).toString
-    asmLine += LDP(FP, LR, SP, ImmVal(16), PostIndex).toString
-    asmLine += RET.toString
+    asmLines += AsmFunction(
+      AsmSnippet(f"wacc_${funcName}:")(0),
+      Comment("push {fp, lr}")(4),
+      STP(fp, lr, PreIndex(sp, ImmVal(-16))),
+      pushCode,
+      MOV(fp, sp),
+      // the current scope is for parameters
+      generateBlock(func.s, allocator, symbolTable.currentScope.children.head),
+      popCode,
+      Comment("pop {fp, lr}")(4),
+      LDP(fp, lr, PreIndex(sp, ImmVal(-16))),
+      RET
+    )
+    AsmFunction(asmLines.to(Seq)*)
   }
 
   /** Generate assembly code to evaluate the result of a rvalue.
@@ -161,31 +155,29 @@ object Generator {
       scope: Scope
   )(implicit
       symbolTable: SymbolTable
-  ): ListBuffer[String] = {
-    val codeLines: ListBuffer[String] = ListBuffer()
+  ): AsmSnippet = {
+    val asmLines: ListBuffer[AsmSnippet] = ListBuffer()
     // wip
     rvalue match
 
       case Call(Ident(funcName), ArgList(argList)) => {
         val (pushCode, popCode) = pushAndPopRegisters(allocator.callerRegister)
-        codeLines ++= pushCode
+        asmLines += pushCode
         val (argPushCode, offset) = pushArgs(funcName, argList, allocator, scope)
         if (offset > 0)
-          codeLines += SUBS(SP, SP, ImmVal(offset)).toString
-        codeLines ++= argPushCode
-        codeLines += BL(GlobalLabel(f"wacc_$funcName")).toString
-
-        // Save result at x8
-        codeLines += MOVReg(XRegister(8), XRegister(0)).toString
+          asmLines += SUBS(sp, sp, ImmVal(offset))
+        asmLines += argPushCode
+        asmLines += BL(asmGlobal ~ f"wacc_$funcName")
+        asmLines += MOV(XRegister(8), XRegister(0))
 
         if (offset > 0)
-          codeLines += ADDS(SP, SP, ImmVal(offset)).toString
-        codeLines ++= popCode
+          asmLines += ADDS(sp, sp, ImmVal(offset))
+        asmLines += popCode
       }
 
       case _ =>
 
-    codeLines
+    AsmFunction(asmLines.to(Seq)*)
   }
 
   /** Generate assembly code to evaluate the result of an expression The default position of result
@@ -198,9 +190,9 @@ object Generator {
       dest: Register = XRegister(8)
   )(implicit
       symbolTable: SymbolTable
-  ): ListBuffer[String] = {
-    // wip
-    ListBuffer(Comment(s"TODO: evaluate $expr and move to $dest")(4).toString)
+  ): AsmSnippet = {
+    // TODO
+    Comment(s"TODO: evaluate $expr and move to $dest")(4)
   }
 
   /** Generate assemply code to calculate a list of expr and push them into the stack. Return a list
@@ -213,8 +205,8 @@ object Generator {
       scope: Scope
   )(implicit
       symbolTable: SymbolTable
-  ): (ListBuffer[String], Int) = {
-    val codeLines: ListBuffer[String] = ListBuffer()
+  ): (AsmSnippet, Int) = {
+    val asmLines: ListBuffer[AsmSnippet] = ListBuffer()
     val paramTypes = symbolTable.lookupFunction(funcName).fold(Nil)(x => x.paramTypes)
     var paramCount: Int = 0
     var offset: Int = 0
@@ -223,16 +215,17 @@ object Generator {
       val paramSize: Int = TypeBridge.fromAst(paramType).byteSize
       val dest = if paramSize > 4 then XRegister(paramCount) else WRegister(paramCount)
       if (paramCount < 8) {
-        codeLines ++= generateExpr(expr, allocator, scope, dest)
+        asmLines += generateExpr(expr, allocator, scope, dest)
       } else {
-        codeLines ++= generateExpr(expr, allocator = allocator, scope = scope)
-        codeLines += STR(dest, SP, ImmVal(offset), Offset).toString
+        asmLines += generateExpr(expr, allocator = allocator, scope = scope)
+        asmLines += STR(dest, Offset(sp, ImmVal(offset)))
         offset += paramSize
         paramCount -= 1
       }
       paramCount += 1
     }
-    (codeLines, math.floorDiv(offset + 15, 16) * 16)
+    (AsmFunction(asmLines.to(Seq)*), math.floorDiv(offset + 15, 16) * 16)
+    
   }
 
   /** Generate code to push and pop all registers in `regs` to the stack. The generated code works
@@ -240,36 +233,39 @@ object Generator {
     */
   private def pushAndPopRegisters(
       regs: ArrayBuffer[Register]
-  ): (ListBuffer[String], ListBuffer[String]) = {
+  ): (AsmSnippet, AsmSnippet) = {
 
     val numReg: Int = regs.size
     val offset = (numReg + 1) / 2 * 16
 
     if (numReg == 0)
-      return (ListBuffer(), ListBuffer())
+      return (AsmSnippet("")(0), AsmSnippet("")(0))
 
-    val pushComment = Comment(s"push {${regs.mkString(", ")}}")(4).toString
-    val popComment = Comment(s"pop {${regs.mkString(", ")}}")(4).toString
+    val pushComment = Comment(s"push {${regs.mkString(", ")}}")(4)
+    val popComment = Comment(s"pop {${regs.mkString(", ")}}")(4)
     if (numReg == 1) {
-      val pushCode = STP(regs(0), XZR, SP, ImmVal(-offset), PreIndex).toString
-      val popCode = LDP(regs(0), XZR, SP, ImmVal(offset), PostIndex).toString
-      (ListBuffer(pushCode), ListBuffer(popCode))
+      val pushCode = STP(regs(0), xzr, PreIndex(sp, ImmVal(-offset)))
+      val popCode = LDP(regs(0), xzr, PostIndex(sp, ImmVal(offset)))
+      (pushCode, popCode)
     } else {
 
-      val firstPush = STP(regs(0), regs(1), SP, ImmVal(-offset), PreIndex)
-      val lastPop = LDP(regs(0), regs(1), SP, ImmVal(offset), PostIndex)
+      val firstPush = STP(regs(0), regs(1), PreIndex(sp, ImmVal(-offset)))
+      val lastPop = LDP(regs(0), regs(1), PostIndex(sp, ImmVal(offset)))
 
       val pairedInstrs = (2 until numReg by 2).map { pushedNum =>
         val r1 = regs(pushedNum)
-        val r2 = if (pushedNum + 1 < numReg) regs(pushedNum + 1) else XZR
+        val r2 = if (pushedNum + 1 < numReg) regs(pushedNum + 1) else xzr
         (
-          STP(r1, r2, SP, ImmVal(8 * pushedNum), Offset),
-          LDP(r1, r2, SP, ImmVal(8 * pushedNum), Offset)
+          STP(r1, r2, Offset(sp, ImmVal(8 * pushedNum))),
+          LDP(r1, r2, Offset(sp, ImmVal(8 * pushedNum)))
         )
       }
-      val pushCode = (firstPush +: pairedInstrs.map(_._1)).to(ListBuffer)
-      val popCode = (pairedInstrs.map(_._2) :+ lastPop).to(ListBuffer)
-      (pushComment +: pushCode.map(_.toString), popComment +: popCode.map(_.toString))
+      val pushCode = (firstPush +: pairedInstrs.map(_._1))
+      val popCode = (pairedInstrs.map(_._2) :+ lastPop)
+      (
+        AsmFunction((pushComment +: pushCode)*), 
+        AsmFunction((popComment +: popCode)*)
+      )
     }
   }
 
