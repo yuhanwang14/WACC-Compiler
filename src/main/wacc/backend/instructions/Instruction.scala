@@ -25,7 +25,9 @@ case class STURB(Rt: Register, address: Address)
 
 case class MOV(Rd: Register, opr: Operand) extends Instruction(f"mov $Rd, $opr")
 
-case class CMPImm(Rd: Register, opr: Operand) extends Instruction(f"cmp $Rd, $opr")
+case class CMP(Rd: Register, opr: Operand) extends Instruction(f"cmp $Rd, $opr")
+
+case class CSET(Rd: Register, cond: Cond) extends Instruction(f"cset $Rd, $cond")
 
 case class ADDS(Rd: Register, Rn: Register, opr: Operand) extends Instruction(f"adds $Rd, $Rn, $opr")
 

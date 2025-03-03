@@ -149,7 +149,7 @@ object PredefinedFunctions {
     LabelledStringConst(asmLocal ~ "._printb_str0", "false"),
     InstrLabel("_printb"),
     STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
-    CMPImm(WRegister(0), ImmVal(0)),
+    CMP(WRegister(0), ImmVal(0)),
     BCond(asmGlobal ~ "L_printb0", Cond.NE),
     ADR(XRegister(2), asmLocal ~ "._preintb_str0"),
     B(asmGlobal ~ ".L_printb1")

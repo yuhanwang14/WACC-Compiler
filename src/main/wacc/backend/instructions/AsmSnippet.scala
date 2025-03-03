@@ -1,7 +1,5 @@
 package instructions
 
-import scala.annotation.varargs
-
 class AsmSnippet(code: String)(implicit indent: Int) {
   override def toString: String = " " * indent + code.replace("\n", "\n" + " " * indent)
 }
@@ -9,7 +7,7 @@ class AsmSnippet(code: String)(implicit indent: Int) {
 case class Comment(comment: String)(implicit indent: Int) extends AsmSnippet(f"// $comment")
 
 class MultiLineAsmSnippet(lines: AsmSnippet*)(implicit indent: Int)
-extends AsmSnippet(lines.mkString("\n"))
+    extends AsmSnippet(lines.mkString("\n"))
 
 case class AsmFunction(lines: AsmSnippet*) extends MultiLineAsmSnippet(lines*)(0)
 
