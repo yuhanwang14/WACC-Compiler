@@ -12,29 +12,29 @@ object Register {
   val FP:  XRegister = XRegister(29) 
   val LR:  XRegister = XRegister(30)
   val SP:  XRegister = XRegister(31) 
-  val XZR: XRegister = XRegister(31, isZero = true)  // Zero Register
+  val XZR: XRegister = XRegister(32)  // Zero Register
 }
 
-final case class XRegister(number: Int, isZero: Boolean = false) extends Register {
-  def asW: WRegister = WRegister(number, isZero)
+final case class XRegister(number: Int) extends Register {
+  def asW: WRegister = WRegister(number)
 
-  override def toString: String = (number, isZero) match {
-    case (29, _) => "fp"  
-    case (30, _) => "lr"  
-    case (31, false) => "sp" 
-    case (31, true) => "xzr"
+  override def toString: String = number match {
+    case 29 => "fp"
+    case 30 => "lr"
+    case 31 => "sp"
+    case 32 => "xzr"
     case _  => s"x$number"
   }
 }
 
-final case class WRegister(number: Int, isZero: Boolean = false) extends Register {
-  def asX: XRegister = XRegister(number, isZero)
+final case class WRegister(number: Int) extends Register {
+  def asX: XRegister = XRegister(number)
 
-  override def toString: String = (number, isZero) match {
-    case (29, _) => "wfp" 
-    case (30, _) => "wlr" 
-    case (31, false) => "sp"  
-    case (31, true) => "wzr"
+  override def toString: String = number match {
+    case 29 => "wfp"
+    case 30 => "wlr"
+    case 31 => "sp"
+    case 32 => "wzr"
     case _  => s"w$number"
   }
 }

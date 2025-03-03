@@ -14,13 +14,9 @@ case class LDUR(Rt: Register, address: Address)
 case class STR(Rt: Register, address: Address)
     extends Instruction(f"str $Rt, $address")
 
-case class MOVReg(Rd: Register, Rm: Register) extends Instruction(f"mov $Rd, $Rm")
+case class MOV(Rd: Register, opr: Operand) extends Instruction(f"mov $Rd, $opr")
 
-case class MOVImm(Rd: Register, immVal: ImmVal) extends Instruction(f"mov $Rd, $immVal")
-
-case class CMPReg(Rd: Register, Rm: Register) extends Instruction(f"cmp $Rd, $Rm")
-
-case class CMPImm(Rd: Register, immVal: ImmVal) extends Instruction(f"cmp $Rd, $immVal")
+case class CMPImm(Rd: Register, opr: Operand) extends Instruction(f"cmp $Rd, $opr")
 
 case class ADDS(Rd: Register, Rn: Register, opr: Operand) extends Instruction(f"adds $Rd, $Rn, $opr")
 
