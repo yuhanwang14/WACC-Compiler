@@ -2,9 +2,9 @@ package backend
 
 import instructions.{WRegister, XRegister}
 
-class LocationIterator {
+class LocationIterator(paramCount: Int) {
 
-  val regSeq: Seq[Int] = (19 to 28) ++ (??? /* to implement arg registers */ ) ++ (10 to 15) :+ 18
+  val regSeq: Seq[Int] = (19 to 28) ++ (paramCount to 7) ++ (10 to 15) :+ 18
   var at: Int = 0
   var stackOffset: Int = 0
   override def next(size: Int): Location =
