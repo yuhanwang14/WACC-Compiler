@@ -26,15 +26,15 @@ case class ADDS(Rd: Register, Rn: Register, opr: Operand) extends Instruction(f"
 
 case class SUBS(Rd: Register, Rn: Register, opr: Operand) extends Instruction(f"subs $Rd, $Rn, $opr")
 
-case class CBZ(Rd: Register, label: Label) extends Instruction(f"cbz $Rd, #label")
+case class CBZ(Rd: Register, label: String) extends Instruction(f"cbz $Rd, #label")
 
-case class ADR(Rd: Register, label: Label) extends Instruction(f"adr $Rd, $label")
+case class ADR(Rd: Register, label: String) extends Instruction(f"adr $Rd, $label")
 
-case class B(label: Label) extends Instruction(f"b $label")
+case class B(label: String) extends Instruction(f"b $label")
 
-case class BL(label: Label) extends Instruction(f"bl $label")
+case class BL(label: String) extends Instruction(f"bl $label")
 
-case class BCond(label: Label, cond: Cond) extends Instruction(f"b.$cond 2$label")
+case class BCond(label: String, cond: Cond) extends Instruction(f"b.$cond 2$label")
 
 case object RET extends Instruction("ret")
 

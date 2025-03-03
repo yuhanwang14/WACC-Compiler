@@ -5,6 +5,7 @@ import common.SymbolTable
 import common.types.TypeBridge
 import instructions.*
 import instructions.Register.*
+import instructions.AsmLabeling.*
 import scala.collection.mutable.ListBuffer
 import common.Scope
 import scala.collection.mutable.ArrayBuffer
@@ -54,7 +55,7 @@ object Generator {
         case Skip() =>
 
         case If(cond, b1, b2) => {
-          val thenLabel = LocalLabel(f"${localLabelCount}")
+          val thenLabel = asmLocal ~ localLabelCount
           val afterLabel = LocalLabel(f"${localLabelCount + 1}")
           var newAllocator: RegisterAllocator = allocator.clone()
           localLabelCount += 2

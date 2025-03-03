@@ -23,12 +23,12 @@ case class WordConst(value: Int) extends Header(f".word $value")(4)
 
 case class StringConst(value: String) extends Header(f".asciz \"$value\"")(4)
 
-case class LabelledStringConst(value: String, label: String)
+case class LabelledStringConst(label: String, value: String)
     extends MultiLineAsmSnippet(
       List(
-        Comment(f"// length of ${LocalLabel(label)}")(0),
+        Comment(f"// length of ${label}")(0),
         WordConst(value.length()),
-        LabelHeader(LocalLabel(label).toString),
+        LabelHeader(label),
         StringConst(value)
       )
     )(0)

@@ -1,16 +1,12 @@
 package instructions
 
-sealed trait Label
+object AsmLabeling {
+  object asmLocal {
+    def ~(label: String) = f".L$label"
+  }
 
-case class LocalLabel(identifier: String) extends Label {
-  override def toString: String = s".L$identifier"
+  object asmGlobal {
+    def ~(label: String) = f"$label"
+  }
 }
 
-case class GlobalLabel(identifier: String) extends Label {
-  override def toString: String = s"$identifier"
-}
-
-case class StringLabel(identifier: String, value: String, isLocal: Boolean = true) extends Label {
-  val label = if isLocal then LocalLabel(identifier).toString else identifier
-  override def toString: String = s"  .word ${value.length}\n$label:\n    .asciz \"$value\""
-}
