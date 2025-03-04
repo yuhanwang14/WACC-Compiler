@@ -2,8 +2,6 @@ package instructions
 
 import AsmLabeling.*
 
-// TODO: .align 4, .word n
-
 object PredefinedFunctions {
   val predefinedErrMessages = Map(
     "._errDivZero_str0" ->
@@ -22,27 +20,37 @@ object PredefinedFunctions {
     predefinedErrMessages.view.mapValues(_.toString).mkString("\n")
 
   def _err(localErrName: String) = AsmFunction(
-    LabelledStringConst(asmLocal ~ localErrName, predefinedErrMessages(localErrName)),
-    InstrLabel(asmLocal ~ localErrName),
-    ADR(XRegister(0), asmLocal ~ localErrName),
+    LabelledStringConst(
+      asmLocal ~ f"${localErrName}_str0",
+      predefinedErrMessages(f"${localErrName}_str0")
+    ),
+    LabelHeader(localErrName),
+    ADR(XRegister(0), asmLocal ~ f"${localErrName}_str0"),
     BL(asmGlobal ~ "_prints"),
     MOV(WRegister(0), ImmVal(-1)),
     BL(asmGlobal ~ "exit")
   )
 
-  def _errOutOfBounds() = _err("._errOutOfBounds_str0")
+  def _errOutOfBounds() = _err("._errOutOfBounds")
 
-  def _errNull() = _err("._errNull_str0")
+  def _errNull() = _err("._errNull")
 
-  def _errOverflow() = _err("._errOverflow_str0")
+  def _errOverflow() = _err("._errOverflow")
 
-  def _errDivZero() = _err("._errDivZero_str0")
+  def _errDivZero() = _err("._errDivZero")
 
-  def _errOutOfMemory() = _err("._errOutOfMemory_str0")
+  def _errOutOfMemory() = _err("._errOutOfMemory")
 
   def _readc() = AsmFunction(
-    LabelledStringConst(asmLocal ~ "._readc_str0", "%c"),
-    InstrLabel("_readc"),
+    LabelledStringConst(asmLocal ~ "._readc_str0", " %c"),
+    LabelHeader(asmGlobal ~ "_readc"),
+    Comment("X0 contains the \"original\" value of the destination of the read")(4),
+    Comment("allocate space on the stack to store the read: preserve alignment!")(4),
+    Comment("the passed default argument should be stored in case of EOF")(4),
+    Comment(
+      "aarch64 mandates 16-byte SP alignment at all times, " +
+        "might as well merge the stores"
+    )(4),
     STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
     MOV(XRegister(1), sp),
     ADR(XRegister(0), asmLocal ~ "._readc_str0"),
@@ -53,7 +61,14 @@ object PredefinedFunctions {
 
   def _readi() = AsmFunction(
     LabelledStringConst(asmLocal ~ "._readi_str0", "%d"),
-    InstrLabel("_readi"),
+    LabelHeader(asmGlobal ~ "_readi"),
+    Comment("X0 contains the \"original\" value of the destination of the read")(4),
+    Comment("allocate space on the stack to store the read: preserve alignment!")(4),
+    Comment("the passed default argument should be stored in case of EOF")(4),
+    Comment(
+      "aarch64 mandates 16-byte SP alignment at all times," +
+        " might as well merge the stores"
+    )(4),
     STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
     MOV(XRegister(1), sp),
     ADR(XRegister(0), asmLocal ~ "_readi_str0"),
@@ -63,7 +78,7 @@ object PredefinedFunctions {
   )
 
   def _freepair() = AsmFunction(
-    InstrLabel("_freepair"),
+    LabelHeader(asmGlobal ~ "_freepair"),
     STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
     CBZ(XRegister(0), asmGlobal ~ "_errNull"),
     BL(asmGlobal ~ "free"),
@@ -72,7 +87,7 @@ object PredefinedFunctions {
   )
 
   def _malloc() = AsmFunction(
-    InstrLabel("_malloc"),
+    LabelHeader(asmGlobal ~ "_malloc"),
     STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
     BL(asmGlobal ~ "malloc"),
     CBZ(XRegister(0), asmGlobal ~ "_errOutOfMemory"),
@@ -80,96 +95,106 @@ object PredefinedFunctions {
     RET
   )
 
-  def _printp() = AsmFunction(
-    LabelledStringConst(asmLocal ~ "._printp_str0", "%p"),
-    InstrLabel("_printp"),
-    STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
-    MOV(XRegister(1), XRegister(0)),
-    ADR(XRegister(0), asmLocal ~ "._printp_str0"),
-    BL(asmGlobal ~ "printf"),
-    MOV(XRegister(0), ImmVal(0)),
-    BL(asmGlobal ~ "fflush"),
-    LDP(lr, xzr, PostIndex(sp, ImmVal(16))),
-    RET
-  )
+  def _printp() =
+    val fmtStr = asmLocal ~ "._printp_str0"
+    AsmFunction(
+      LabelledStringConst(fmtStr, "%p"),
+      LabelHeader(asmGlobal ~ "_printp"),
+      STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
+      MOV(XRegister(1), XRegister(0)),
+      ADR(XRegister(0), fmtStr),
+      BL(asmGlobal ~ "printf"),
+      MOV(XRegister(0), ImmVal(0)),
+      BL(asmGlobal ~ "fflush"),
+      LDP(lr, xzr, PostIndex(sp, ImmVal(16))),
+      RET
+    )
 
-  def _println() = AsmFunction(
-    LabelledStringConst(asmLocal ~ "._println_str0", ""),
-    InstrLabel("_println"),
-    STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
-    ADR(XRegister(0), asmLocal ~ "._println_str0"),
-    BL(asmGlobal ~ "puts"),
-    MOV(XRegister(0), ImmVal(0)),
-    BL(asmGlobal ~ "fflush"),
-    LDP(lr, xzr, PostIndex(sp, ImmVal(16))),
-    RET
-  )
+  def _println() =
+    val fmtStr = asmLocal ~ "._println_str0"
+    AsmFunction(
+      LabelledStringConst(fmtStr, ""),
+      LabelHeader(asmGlobal ~ "_println"),
+      STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
+      ADR(XRegister(0), fmtStr),
+      BL(asmGlobal ~ "puts"),
+      MOV(XRegister(0), ImmVal(0)),
+      BL(asmGlobal ~ "fflush"),
+      LDP(lr, xzr, PostIndex(sp, ImmVal(16))),
+      RET
+    )
 
-  def _printi() = AsmFunction(
-    LabelledStringConst(asmLocal ~ "._printi_str0", "%d"),
-    InstrLabel("_printi"),
-    STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
-    MOV(XRegister(1), XRegister(0)),
-    ADR(XRegister(0), asmLocal ~ "._printi_str0"),
-    BL(asmGlobal ~ "printf"),
-    MOV(XRegister(0), ImmVal(0)),
-    BL(asmGlobal ~ "fflush"),
-    LDP(lr, xzr, PostIndex(sp, ImmVal(16))),
-    RET
-  )
+  def _printi() =
+    val fmtStr = asmLocal ~ "._printi_str0"
+    AsmFunction(
+      LabelledStringConst(fmtStr, "%d"),
+      LabelHeader(asmGlobal ~ "_printi"),
+      STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
+      MOV(XRegister(1), XRegister(0)),
+      ADR(XRegister(0), fmtStr),
+      BL(asmGlobal ~ "printf"),
+      MOV(XRegister(0), ImmVal(0)),
+      BL(asmGlobal ~ "fflush"),
+      LDP(lr, xzr, PostIndex(sp, ImmVal(16))),
+      RET
+    )
 
-  def _printc() = AsmFunction(
-    LabelledStringConst(asmLocal ~ "._printc_str0", "%c"),
-    InstrLabel("_printc"),
-    STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
-    MOV(XRegister(1), XRegister(0)),
-    ADR(XRegister(0), asmLocal ~ "._printc_str0"),
-    BL(asmGlobal ~ "printf"),
-    MOV(XRegister(0), ImmVal(0)),
-    BL(asmGlobal ~ "fflush"),
-    LDP(lr, xzr, PostIndex(sp, ImmVal(16))),
-    RET
-  )
+  def _printc() =
+    val fmtStr = asmLocal ~ "._printc_str0"
+    AsmFunction(
+      LabelledStringConst(fmtStr, "%c"),
+      LabelHeader(asmGlobal ~ "_printc"),
+      STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
+      MOV(XRegister(1), XRegister(0)),
+      ADR(XRegister(0), fmtStr),
+      BL(asmGlobal ~ "printf"),
+      MOV(XRegister(0), ImmVal(0)),
+      BL(asmGlobal ~ "fflush"),
+      LDP(lr, xzr, PostIndex(sp, ImmVal(16))),
+      RET
+    )
 
-  def _prints() = AsmFunction(
-    LabelledStringConst(asmLocal ~ "._prints_str0", "%s"),
-    InstrLabel("_prints"),
-    STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
-    MOV(XRegister(2), XRegister(0)),
-    LDUR(WRegister(1), Offset(XRegister(0), ImmVal(-4))),
-    ADR(XRegister(0), asmLocal ~ "._prints_str0"),
-    BL(asmGlobal ~ "printf"),
-    MOV(XRegister(0), ImmVal(0)),
-    BL(asmGlobal ~ "fflush"),
-    LDP(lr, xzr, PostIndex(sp, ImmVal(16))),
-    RET
-  )
+  def _prints() =
+    val fmtStr = asmLocal ~ "._prints_str0"
+    AsmFunction(
+      LabelledStringConst(fmtStr, "%.*s"),
+      LabelHeader(asmGlobal ~ "_prints"),
+      STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
+      MOV(XRegister(2), XRegister(0)),
+      LDUR(WRegister(1), Offset(XRegister(0), ImmVal(-4))),
+      ADR(XRegister(0), fmtStr),
+      BL(asmGlobal ~ "printf"),
+      MOV(XRegister(0), ImmVal(0)),
+      BL(asmGlobal ~ "fflush"),
+      LDP(lr, xzr, PostIndex(sp, ImmVal(16))),
+      RET
+    )
 
-  def _printb() = AsmFunction(
-    LabelledStringConst(asmLocal ~ "._printb_str0", "false"),
-    InstrLabel("_printb"),
-    STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
-    CMP(WRegister(0), ImmVal(0)),
-    BCond(asmGlobal ~ "L_printb0", Cond.NE),
-    ADR(XRegister(2), asmLocal ~ "._preintb_str0"),
-    B(asmGlobal ~ ".L_printb1")
-  )
+  def _printb() =
+    // String constants for boolean output
+    val falseStr = asmLocal ~ "._printb_str0"
+    val trueStr = asmLocal ~ "._printb_str1"
+    val fmtStr = asmLocal ~ "._printb_str2"
 
-  def L_printb0() = AsmFunction(
-    LabelledStringConst(asmLocal ~ "._printb_str1", "true"),
-    InstrLabel(".L_printb0"),
-    ADR(XRegister(2), asmLocal ~ "._printb_str1")
-  )
-
-  def L_printb1() = AsmFunction(
-    LabelledStringConst(asmLocal ~ ".printb_str2", "%.*s"),
-    InstrLabel(".L_printb1"),
-    LDUR(WRegister(1), Offset(XRegister(2), ImmVal(-4))),
-    ADR(XRegister(0), asmLocal ~ ".printb_str2"),
-    BL(asmGlobal ~ "printf"),
-    MOV(XRegister(0), ImmVal(0)),
-    BL(asmGlobal ~ "fflush"),
-    LDP(lr, xzr, PostIndex(sp, ImmVal(16))),
-    RET
-  )
+    AsmFunction(
+      LabelledStringConst(falseStr, "false"),
+      LabelledStringConst(trueStr, "true"),
+      LabelledStringConst(fmtStr, "%.*s"),
+      LabelHeader(asmGlobal ~ "_printb"),
+      STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
+      CMP(WRegister(0), ImmVal(0)),
+      BCond(asmLocal ~ "_printb0", Cond.NE),
+      ADR(XRegister(2), falseStr),
+      B(asmLocal ~ "_printb1"),
+      LabelHeader(asmLocal ~ "_printb0"),
+      ADR(XRegister(2), trueStr),
+      LabelHeader(asmLocal ~ "_printb1"),
+      LDUR(WRegister(1), Offset(XRegister(2), ImmVal(-4))),
+      ADR(XRegister(0), fmtStr),
+      BL(asmGlobal ~ "printf"),
+      MOV(XRegister(0), ImmVal(0)),
+      BL(asmGlobal ~ "fflush"),
+      LDP(lr, xzr, PostIndex(sp, ImmVal(16))),
+      RET
+    )
 }

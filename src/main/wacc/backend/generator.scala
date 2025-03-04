@@ -9,12 +9,14 @@ import scala.collection.mutable.ListBuffer
 import common.Scope
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.Map as MutableMap
+import scala.collection.mutable.Set as MutableSet
 import scala.math
 
 object Generator {
 
   private var localLabelCount: Int = 0
   private val _stringConsts: MutableMap[String, Int] = MutableMap()
+  private val _predefinedFuncs: MutableSet[String] = MutableSet()
 
   def generate(prog: Program)(implicit
       symbolTable: SymbolTable

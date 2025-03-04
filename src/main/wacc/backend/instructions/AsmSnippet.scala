@@ -17,6 +17,8 @@ case class DataHeader() extends Header(".data")(0)
 
 case class TextHeader() extends Header(".text")(0)
 
+case class AlignHeader(value: Int) extends Header(f".align $value")(0)
+
 case class SectionHeader(name: String) extends Header(f".section $name")(0)
 
 case class ByteConst(value: Byte) extends Header(f".byte $value")(4)
@@ -30,7 +32,8 @@ case class LabelledStringConst(label: String, value: String)
       Comment(f"// length of ${label}")(0),
       WordConst(value.length()),
       LabelHeader(label),
-      StringConst(value)
+      StringConst(value), 
+      AlignHeader(4)
     )(0)
 
 case class LabelHeader(identifier: String) extends AsmSnippet(f"$identifier:")(0)

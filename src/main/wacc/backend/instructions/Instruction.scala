@@ -32,7 +32,7 @@ case class ADDS(Rd: Register, Rn: Register, opr: Operand)
 case class SUBS(Rd: Register, Rn: Register, opr: Operand)
     extends Instruction(f"subs $Rd, $Rn, $opr")
 
-case class CBZ(Rd: Register, label: String) extends Instruction(f"cbz $Rd, #label")
+case class CBZ(Rd: Register, label: String) extends Instruction(f"cbz $Rd, $label")
 
 case class ADR(Rd: Register, label: String) extends Instruction(f"adr $Rd, $label")
 
@@ -49,5 +49,3 @@ case object RET extends Instruction("ret")
 case class ALIGN(power: Int) extends Instruction(f".align $power")
 
 case class WORD(len: Int) extends Instruction(f".word $len")
-
-case class InstrLabel(name: String) extends Instruction(f"$name:")
