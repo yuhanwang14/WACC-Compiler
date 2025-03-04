@@ -1,9 +1,11 @@
-package testcode
+package testCode
 
 import scala.sys.process._
 import java.nio.file.{Files, Paths}
+import scala.jdk.CollectionConverters._
 
 object TestFiles {
+
   val dir = "./src/test/wacc"
   val validFiles = Files.readAllLines(Paths.get(s"$dir/file_lists/valid_files")).asScala.toSeq
   val invalidFiles = Files.readAllLines(Paths.get(s"$dir/file_lists/invalid_files")).asScala.toSeq

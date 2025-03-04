@@ -1,12 +1,12 @@
-package testcode
+package testCode
 
-import parser.*
-import semanticCheckers.*
+import frontend.parser.*
 import org.scalatest.funsuite.AnyFunSuite
 import java.io.File
 import scala.jdk.CollectionConverters.*
 import scala.util.{Success, Failure}
 import scala.io.Source
+import semanticCheckers.ProgramChecker
 
 class FrontendSpec extends AnyFunSuite {
 
@@ -14,7 +14,7 @@ class FrontendSpec extends AnyFunSuite {
   TestFiles.updateFileLists()
 
   val validFiles = TestFiles.validFiles
-  val invalidFiles = TEstFiles.invalidFiles
+  val invalidFiles = TestFiles.invalidFiles
 
   def testFile(fileName: String, shouldPass: Boolean): Unit = {
     val src = new File(fileName)

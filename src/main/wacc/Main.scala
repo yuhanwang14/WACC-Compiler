@@ -38,10 +38,17 @@ object Main {
               lines = Source.fromFile(src).getLines().toSeq
             ) match
               case Right(table) => {
-                implicit val asmLine: ListBuffer[String] = ListBuffer[String]()
                 implicit val SymbolTable = table
-                Generator.generate(prog)
-                asmLine.foreach(it => println(it))
+                val asmLine = Generator.generate(prog).toString
+                val outputFileName = fileName.replace(".wacc", ".s")
+                val outputFile = new File(outputFileName)
+                val writer = new java.io.PrintWriter(outputFile)
+                try {
+                  writer.write(asmLine)
+                  println(s"Assembly code written to $outputFileName")
+                } finally {
+                  writer.close()
+                }
               }
               case Left(errors) =>
                 println("#semantic_error#")
