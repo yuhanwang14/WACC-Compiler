@@ -8,20 +8,15 @@ case class STP(Rt: Register, Rt2: Register, address: Address)
 case class LDP(Rt: Register, Rt2: Register, address: Address)
     extends Instruction(f"ldp $Rt, $Rt2, $address")
 
-case class LDUR(Rt: Register, address: Address)
-    extends Instruction(f"ldur $Rt, $address")
+case class LDUR(Rt: Register, address: Address) extends Instruction(f"ldur $Rt, $address")
 
-case class LDURB(Rt: Register, address: Address)
-    extends Instruction(f"ldurb $Rt, $address")
+case class LDURB(Rt: Register, address: Address) extends Instruction(f"ldurb $Rt, $address")
 
-case class STR(Rt: Register, address: Address)
-    extends Instruction(f"str $Rt, $address")
+case class STR(Rt: Register, address: Address) extends Instruction(f"str $Rt, $address")
 
-case class STUR(Rt: Register, address: Address)
-    extends Instruction(f"stur $Rt, $address")
+case class STUR(Rt: Register, address: Address) extends Instruction(f"stur $Rt, $address")
 
-case class STURB(Rt: Register, address: Address)
-    extends Instruction(f"sturb $Rt, $address")
+case class STURB(Rt: Register, address: Address) extends Instruction(f"sturb $Rt, $address")
 
 case class MOV(Rd: Register, opr: Operand) extends Instruction(f"mov $Rd, $opr")
 
@@ -31,9 +26,11 @@ case class CSET(Rd: Register, cond: Cond) extends Instruction(f"cset $Rd, $cond"
 
 case class ADD(Rd: Register, Rn: Register, opr: Operand) extends Instruction(f"add $Rd, $Rn, $opr")
 
-case class ADDS(Rd: Register, Rn: Register, opr: Operand) extends Instruction(f"adds $Rd, $Rn, $opr")
+case class ADDS(Rd: Register, Rn: Register, opr: Operand)
+    extends Instruction(f"adds $Rd, $Rn, $opr")
 
-case class SUBS(Rd: Register, Rn: Register, opr: Operand) extends Instruction(f"subs $Rd, $Rn, $opr")
+case class SUBS(Rd: Register, Rn: Register, opr: Operand)
+    extends Instruction(f"subs $Rd, $Rn, $opr")
 
 case class CBZ(Rd: Register, label: String) extends Instruction(f"cbz $Rd, #label")
 

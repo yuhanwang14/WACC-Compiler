@@ -199,7 +199,7 @@ object Generator {
       case IntLiter(x)  => asmLines += MOV(dest, ImmVal(x))
       case BoolLiter(x) => asmLines += MOV(dest, ImmVal(if (x) then 1 else 0))
       case CharLiter(c) => asmLines += MOV(dest, ImmVal(c))
-      case StrLiter(s)  => {
+      case StrLiter(s) => {
         var index = _stringConsts.size
         if (_stringConsts.contains(s)) {
           index = _stringConsts(s)
@@ -209,13 +209,13 @@ object Generator {
         asmLines += ADRP(dest, asmLocal ~ f".str$index")
         asmLines += ADD(dest, dest, Lo12(asmLocal ~ f".str$index"))
       }
-      case PairLiter()  => asmLines += MOV(dest, ImmVal(0))
+      case PairLiter() => asmLines += MOV(dest, ImmVal(0))
       case Ident(name) => {
         allocator.getLocation(scope.shadower(name).getOrElse("")) match
           case Left(reg)     => asmLines += MOV(dest, reg)
           case Right(offset) => asmLines += LDUR(dest, Offset(fp, ImmVal(offset)))
       }
-      case ArrayElem(identName, exprs) => ???
+      case ArrayElem(identName, exprs) => ??? // TODO: Array
       case Paren(e)                    => generateExpr(e, allocator, scope, dest)
 
       // Binary Operations
