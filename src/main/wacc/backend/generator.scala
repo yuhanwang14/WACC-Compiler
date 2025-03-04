@@ -282,7 +282,7 @@ object Generator {
           case otherwise: Expr => generateExpr(otherwise, allocator, scope)
         }
         asmLines += AsmFunction(
-          CMPImm(XRegister(8), ImmVal(0)),
+          CMP(XRegister(8), ImmVal(0)),
           BCond("_errNull", Cond.EQ),
           MOV(ip0, XRegister(8)),
           LDUR(XRegister(8), Offset(ip0, ImmVal(0)))
@@ -295,14 +295,14 @@ object Generator {
           case otherwise: Expr => generateExpr(otherwise, allocator, scope)
         }
         asmLines += AsmFunction(
-          CMPImm(XRegister(8), ImmVal(0)),
+          CMP(XRegister(8), ImmVal(0)),
           BCond("_errNull", Cond.EQ),
           MOV(ip0, XRegister(8)),
           LDUR(XRegister(8), Offset(ip0, ImmVal(1)))
         )
       }
 
-      case expr: Expr => 
+      case expr: Expr =>
 
       case _ =>
 
@@ -463,7 +463,7 @@ object Generator {
       case Chr(e) => ???
     }
 
-    ???
+    AsmFunction(asmLines.toList*)
   }
 
   /** Generate assemply code to calculate a list of expr and push them into the stack. Return a list
