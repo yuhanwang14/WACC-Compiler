@@ -3,7 +3,7 @@ package instructions
 import AsmLabeling.*
 
 object PredefinedFunctions {
-  val predefinedErrMessages = Map(
+  private val predefinedErrMessages = Map(
     "._errDivZero_str0" ->
       "fatal error: division or modulo by zero\n",
     "._errOutOfMemory_str0" ->
@@ -16,30 +16,27 @@ object PredefinedFunctions {
       "fatal error: array index %d out of bounds\n"
   )
 
-  def getPredefinedMessages: String =
-    predefinedErrMessages.view.mapValues(_.toString).mkString("\n")
-
-  def _err(localErrName: String) = AsmFunction(
+  private def _err(errName: String) = AsmFunction(
     LabelledStringConst(
-      asmLocal ~ f"${localErrName}_str0",
-      predefinedErrMessages(f"${localErrName}_str0")
+      asmLocal ~ f"._${errName}_str0",
+      predefinedErrMessages(f"._${errName}_str0")
     ),
-    LabelHeader(localErrName),
-    ADR(XRegister(0), asmLocal ~ f"${localErrName}_str0"),
+    LabelHeader(errName),
+    ADR(XRegister(0), asmLocal ~ f"._${errName}_str0"),
     BL(asmGlobal ~ "_prints"),
     MOV(WRegister(0), ImmVal(-1)),
     BL(asmGlobal ~ "exit")
   )
 
-  def _errOutOfBounds() = _err("._errOutOfBounds")
+  val _errOutOfBounds = _err("errOutOfBounds")
 
-  def _errNull() = _err("._errNull")
+  val _errNull = _err("errNull")
 
-  def _errOverflow() = _err("._errOverflow")
+  val _errOverflow = _err("errOverflow")
 
-  def _errDivZero() = _err("._errDivZero")
+  val _errDivZero = _err("errDivZero")
 
-  def _errOutOfMemory() = _err("._errOutOfMemory")
+  val _errOutOfMemory = _err("errOutOfMemory")
 
   def _read(name: String, fmt: String) = AsmFunction(
     LabelledStringConst(asmLocal ~ s"._${name}_str0", fmt),
@@ -59,11 +56,11 @@ object PredefinedFunctions {
     RET
   )
 
-  def _readc() = _read("readc", " %c")
+  val _readc = _read("readc", " %c")
 
-  def _readi() = _read("readi", "%d")
+  val _readi = _read("readi", "%d")
 
-  def _freepair() = AsmFunction(
+  val _freepair = AsmFunction(
     LabelHeader(asmGlobal ~ "_freepair"),
     STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
     CBZ(XRegister(0), asmGlobal ~ "_errNull"),
@@ -72,7 +69,7 @@ object PredefinedFunctions {
     RET
   )
 
-  def _malloc() = AsmFunction(
+  val _malloc = AsmFunction(
     LabelHeader(asmGlobal ~ "_malloc"),
     STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
     BL(asmGlobal ~ "malloc"),
@@ -81,7 +78,7 @@ object PredefinedFunctions {
     RET
   )
 
-  def _print(name: String, fmt: String, setupRegisters: Seq[Instruction] = Nil) = {
+  private def _print(name: String, fmt: String, setupRegisters: Seq[Instruction] = Nil) = {
     val fmtStr = asmLocal ~ s"._${name}_str0"
     AsmFunction(
       LabelledStringConst(fmtStr, fmt),
@@ -97,15 +94,15 @@ object PredefinedFunctions {
     )
   }
 
-  def _printp() = _print("printp", "%p", Seq(MOV(XRegister(1), XRegister(0))))
+  val _printp = _print("printp", "%p", Seq(MOV(XRegister(1), XRegister(0))))
 
-  def _println() = _print("println", "")
+  val _println = _print("println", "")
 
-  def _printi() = _print("printi", "%d", Seq(MOV(XRegister(1), XRegister(0))))
+  val _printi = _print("printi", "%d", Seq(MOV(XRegister(1), XRegister(0))))
 
-  def _printc() = _print("printc", "%c", Seq(MOV(XRegister(1), XRegister(0))))
+  val _printc = _print("printc", "%c", Seq(MOV(XRegister(1), XRegister(0))))
 
-  def _prints() = _print(
+  val _prints = _print(
     "prints",
     "%.*s",
     Seq(
@@ -114,7 +111,7 @@ object PredefinedFunctions {
     )
   )
 
-  def _printb() = {
+  val _printb = {
     val falseStr = asmLocal ~ "._printb_str0"
     val trueStr = asmLocal ~ "._printb_str1"
     val fmtStr = asmLocal ~ "._printb_str2"
