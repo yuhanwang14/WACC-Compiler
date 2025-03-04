@@ -72,11 +72,11 @@ object Generator {
 
           // generate `then` block
           newAllocator = allocator.clone()
-          asmLines += AsmSnippet(thenLabel)(0)
+          asmLines += LabelHeader(thenLabel)
           asmLines += generateBlock(b1, newAllocator, subScopes.head)
           subScopes = subScopes.tail
 
-          asmLines += AsmSnippet(afterLabel)(0)
+          asmLines += LabelHeader(afterLabel)
         }
 
         case While(cond, block) => {
@@ -86,11 +86,11 @@ object Generator {
           localLabelCount += 2
 
           asmLines += B(loopLabel)
-          asmLines += AsmSnippet(loopLabel)(0)
+          asmLines += LabelHeader(loopLabel)
           asmLines += generateBlock(block, newAllocator, subScopes.head)
           subScopes = subScopes.tail
 
-          asmLines += AsmSnippet(afterLabel)(0)
+          asmLines += LabelHeader(afterLabel)
           asmLines += Comment(s"TODO: evaluate $cond and bcond to $loopLabel")(4)
         }
 
@@ -219,43 +219,62 @@ object Generator {
       case Paren(e)                    => generateExpr(e, allocator, scope, dest)
 
       // Binary Operations
-      // TODO: Logical binary operations need branches
-      case Or(x, y)  => ???
-      case And(x, y) => ???
+      case Or(expr1, expr2) => {
+        asmLines += generateExpr(expr2, allocator, scope, dest)
+        asmLines += CMP(dest, ImmVal(1))
+        val orLabel = asmLocal ~ localLabelCount
+        asmLines += BCond(orLabel, Cond.EQ)
+        localLabelCount += 1
+        asmLines += generateExpr(expr2, allocator, scope, dest)
+        asmLines += CMP(dest, ImmVal(1))
+        asmLines += LabelHeader(orLabel)
+        asmLines += CSET(dest, Cond.EQ)
+      }
+      case And(expr1, expr2) => {
+        asmLines += generateExpr(expr2, allocator, scope, dest)
+        asmLines += CMP(dest, ImmVal(1))
+        val andLabel = asmLocal ~ localLabelCount
+        asmLines += BCond(andLabel, Cond.NE)
+        localLabelCount += 1
+        asmLines += generateExpr(expr2, allocator, scope, dest)
+        asmLines += CMP(dest, ImmVal(1))
+        asmLines += LabelHeader(andLabel)
+        asmLines += CSET(dest, Cond.EQ)
+      }
 
       case Equal(expr1, expr2) => {
-        generateExpr(expr1, allocator, scope, x9)
-        generateExpr(expr2, allocator, scope, dest)
+        asmLines += generateExpr(expr1, allocator, scope, x9)
+        asmLines += generateExpr(expr2, allocator, scope, dest)
         asmLines += CMP(dest, x9)
         asmLines += CSET(dest, Cond.EQ)
       }
       case NotEqual(expr1, expr2) => {
-        generateExpr(expr1, allocator, scope, x9)
-        generateExpr(expr2, allocator, scope, dest)
+        asmLines += generateExpr(expr1, allocator, scope, x9)
+        asmLines += generateExpr(expr2, allocator, scope, dest)
         asmLines += CMP(dest, x9)
         asmLines += CSET(dest, Cond.NE)
       }
       case Less(expr1, expr2) => {
-        generateExpr(expr1, allocator, scope, x9)
-        generateExpr(expr2, allocator, scope, dest)
+        asmLines += generateExpr(expr1, allocator, scope, x9)
+        asmLines += generateExpr(expr2, allocator, scope, dest)
         asmLines += CMP(dest, x9)
         asmLines += CSET(dest, Cond.LT)
       }
       case LessEqual(expr1, expr2) => {
-        generateExpr(expr1, allocator, scope, x9)
-        generateExpr(expr2, allocator, scope, dest)
+        asmLines += generateExpr(expr1, allocator, scope, x9)
+        asmLines += generateExpr(expr2, allocator, scope, dest)
         asmLines += CMP(dest, x9)
         asmLines += CSET(dest, Cond.LE)
       }
       case Greater(expr1, expr2) => {
-        generateExpr(expr1, allocator, scope, x9)
-        generateExpr(expr2, allocator, scope, dest)
+        asmLines += generateExpr(expr1, allocator, scope, x9)
+        asmLines += generateExpr(expr2, allocator, scope, dest)
         asmLines += CMP(dest, x9)
         asmLines += CSET(dest, Cond.GT)
       }
       case GreaterEqual(expr1, expr2) => {
-        generateExpr(expr1, allocator, scope, x9)
-        generateExpr(expr2, allocator, scope, dest)
+        asmLines += generateExpr(expr1, allocator, scope, x9)
+        asmLines += generateExpr(expr2, allocator, scope, dest)
         asmLines += CMP(dest, x9)
         asmLines += CSET(dest, Cond.GE)
       }
@@ -267,14 +286,14 @@ object Generator {
 
       // Unary Operations
       case Not(e) => {
-        generateExpr(e, allocator, scope, x9)
+        asmLines += generateExpr(e, allocator, scope, x9)
         asmLines += CMP(x9, ImmVal(1))
         asmLines += CSET(dest, Cond.NE)
       }
       case Negate(e) => ???
       case Len(e)    => ???
       case Ord(e) => {
-        generateExpr(e, allocator, scope, x9)
+        asmLines += generateExpr(e, allocator, scope, x9)
         asmLines += MOV(dest, x9)
       }
       case Chr(e) => ???
