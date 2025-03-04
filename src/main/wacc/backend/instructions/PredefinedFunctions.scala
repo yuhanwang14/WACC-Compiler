@@ -95,83 +95,40 @@ object PredefinedFunctions {
     RET
   )
 
-  def _printp() =
-    val fmtStr = asmLocal ~ "._printp_str0"
+  def _print(name: String, fmt: String, setupRegisters: Seq[Instruction] = Nil) = {
+    val fmtStr = asmLocal ~ s"._${name}_str0"
     AsmFunction(
-      LabelledStringConst(fmtStr, "%p"),
-      LabelHeader(asmGlobal ~ "_printp"),
+      LabelledStringConst(fmtStr, fmt),
+      LabelHeader(asmGlobal ~ s"_$name"),
       STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
-      MOV(XRegister(1), XRegister(0)),
+      AsmFunction(setupRegisters*),
       ADR(XRegister(0), fmtStr),
-      BL(asmGlobal ~ "printf"),
+      BL(asmGlobal ~ (if (name == "println") "puts" else "printf")),
       MOV(XRegister(0), ImmVal(0)),
       BL(asmGlobal ~ "fflush"),
       LDP(lr, xzr, PostIndex(sp, ImmVal(16))),
       RET
     )
+  }
 
-  def _println() =
-    val fmtStr = asmLocal ~ "._println_str0"
-    AsmFunction(
-      LabelledStringConst(fmtStr, ""),
-      LabelHeader(asmGlobal ~ "_println"),
-      STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
-      ADR(XRegister(0), fmtStr),
-      BL(asmGlobal ~ "puts"),
-      MOV(XRegister(0), ImmVal(0)),
-      BL(asmGlobal ~ "fflush"),
-      LDP(lr, xzr, PostIndex(sp, ImmVal(16))),
-      RET
-    )
+  def _printp() = _print("printp", "%p", Seq(MOV(XRegister(1), XRegister(0))))
 
-  def _printi() =
-    val fmtStr = asmLocal ~ "._printi_str0"
-    AsmFunction(
-      LabelledStringConst(fmtStr, "%d"),
-      LabelHeader(asmGlobal ~ "_printi"),
-      STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
-      MOV(XRegister(1), XRegister(0)),
-      ADR(XRegister(0), fmtStr),
-      BL(asmGlobal ~ "printf"),
-      MOV(XRegister(0), ImmVal(0)),
-      BL(asmGlobal ~ "fflush"),
-      LDP(lr, xzr, PostIndex(sp, ImmVal(16))),
-      RET
-    )
+  def _println() = _print("println", "")
 
-  def _printc() =
-    val fmtStr = asmLocal ~ "._printc_str0"
-    AsmFunction(
-      LabelledStringConst(fmtStr, "%c"),
-      LabelHeader(asmGlobal ~ "_printc"),
-      STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
-      MOV(XRegister(1), XRegister(0)),
-      ADR(XRegister(0), fmtStr),
-      BL(asmGlobal ~ "printf"),
-      MOV(XRegister(0), ImmVal(0)),
-      BL(asmGlobal ~ "fflush"),
-      LDP(lr, xzr, PostIndex(sp, ImmVal(16))),
-      RET
-    )
+  def _printi() = _print("printi", "%d", Seq(MOV(XRegister(1), XRegister(0))))
 
-  def _prints() =
-    val fmtStr = asmLocal ~ "._prints_str0"
-    AsmFunction(
-      LabelledStringConst(fmtStr, "%.*s"),
-      LabelHeader(asmGlobal ~ "_prints"),
-      STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
+  def _printc() = _print("printc", "%c", Seq(MOV(XRegister(1), XRegister(0))))
+
+  def _prints() = _print(
+    "prints",
+    "%.*s",
+    Seq(
       MOV(XRegister(2), XRegister(0)),
-      LDUR(WRegister(1), Offset(XRegister(0), ImmVal(-4))),
-      ADR(XRegister(0), fmtStr),
-      BL(asmGlobal ~ "printf"),
-      MOV(XRegister(0), ImmVal(0)),
-      BL(asmGlobal ~ "fflush"),
-      LDP(lr, xzr, PostIndex(sp, ImmVal(16))),
-      RET
+      LDUR(WRegister(1), Offset(XRegister(0), ImmVal(-4)))
     )
+  )
 
-  def _printb() =
-    // String constants for boolean output
+  def _printb() = {
     val falseStr = asmLocal ~ "._printb_str0"
     val trueStr = asmLocal ~ "._printb_str1"
     val fmtStr = asmLocal ~ "._printb_str2"
@@ -197,4 +154,5 @@ object PredefinedFunctions {
       LDP(lr, xzr, PostIndex(sp, ImmVal(16))),
       RET
     )
+  }
 }
