@@ -19,7 +19,7 @@ case class DataHeader() extends Header(".data")(0)
 
 case class TextHeader() extends Header(".text")(0)
 
-case class GlobalHeader(name: String) extends Header(f".globol $name")(0)
+case class GlobalHeader(name: String) extends Header(f".global $name")(0)
 
 case class AlignHeader(value: Int) extends Header(f".align $value")(0)
 
