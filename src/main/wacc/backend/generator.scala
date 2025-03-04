@@ -8,11 +8,13 @@ import instructions.AsmLabeling.*
 import scala.collection.mutable.ListBuffer
 import common.Scope
 import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.Map as MutableMap
 import scala.math
 
 object Generator {
 
   private var localLabelCount: Int = 0
+  private val _stringConsts: MutableMap[String, Int] = MutableMap()
 
   def generate(prog: Program)(implicit
       symbolTable: SymbolTable
@@ -157,7 +159,7 @@ object Generator {
       symbolTable: SymbolTable
   ): AsmSnippet = {
     val asmLines: ListBuffer[AsmSnippet] = ListBuffer()
-    // wip
+    // TODO
     rvalue match
 
       case Call(Ident(funcName), ArgList(argList)) => {
@@ -192,11 +194,21 @@ object Generator {
       symbolTable: SymbolTable
   ): AsmSnippet = {
     val asmLines: ListBuffer[AsmSnippet] = ListBuffer()
+    val x9 = XRegister(9)
     expr match {
       case IntLiter(x)  => asmLines += MOV(dest, ImmVal(x))
       case BoolLiter(x) => asmLines += MOV(dest, ImmVal(if (x) then 1 else 0))
       case CharLiter(c) => asmLines += MOV(dest, ImmVal(c))
-      case StrLiter(s)  => ??? // TODO: Generate a string as local variables
+      case StrLiter(s)  => {
+        var index = _stringConsts.size
+        if (_stringConsts.contains(s)) {
+          index = _stringConsts(s)
+        } else {
+          _stringConsts(s) = index
+        }
+        asmLines += ADRP(dest, asmLocal ~ f".str$index")
+        asmLines += ADD(dest, dest, Lo12(asmLocal ~ f".str$index"))
+      }
       case PairLiter()  => asmLines += MOV(dest, ImmVal(0))
       case Ident(name) => {
         allocator.getLocation(scope.shadower(name).getOrElse("")) match
@@ -212,39 +224,39 @@ object Generator {
       case And(x, y) => ???
 
       case Equal(expr1, expr2) => {
-        generateExpr(expr1, allocator, scope, XRegister(9))
+        generateExpr(expr1, allocator, scope, x9)
         generateExpr(expr2, allocator, scope, dest)
-        asmLines += CMP(dest, XRegister(9))
+        asmLines += CMP(dest, x9)
         asmLines += CSET(dest, Cond.EQ)
       }
       case NotEqual(expr1, expr2) => {
-        generateExpr(expr1, allocator, scope, XRegister(9))
+        generateExpr(expr1, allocator, scope, x9)
         generateExpr(expr2, allocator, scope, dest)
-        asmLines += CMP(dest, XRegister(9))
+        asmLines += CMP(dest, x9)
         asmLines += CSET(dest, Cond.NE)
       }
       case Less(expr1, expr2) => {
-        generateExpr(expr1, allocator, scope, XRegister(9))
+        generateExpr(expr1, allocator, scope, x9)
         generateExpr(expr2, allocator, scope, dest)
-        asmLines += CMP(dest, XRegister(9))
+        asmLines += CMP(dest, x9)
         asmLines += CSET(dest, Cond.LT)
       }
       case LessEqual(expr1, expr2) => {
-        generateExpr(expr1, allocator, scope, XRegister(9))
+        generateExpr(expr1, allocator, scope, x9)
         generateExpr(expr2, allocator, scope, dest)
-        asmLines += CMP(dest, XRegister(9))
+        asmLines += CMP(dest, x9)
         asmLines += CSET(dest, Cond.LE)
       }
       case Greater(expr1, expr2) => {
-        generateExpr(expr1, allocator, scope, XRegister(9))
+        generateExpr(expr1, allocator, scope, x9)
         generateExpr(expr2, allocator, scope, dest)
-        asmLines += CMP(dest, XRegister(9))
+        asmLines += CMP(dest, x9)
         asmLines += CSET(dest, Cond.GT)
       }
       case GreaterEqual(expr1, expr2) => {
-        generateExpr(expr1, allocator, scope, XRegister(9))
+        generateExpr(expr1, allocator, scope, x9)
         generateExpr(expr2, allocator, scope, dest)
-        asmLines += CMP(dest, XRegister(9))
+        asmLines += CMP(dest, x9)
         asmLines += CSET(dest, Cond.GE)
       }
       case Add(expr1, expr2) => ???
@@ -255,15 +267,15 @@ object Generator {
 
       // Unary Operations
       case Not(e) => {
-        generateExpr(e, allocator, scope, XRegister(9))
-        asmLines += CMP(XRegister(9), ImmVal(1))
+        generateExpr(e, allocator, scope, x9)
+        asmLines += CMP(x9, ImmVal(1))
         asmLines += CSET(dest, Cond.NE)
       }
       case Negate(e) => ???
       case Len(e)    => ???
       case Ord(e) => {
-        generateExpr(e, allocator, scope, XRegister(9))
-        asmLines += MOV(dest, XRegister(9))
+        generateExpr(e, allocator, scope, x9)
+        asmLines += MOV(dest, x9)
       }
       case Chr(e) => ???
     }

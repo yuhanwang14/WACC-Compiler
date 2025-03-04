@@ -2,8 +2,14 @@ package instructions
 
 trait Operand
 
-case class ImmVal(value: Int) extends Operand {
+trait Imm extends Operand
+
+case class ImmVal(value: Int) extends Imm {
   override def toString: String = s"#${value}"
+}
+
+case class Lo12(label: String) extends Imm {
+  override def toString: String = s":lo12:$label"
 }
 
 trait Address(override val toString: String)

@@ -30,7 +30,7 @@ object PredefinedFunctions {
     BL(asmGlobal ~ "exit")
   )
 
-  def _errOutOfBounds() = _err("._errDivZero_str0")
+  def _errOutOfBounds() = _err("._errOutOfBounds_str0")
 
   def _errNull() = _err("._errNull_str0")
 
