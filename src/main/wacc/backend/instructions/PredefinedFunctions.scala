@@ -41,9 +41,9 @@ object PredefinedFunctions {
 
   def _errOutOfMemory() = _err("._errOutOfMemory")
 
-  def _readc() = AsmFunction(
-    LabelledStringConst(asmLocal ~ "._readc_str0", " %c"),
-    LabelHeader(asmGlobal ~ "_readc"),
+  def _read(name: String, fmt: String) = AsmFunction(
+    LabelledStringConst(asmLocal ~ s"._${name}_str0", fmt),
+    LabelHeader(asmGlobal ~ s"_$name"),
     Comment("X0 contains the \"original\" value of the destination of the read")(4),
     Comment("allocate space on the stack to store the read: preserve alignment!")(4),
     Comment("the passed default argument should be stored in case of EOF")(4),
@@ -53,29 +53,15 @@ object PredefinedFunctions {
     )(4),
     STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
     MOV(XRegister(1), sp),
-    ADR(XRegister(0), asmLocal ~ "._readc_str0"),
+    ADR(XRegister(0), asmLocal ~ s"._${name}_str0"),
     BL(asmGlobal ~ "scanf"),
     LDP(XRegister(0), lr, PostIndex(sp, ImmVal(16))),
     RET
   )
 
-  def _readi() = AsmFunction(
-    LabelledStringConst(asmLocal ~ "._readi_str0", "%d"),
-    LabelHeader(asmGlobal ~ "_readi"),
-    Comment("X0 contains the \"original\" value of the destination of the read")(4),
-    Comment("allocate space on the stack to store the read: preserve alignment!")(4),
-    Comment("the passed default argument should be stored in case of EOF")(4),
-    Comment(
-      "aarch64 mandates 16-byte SP alignment at all times," +
-        " might as well merge the stores"
-    )(4),
-    STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
-    MOV(XRegister(1), sp),
-    ADR(XRegister(0), asmLocal ~ "_readi_str0"),
-    BL(asmGlobal ~ "scanf"),
-    LDP(XRegister(0), lr, PostIndex(sp, ImmVal(16))),
-    RET
-  )
+  def _readc() = _read("readc", " %c")
+
+  def _readi() = _read("readi", "%d")
 
   def _freepair() = AsmFunction(
     LabelHeader(asmGlobal ~ "_freepair"),
