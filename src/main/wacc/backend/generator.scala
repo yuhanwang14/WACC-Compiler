@@ -9,7 +9,6 @@ import scala.collection.mutable.ListBuffer
 import common.Scope
 import scala.collection.mutable.ArrayBuffer
 import scala.math
-import parsers.StatementParser.rValue
 
 object Generator {
 
@@ -116,7 +115,8 @@ object Generator {
             case Left(reg) => asmLines += MOV(reg, XRegister(8))
             case Right(offset) => {
               varType match {
-                case BoolType() | CharType() => STURB(XRegister(8), Offset(fp, ImmVal(offset)))
+                case BoolType() | CharType() => STURB(WRegister(8), Offset(fp, ImmVal(offset)))
+                case IntType() => STUR(WRegister(8), Offset(fp, ImmVal(offset)))
                 case _ => STUR(XRegister(8), Offset(fp, ImmVal(offset)))
               }
             }
@@ -233,9 +233,113 @@ object Generator {
         asmLines += popCode
       }
 
+      // TODO: need the type of expr to infer the size of array
+      // Currently assume that the size of element is 4
+      case ArrayLiter(exprs) => {
+        val (pushCode, popCode) = pushAndPopRegisters(allocator.callerRegister)
+        val typeSize = 4
+        val arrayLen = exprs.length
+        asmLines += AsmFunction(
+          pushCode,
+          MOV(WRegister(0), ImmVal(4 + typeSize * arrayLen)),
+          BL("_malloc"),
+          MOV(ip0, XRegister(0)),
+          popCode,
+          ADDS(ip0, ip0, ImmVal(4)),
+          MOV(WRegister(8), ImmVal(arrayLen)),
+          STUR(WRegister(8), Offset(ip0, ImmVal(-4)))
+        )
+        exprs.zipWithIndex.map { (expr, ind) => 
+          asmLines += generateExpr(expr, allocator, scope)
+          asmLines += STUR(WRegister(8), Offset(ip0, ImmVal(ind * typeSize)))
+        }
+        asmLines += MOV(XRegister(8), ip0)
+      }
+
+      case NewPair(expr1, expr2) => {
+        val (pushCode, popCode) = pushAndPopRegisters(allocator.callerRegister)
+        asmLines += AsmFunction(
+          pushCode,
+          MOV(WRegister(0), ImmVal(16)),
+          BL("_malloc"),
+          MOV(ip0, XRegister(0)),
+          popCode,
+          generateExpr(expr1, allocator, scope),
+          STUR(XRegister(8), Offset(ip0, ImmVal(0))),
+          generateExpr(expr2, allocator, scope),
+          STUR(XRegister(8), Offset(ip0, ImmVal(8))),
+          MOV(XRegister(8), ip0),
+        )
+      }
+
+      case First(lvalue) => {
+        lvalue match {
+          case pairElem: PairElem => generateRValue(pairElem, allocator, scope)
+          case otherwise: Expr => generateExpr(otherwise, allocator, scope)
+        }
+        asmLines += AsmFunction(
+          CMPImm(XRegister(8), ImmVal(0)),
+          BCond("_errNull", Cond.EQ),
+          MOV(ip0, XRegister(8)),
+          LDUR(XRegister(8), Offset(ip0, ImmVal(0)))
+        )
+      }
+
+      case Second(lValue) => {
+        lValue match {
+          case pairElem: PairElem => generateRValue(pairElem, allocator, scope)
+          case otherwise: Expr => generateExpr(otherwise, allocator, scope)
+        }
+        asmLines += AsmFunction(
+          CMPImm(XRegister(8), ImmVal(0)),
+          BCond("_errNull", Cond.EQ),
+          MOV(ip0, XRegister(8)),
+          LDUR(XRegister(8), Offset(ip0, ImmVal(1)))
+        )
+      }
+
+      case expr: Expr => 
+
       case _ =>
 
     AsmFunction(asmLines.to(Seq)*)
+  }
+
+  /**
+   * Generate assembly code to move the content of x8 to a given location
+   */
+  private def generateLValue(
+    lValue: LValue,
+    allocator: RegisterAllocator,
+    scope: Scope
+  )(implicit
+    symbolTable: SymbolTable
+  ): AsmSnippet = {
+
+    val asmLines: ListBuffer[AsmSnippet] = ListBuffer()
+    lValue match {
+
+      case Ident(name) => {
+        val prefixedName = scope.shadower(name).getOrElse("")
+        val location = allocator.getLocation(prefixedName)
+        val varType = scope.lookupSymbol(prefixedName).getOrElse(anyType)
+        location match {
+          case Left(reg) => asmLines += MOV(reg, XRegister(8))
+          case Right(offset) => {
+            varType match {
+              case BoolType() | CharType() => asmLines += STURB(WRegister(8), Offset(fp, ImmVal(offset)))
+              case _ => asmLines += STUR(XRegister(8), Offset(fp, ImmVal(offset)))
+            }
+          }
+        }
+      }
+
+      case ArrayElem(Ident(name), exprs) => ???
+      case First(lValue) => ???
+      case Second(lValue) => ???
+      case _ =>  
+    }
+    AsmFunction(asmLines.toList*)
   }
 
   /** Generate assembly code to evaluate the result of an expression The default position of result
