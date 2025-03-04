@@ -45,7 +45,3 @@ case class BL(label: String) extends Instruction(f"bl $label")
 case class BCond(label: String, cond: Cond) extends Instruction(f"b.$cond 2$label")
 
 case object RET extends Instruction("ret")
-
-case class ALIGN(power: Int) extends Instruction(f".align $power")
-
-case class WORD(len: Int) extends Instruction(f".word $len")
