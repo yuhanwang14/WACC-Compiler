@@ -28,15 +28,15 @@ object PredefinedFunctions {
     BL(asmGlobal ~ "exit")
   )
 
-  val _errOutOfBounds = _err("errOutOfBounds")
+  private val _errOutOfBounds = _err("errOutOfBounds")
 
-  val _errNull = _err("errNull")
+  private val _errNull = _err("errNull")
 
-  val _errOverflow = _err("errOverflow")
+  private val _errOverflow = _err("errOverflow")
 
-  val _errDivZero = _err("errDivZero")
+  private val _errDivZero = _err("errDivZero")
 
-  val _errOutOfMemory = _err("errOutOfMemory")
+  private val _errOutOfMemory = _err("errOutOfMemory")
 
   def _read(name: String, fmt: String) = AsmFunction(
     LabelledStringConst(asmLocal ~ s"._${name}_str0", fmt),
@@ -56,11 +56,11 @@ object PredefinedFunctions {
     RET
   )
 
-  val _readc = _read("readc", " %c")
+  private val _readc = _read("readc", " %c")
 
-  val _readi = _read("readi", "%d")
+  private val _readi = _read("readi", "%d")
 
-  val _freepair = AsmFunction(
+  private val _freepair = AsmFunction(
     LabelHeader(asmGlobal ~ "_freepair"),
     STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
     CBZ(XRegister(0), asmGlobal ~ "_errNull"),
@@ -69,7 +69,7 @@ object PredefinedFunctions {
     RET
   )
 
-  val _malloc = AsmFunction(
+  private val _malloc = AsmFunction(
     LabelHeader(asmGlobal ~ "_malloc"),
     STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
     BL(asmGlobal ~ "malloc"),
@@ -94,15 +94,15 @@ object PredefinedFunctions {
     )
   }
 
-  val _printp = _print("printp", "%p", Seq(MOV(XRegister(1), XRegister(0))))
+  private val _printp = _print("printp", "%p", Seq(MOV(XRegister(1), XRegister(0))))
 
-  val _println = _print("println", "")
+  private val _println = _print("println", "")
 
-  val _printi = _print("printi", "%d", Seq(MOV(XRegister(1), XRegister(0))))
+  private val _printi = _print("printi", "%d", Seq(MOV(XRegister(1), XRegister(0))))
 
-  val _printc = _print("printc", "%c", Seq(MOV(XRegister(1), XRegister(0))))
+  private val _printc = _print("printc", "%c", Seq(MOV(XRegister(1), XRegister(0))))
 
-  val _prints = _print(
+  private val _prints = _print(
     "prints",
     "%.*s",
     Seq(
@@ -111,7 +111,7 @@ object PredefinedFunctions {
     )
   )
 
-  val _printb = {
+  private val _printb = {
     val falseStr = asmLocal ~ "._printb_str0"
     val trueStr = asmLocal ~ "._printb_str1"
     val fmtStr = asmLocal ~ "._printb_str2"
@@ -138,4 +138,22 @@ object PredefinedFunctions {
       RET
     )
   }
+
+  val predefinedFunctions: Map[String, AsmFunction] = Map(
+    "_errOutOfBounds" -> _errOutOfBounds,
+    "_errNull" -> _errNull,
+    "_errOverflow" -> _errOverflow,
+    "_errDivZero" -> _errDivZero,
+    "_errOutOfMemory" -> _errOutOfMemory,
+    "_readc" -> _readc,
+    "_readi" -> _readi,
+    "_freepair" -> _freepair,
+    "_malloc" -> _malloc,
+    "_printp" -> _printp,
+    "_println" -> _println,
+    "_printi" -> _printi,
+    "_printc" -> _printc,
+    "_prints" -> _prints,
+    "_printb" -> _printb
+  )
 }

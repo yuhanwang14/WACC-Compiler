@@ -4,6 +4,8 @@ class AsmSnippet(code: String)(implicit indent: Int) {
   override def toString: String = " " * indent + code.replace("\n", "\n" + " " * indent)
 }
 
+case object EmptyAsmSnippet extends AsmSnippet("")(0)
+
 case class Comment(comment: String)(implicit indent: Int) extends AsmSnippet(f"// $comment")
 
 class MultiLineAsmSnippet(lines: AsmSnippet*)(implicit indent: Int)
@@ -16,6 +18,8 @@ class Header(code: String)(implicit indent: Int) extends AsmSnippet(code)
 case class DataHeader() extends Header(".data")(0)
 
 case class TextHeader() extends Header(".text")(0)
+
+case class GlobalHeader(name: String) extends Header(f".globol $name")(0)
 
 case class AlignHeader(value: Int) extends Header(f".align $value")(0)
 

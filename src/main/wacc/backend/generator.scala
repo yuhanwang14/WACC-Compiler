@@ -11,6 +11,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.Map as MutableMap
 import scala.collection.mutable.Set as MutableSet
 import scala.math
+import instructions.PredefinedFunctions.*
 
 object Generator {
 
@@ -21,9 +22,31 @@ object Generator {
   def generate(prog: Program)(implicit
       symbolTable: SymbolTable
   ): AsmSnippet = {
-    // generateBlock(prog.s)
     val asmLines: ListBuffer[AsmSnippet] = ListBuffer()
-    prog.fs.foreach(x => asmLines += generateFunc(x))
+    asmLines += AsmFunction(
+      DataHeader(),
+      AsmFunction(
+        _stringConsts
+          .map((str, index) => {
+            LabelledStringConst(asmLocal ~ f"str$index", str)
+          })
+          .to(Seq)*
+      ),
+      TextHeader(),
+      GlobalHeader("main"),
+      LabelHeader("main"),
+      Comment("push {fp, lr}")(4),
+      STP(fp, lr, PreIndex(sp, ImmVal(-16))),
+      // pushCode,
+      MOV(fp, sp),
+      generateBlock(prog.s, RegisterAllocator(), symbolTable.currentScope.children.head),
+      // popCode,
+      Comment("pop {fp, lr}")(4),
+      LDP(fp, lr, PreIndex(sp, ImmVal(-16))),
+      RET
+    )
+    prog.fs.foreach(func => asmLines += generateFunc(func))
+    _predefinedFuncs.foreach(name => asmLines += predefinedFunctions(name))
     AsmFunction(asmLines.to(Seq)*)
   }
 
@@ -120,8 +143,8 @@ object Generator {
             case Right(offset) => {
               varType match {
                 case BoolType() | CharType() => STURB(WRegister(8), Offset(fp, ImmVal(offset)))
-                case IntType() => STUR(WRegister(8), Offset(fp, ImmVal(offset)))
-                case _ => STUR(XRegister(8), Offset(fp, ImmVal(offset)))
+                case IntType()               => STUR(WRegister(8), Offset(fp, ImmVal(offset)))
+                case _                       => STUR(XRegister(8), Offset(fp, ImmVal(offset)))
               }
             }
           }
@@ -194,7 +217,7 @@ object Generator {
     }
 
     asmLines += AsmFunction(
-      AsmSnippet(f"wacc_${funcName}:")(0),
+      LabelHeader(f"wacc_$funcName"),
       Comment("push {fp, lr}")(4),
       STP(fp, lr, PreIndex(sp, ImmVal(-16))),
       pushCode,
@@ -253,7 +276,7 @@ object Generator {
           MOV(WRegister(8), ImmVal(arrayLen)),
           STUR(WRegister(8), Offset(ip0, ImmVal(-4)))
         )
-        exprs.zipWithIndex.map { (expr, ind) => 
+        exprs.zipWithIndex.map { (expr, ind) =>
           asmLines += generateExpr(expr, allocator, scope)
           asmLines += STUR(WRegister(8), Offset(ip0, ImmVal(ind * typeSize)))
         }
@@ -272,14 +295,14 @@ object Generator {
           STUR(XRegister(8), Offset(ip0, ImmVal(0))),
           generateExpr(expr2, allocator, scope),
           STUR(XRegister(8), Offset(ip0, ImmVal(8))),
-          MOV(XRegister(8), ip0),
+          MOV(XRegister(8), ip0)
         )
       }
 
       case First(lvalue) => {
         lvalue match {
           case pairElem: PairElem => generateRValue(pairElem, allocator, scope)
-          case otherwise: Expr => generateExpr(otherwise, allocator, scope)
+          case otherwise: Expr    => generateExpr(otherwise, allocator, scope)
         }
         asmLines += AsmFunction(
           CMP(XRegister(8), ImmVal(0)),
@@ -292,7 +315,7 @@ object Generator {
       case Second(lValue) => {
         lValue match {
           case pairElem: PairElem => generateRValue(pairElem, allocator, scope)
-          case otherwise: Expr => generateExpr(otherwise, allocator, scope)
+          case otherwise: Expr    => generateExpr(otherwise, allocator, scope)
         }
         asmLines += AsmFunction(
           CMP(XRegister(8), ImmVal(0)),
@@ -309,15 +332,14 @@ object Generator {
     AsmFunction(asmLines.to(Seq)*)
   }
 
-  /**
-   * Generate assembly code to move the content of x8 to a given location
-   */
+  /** Generate assembly code to move the content of x8 to a given location
+    */
   private def generateLValue(
-    lValue: LValue,
-    allocator: RegisterAllocator,
-    scope: Scope
+      lValue: LValue,
+      allocator: RegisterAllocator,
+      scope: Scope
   )(implicit
-    symbolTable: SymbolTable
+      symbolTable: SymbolTable
   ): AsmSnippet = {
 
     val asmLines: ListBuffer[AsmSnippet] = ListBuffer()
@@ -331,7 +353,8 @@ object Generator {
           case Left(reg) => asmLines += MOV(reg, XRegister(8))
           case Right(offset) => {
             varType match {
-              case BoolType() | CharType() => asmLines += STURB(WRegister(8), Offset(fp, ImmVal(offset)))
+              case BoolType() | CharType() =>
+                asmLines += STURB(WRegister(8), Offset(fp, ImmVal(offset)))
               case _ => asmLines += STUR(XRegister(8), Offset(fp, ImmVal(offset)))
             }
           }
@@ -339,9 +362,9 @@ object Generator {
       }
 
       case ArrayElem(Ident(name), exprs) => ???
-      case First(lValue) => ???
-      case Second(lValue) => ???
-      case _ =>  
+      case First(lValue)                 => ???
+      case Second(lValue)                => ???
+      case _                             =>
     }
     AsmFunction(asmLines.toList*)
   }
@@ -442,6 +465,7 @@ object Generator {
         asmLines += CMP(dest, x9)
         asmLines += CSET(dest, Cond.GE)
       }
+
       case Add(expr1, expr2) => ???
       case Sub(expr1, expr2) => ???
       case Mul(expr1, expr2) => ???
@@ -509,7 +533,7 @@ object Generator {
     val offset = (numReg + 1) / 2 * 16
 
     if (numReg == 0)
-      return (AsmSnippet("")(0), AsmSnippet("")(0))
+      return (EmptyAsmSnippet, EmptyAsmSnippet)
 
     val pushComment = Comment(s"push {${regs.mkString(", ")}}")(4)
     val popComment = Comment(s"pop {${regs.mkString(", ")}}")(4)
