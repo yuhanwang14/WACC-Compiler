@@ -40,7 +40,7 @@ object Main {
               case Right(table) => {
                 implicit val SymbolTable = table
                 val asmLine = Generator.generate(prog).toString
-                val outputFileName = fileName.replace(".wacc", ".s")
+                val outputFileName = "./" + fileName.split('/').last.replace(".wacc", ".s") 
                 val outputFile = new File(outputFileName)
                 val writer = new java.io.PrintWriter(outputFile)
                 try {
