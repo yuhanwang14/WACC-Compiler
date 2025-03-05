@@ -17,7 +17,7 @@ trait Scope:
   val varTable: Map[String, FrontEndType] = Map()
   val returnType: Option[FrontEndType] = None
   val parent: Option[Scope] = None
-  var shadower: Shadower = Shadower()
+  val shadower: Shadower = Shadower()
   
   /**
     * For register allocator's use.
@@ -54,6 +54,8 @@ trait Scope:
 
   def apply(prefixedId: String): Option[FrontEndType] = lookupSymbol(prefixedId)
 
+  def unshadow(identifier: String): Option[String] = shadower(identifier)
+
 object Scope:
   val PrefixSeparator = "::"
   val ScopeDefaultName = "_scope"
@@ -66,7 +68,7 @@ class ChildScope(parentScope: Scope, identifier: String = Scope.ScopeDefaultName
   override val prefix: String = parentScope.prefix + Scope.PrefixSeparator + identifier
   override val varTable: Map[String, FrontEndType] = parentScope.varTable.clone()
   override val returnType: Option[FrontEndType] = parentScope.returnType
-  shadower = parentScope.shadower.clone()
+  override val shadower = parentScope.shadower.clone()
 
 class GlobalScope extends Scope:
   override val prefix = Scope.GlobalScopePrefix

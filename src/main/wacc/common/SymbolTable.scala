@@ -43,7 +43,7 @@ class SymbolTable:
   // Looks up a symbol from innermost to outermost scope
   def lookupSymbol(identifier: String): Option[ast.WaccType] = currentScope(identifier)
 
-  def unshadow(identifier: String): Option[String] = currentScope.shadower(identifier)
+  def unshadow(identifier: String): Option[String] = currentScope.unshadow(identifier: String)
 
   def addFunction(f: ast.Func): Boolean =
     if (funcTable.contains(f.ti(1).name)) then
