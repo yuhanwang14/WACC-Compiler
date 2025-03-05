@@ -13,7 +13,7 @@ object Main {
   def main(args: Array[String]): Unit = {
     // Ensure a filename is provided.
     val fileName = args.headOption.getOrElse {
-      println("No argument given!\nExample usage: ./wacc-compiler {my_code}.wacc") // chanced compile to ./wacc-compiler
+      println("No argument given!\nExample usage: ./wacc-compiler {my_code}.wacc") 
       sys.exit(exitStatusFailure)
       ""
     }

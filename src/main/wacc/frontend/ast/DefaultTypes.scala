@@ -8,6 +8,7 @@ object DefaultTypes {
   val charType: WaccType = CharType()(defaultPos)
   val stringType: WaccType = StringType()(defaultPos)
   val unknownType: WaccType = UnknownType()(defaultPos)
+  val arrayType: WaccType = ArrayType(anyType)(defaultPos)
 }
 
 export DefaultTypes.*

@@ -1,8 +1,7 @@
-package instructions
+package backend.instructions
 
-class AsmSnippet(code: String)(implicit indent: Int) {
+class AsmSnippet(code: String)(implicit indent: Int):
   override def toString: String = " " * indent + code.replace("\n", "\n" + " " * indent)
-}
 
 case object EmptyAsmSnippet extends AsmSnippet("")(0)
 
@@ -36,7 +35,7 @@ case class LabelledStringConst(label: String, value: String)
       Comment(f"// length of ${label}")(0),
       WordConst(value.length()),
       LabelHeader(label),
-      StringConst(value), 
+      StringConst(value),
       AlignHeader(4)
     )(0)
 

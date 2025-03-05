@@ -1,6 +1,6 @@
-package instructions
+package backend.instructions
 
-enum Cond(val mnemonic: String):
+enum Cond(override val toString: String):
   case EQ extends Cond("eq") // Equal
   case NE extends Cond("ne") // Not Equal
   case CS extends Cond("cs") // Carry Set (unsigned higher or same)
@@ -17,5 +17,3 @@ enum Cond(val mnemonic: String):
   case LE extends Cond("le") // Signed Less Than or Equal
   case AL extends Cond("al") // Always (unconditional)
   case NV extends Cond("nv") // Never
-
-  override def toString = mnemonic

@@ -1,4 +1,4 @@
-package instructions
+package backend.instructions
 
 sealed class Instruction(code: String) extends AsmSnippet(code)(4)
 
@@ -7,6 +7,10 @@ case class STP(Rt: Register, Rt2: Register, address: Address)
 
 case class LDP(Rt: Register, Rt2: Register, address: Address)
     extends Instruction(f"ldp $Rt, $Rt2, $address")
+
+case class LDR(Rt: Register, address: Address) extends Instruction(f"ldr $Rt, $address")
+
+case class LDRB(Rt: Register, address: Address) extends Instruction(f"ldrb $Rt, $address")
 
 case class LDUR(Rt: Register, address: Address) extends Instruction(f"ldur $Rt, $address")
 

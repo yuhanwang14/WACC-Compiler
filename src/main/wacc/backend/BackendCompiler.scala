@@ -3,10 +3,10 @@ package wacc.backend
 import java.io.File
 import scala.io.Source
 import scala.util.{Success, Failure}
-import frontend.parser._     // Assuming your parser is here
-import semanticCheckers._    // And your semantic checkers are here
-import backend.Generator     // Assuming your Generator is in backend
-// Import other necessary modules (like for error logging)
+import frontend.parser._     
+import semanticCheckers._    
+import backend.Generator    
+import common.SymbolTable
 
 object BackendCompiler {
   
@@ -45,11 +45,11 @@ object BackendCompiler {
             val lines = Source.fromFile(src).getLines().toSeq
             // Check semantic correctness using your ProgramChecker
             ProgramChecker.check(prog)(source = filename.split('/').last, lines = lines) match {
-              case Right(symbolTable) =>
+              case Right((newProg, symbolTable)) =>
                 // Set the implicit symbol table for code generation
                 implicit val SymbolTable = symbolTable
                 // Generate assembly code and store it in outputString
-                outputString = Generator.generate(prog).toString
+                outputString = Generator.generate(newProg).toString
                 exitStatusSuccess
 
               case Left(errors) =>
