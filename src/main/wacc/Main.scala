@@ -1,66 +1,42 @@
 package wacc
 
-import frontend.*, frontend.parser.*
-import backend.* 
-import semanticCheckers.*
-import java.io.File
-import scala.util.*
+import java.io.{File, PrintWriter}
+import scala.util.{Using, Success, Failure}
 import scala.io.Source
-import scala.collection.mutable.ListBuffer
+import backend.BackendCompiler
 
 object Main {
-  val exitStatusSuccess = 0
-  val exitStatusFailure = -1
-  val exitStatusSyntaxError = 100
+  val exitStatusSuccess       = 0
+  val exitStatusFailure       = -1
+  val exitStatusSyntaxError   = 100
   val exitStatusSemanticError = 200
 
   def main(args: Array[String]): Unit = {
-    val fileName = args.headOption match {
-      case Some(fn) => fn
-      case None => {
-        println(
-          "No argument given!\nExample usage: compile my_code.wacc"
-        )
-        System.exit(exitStatusFailure)
-        ""
-      }
+    // Ensure a filename is provided.
+    val fileName = args.headOption.getOrElse {
+      println("No argument given!\nExample usage: ./wacc-compiler {my_code}.wacc") // chanced compile to ./wacc-compiler
+      sys.exit(exitStatusFailure)
+      ""
     }
 
-    val src: File = new File(fileName)
+    // Call BackendCompiler.compile, returns an exit code.
+    val exitCode = BackendCompiler.compile(fileName)
 
-    parse(src) match
-      case Success(result) =>
-        result match
-          case parsley.Success(prog) =>
-            ProgramChecker.check(prog)(
-              source = fileName.split('/').last,
-              lines = Source.fromFile(src).getLines().toSeq
-            ) match
-              case Right(table) => {
-                implicit val SymbolTable = table
-                val asmLine = Generator.generate(prog).toString
-                val outputFileName = "./" + fileName.split('/').last.replace(".wacc", ".s") 
-                val outputFile = new File(outputFileName)
-                val writer = new java.io.PrintWriter(outputFile)
-                try {
-                  writer.write(asmLine)
-                  println(s"Assembly code written to $outputFileName")
-                } finally {
-                  writer.close()
-                }
-              }
-              case Left(errors) =>
-                println("#semantic_error#")
-                errors.map { error => println(error.format) }
-                System.exit(exitStatusSemanticError)
-
-          case parsley.Failure(error) =>
-            println("#syntax_error#")
-            println(error.format)
-            System.exit(exitStatusSyntaxError)
-
-      case Failure(_) =>
-        println(s"Can't find or read source file at $fileName")
-        System.exit(exitStatusFailure)
+    if (exitCode == exitStatusSuccess) {
+      // Extract a base name for the output file.
+      val baseName = fileName.substring(fileName.lastIndexOf('/') + 1).replace(".wacc", ".s")
+      
+      // Use Using to safely write the output.
+      Using(new PrintWriter(new File(baseName))) { writer =>
+        writer.write(BackendCompiler.outputString)
+      } match {
+        case Success(_) =>
+          println(s"Assembly code written to $baseName")
+        case Failure(ex) =>
+          println(s"Failed to write assembly file: ${ex.getMessage}")
+          sys.exit(exitStatusFailure)
+      }
+    }
+    sys.exit(exitCode)
   }
 }
