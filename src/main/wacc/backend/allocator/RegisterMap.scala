@@ -22,7 +22,7 @@ type Location = Register | Int
 class RegisterMap private (
     vars: Iterable[(String, WaccType)],
     inheritedMap: Iterable[(String, (Location, Int))]
-)(implicit locationIterator: LocationIterator) {
+)(implicit locationIterator: LocationIterator):
   val varMap: MutableMap[String, (Location, Int)] = MutableMap.from(inheritedMap)
   vars.foreach((name, t) => varMap(name) = (locationIterator.next(t.byteSize), t.byteSize))
 
@@ -34,10 +34,11 @@ class RegisterMap private (
 
   def +:(vars: Iterable[(String, WaccType)]): RegisterMap = RegisterMap(vars, varMap)
 
-  def apply(identifier: String): Location = ???
-}
+  export varMap.apply
 
-object RegisterMap {
+  export locationIterator.usedCallerRegisters
+
+object RegisterMap:
   private def mapParams(params: Iterable[(String, WaccType)], start: Int): Iterable[(String, (Location, Int))] =
     params.tail
       .foldRight(
@@ -47,4 +48,3 @@ object RegisterMap {
         (unpacked :+ (id, offset -> t.byteSize)) -> (offset + t.byteSize)
       }
       ._1
-}
