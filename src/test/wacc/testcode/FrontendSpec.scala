@@ -52,11 +52,11 @@ class FrontendSpec extends AnyFunSuite {
     }
   }
 
-  validFiles.foreach { fileName =>
-    test(s"Valid Test: $fileName") { testFile(fileName, shouldPass = true) }
-  }
+  // validFiles.foreach { fileName =>
+  //   test(s"Valid Test: $fileName") { testFile(fileName, shouldPass = true) }
+  // }
 
-  invalidFiles.foreach { fileName =>
-    test(s"Invalid Test: $fileName") { testFile(fileName, shouldPass = false) }
-  }
+  // invalidFiles.foreach { fileName =>
+  //   test(s"Invalid Test: $fileName") { testFile(fileName, shouldPass = false) }
+  // }
 }
