@@ -16,7 +16,7 @@ trait Scope:
   val children: ArrayBuffer[Scope] = ArrayBuffer()
   val varTable: Map[String, FrontEndType] = Map()
   val returnType: Option[FrontEndType] = None
-  protected val parent: Option[Scope] = None
+  val parent: Option[Scope] = None
   var shadower: Shadower = Shadower()
   
   /**
