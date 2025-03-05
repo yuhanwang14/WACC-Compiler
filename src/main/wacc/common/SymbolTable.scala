@@ -2,6 +2,7 @@ package common
 
 import scala.collection.mutable.{ArrayBuffer, Map}
 import types.FunctionSignature
+import frontend.ast
 
 /** A `SymbolTable` instance stores all already-added variables and function signature.
   *
@@ -42,7 +43,7 @@ class SymbolTable:
   // Looks up a symbol from innermost to outermost scope
   def lookupSymbol(identifier: String): Option[ast.WaccType] = currentScope(identifier)
 
-  def unshadow(identifier: String): Option[String] = currentScope.shadower(identifier)
+  def unshadow(identifier: String): Option[String] = currentScope.unshadow(identifier: String)
 
   def addFunction(f: ast.Func): Boolean =
     if (funcTable.contains(f.ti(1).name)) then

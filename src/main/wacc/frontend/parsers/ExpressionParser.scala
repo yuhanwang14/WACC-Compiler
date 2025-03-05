@@ -1,6 +1,6 @@
-package parsers
+package frontend.parsers
 
-import ast.*
+import frontend.ast.*
 import frontend.lexer.* 
 import frontend.lexer.implicits.implicitSymbol
 import parsley.Parsley.*, parsley.Parsley

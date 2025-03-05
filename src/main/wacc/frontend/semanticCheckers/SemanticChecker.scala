@@ -1,6 +1,6 @@
-package semanticCheckers
+package frontend.semanticCheckers
 
-import ast.*
+import frontend.ast.*
 import errors.*
 import scala.collection.mutable.ListBuffer
 import common.SymbolTable
@@ -366,7 +366,7 @@ object SemanticChecker {
         case (CharType(), newE)              => PrintC(newE)(stmt.pos)
         case (IntType(), newE)               => PrintI(newE)(stmt.pos)
         case (StringType(), newE)            => PrintS(newE)(stmt.pos)
-        case (ArrayType(_), newE)            => PrintA(newE)(stmt.pos)
+        case (ArrayType(_), newE)            => PrintP(newE)(stmt.pos)
         case (NonErasedPairType(_, _), newE) => PrintP(newE)(stmt.pos)
         case _                               => stmt
 
@@ -376,7 +376,7 @@ object SemanticChecker {
         case (CharType(), newE)              => PrintlnC(newE)(stmt.pos)
         case (IntType(), newE)               => PrintlnI(newE)(stmt.pos)
         case (StringType(), newE)            => PrintlnS(newE)(stmt.pos)
-        case (ArrayType(_), newE)            => PrintlnA(newE)(stmt.pos)
+        case (ArrayType(_), newE)            => PrintlnP(newE)(stmt.pos)
         case (NonErasedPairType(_, _), newE) => PrintlnP(newE)(stmt.pos)
         case _                               => stmt
     case Read(e) =>
