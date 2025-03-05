@@ -40,7 +40,7 @@ object Generator {
       STP(fp, lr, PreIndex(sp, ImmVal(-16))),
       // pushCode,
       MOV(fp, sp),
-      generateBlock(prog.s, RegisterMap(Nil, 10), symbolTable.currentScope.children.head),
+      generateBlock(prog.s, RegisterMap(Seq(), 10), symbolTable.currentScope.children.head),
       // popCode,
       Comment("pop {fp, lr}")(4),
       LDP(fp, lr, PreIndex(sp, ImmVal(-16))),
@@ -134,7 +134,7 @@ object Generator {
           val name: String = ti._2.name
           val varType = ti._1
           val location = registerMap(name)
-          location match {
+          location._1 match {
             case reg: Register => asmLines += MOV(reg, XRegister(8))
             case offset: Int => {
               varType match {
@@ -204,9 +204,8 @@ object Generator {
     val params =
       func.ps.fold(List())(x => x.ps).map(
         x => (s"_func_${funcName}_params::" + x.i.name, TypeBridge.fromAst(x.t)))
-    val numOfParams: Int = params.size
 
-    // temporarily push all registers saved by Callee
+    // TODO: temporarily push all registers saved by Callee
     val numOfVariables = 10
     val calleeRegisters: ArrayBuffer[Register] = (19 to 28).map(n => XRegister(n)).to(ArrayBuffer)
     val (pushCode, popCode) = pushAndPopRegisters(calleeRegisters)
@@ -347,7 +346,7 @@ object Generator {
       case Ident(name) => {
         val location = registerMap(name)
         val varType = scope.lookupSymbol(name).getOrElse(anyType)
-        location match {
+        location._1 match {
           case reg: Register => asmLines += MOV(reg, XRegister(8))
           case offset: Int => {
             varType match {
@@ -396,7 +395,7 @@ object Generator {
       }
       case PairLiter() => asmLines += MOV(dest, ImmVal(0))
       case Ident(name) => {
-        registerMap(name) match
+        registerMap(name)._1 match
           case reg: Register => asmLines += MOV(dest, reg)
           case offset: Int   => asmLines += LDUR(dest, Offset(fp, ImmVal(offset)))
       }

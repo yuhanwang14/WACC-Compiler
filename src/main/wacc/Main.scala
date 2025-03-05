@@ -38,9 +38,9 @@ object Main {
               source = fileName.split('/').last,
               lines = Source.fromFile(src).getLines().toSeq
             ) match
-              case Right(table) => {
+              case Right((newProg, table)) => {
                 implicit val SymbolTable = table
-                val asmLine = Generator.generate(prog).toString
+                val asmLine = Generator.generate(newProg).toString
                 val outputFileName = "./" + fileName.split('/').last.replace(".wacc", ".s") 
                 val outputFile = new File(outputFileName)
                 val writer = new java.io.PrintWriter(outputFile)

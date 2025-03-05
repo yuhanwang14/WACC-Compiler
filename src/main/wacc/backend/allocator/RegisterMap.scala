@@ -29,7 +29,10 @@ class RegisterMap private (
   def this(params: Iterable[(String, WaccType)], calleeRegisterCount: Int) =
     this(
       Nil,
-      RegisterMap.mapParams(params, (calleeRegisterCount + 1) / 2 * 16)
+      if params.isEmpty then
+        Nil
+      else
+        RegisterMap.mapParams(params, (calleeRegisterCount + 1) / 2 * 16)
     )(LocationIterator(params.size))
 
   def :+(vars: Iterable[(String, WaccType)]): RegisterMap = RegisterMap(vars, varMap)
