@@ -6,6 +6,7 @@ import java.io.File
 import scala.io.Source
 import scala.util.Using
 import wacc.backend.BackendCompiler  
+import common.FileUtil
 class BackendSpec extends AnyFunSuite {
 
   // Update test lists before running
@@ -23,25 +24,41 @@ class BackendSpec extends AnyFunSuite {
 
     val compileExitCode = BackendCompiler.compile(fileName)
 
+
+
     if (isValid) {
-      // For valid files, expect successful compilation
-      assert(compileExitCode == 0, s"Compilation failed for $fileName with exit code $compileExitCode")
-      // The assembly file should be generated
-      assert(new File(asmFile).exists(), s"Missing assembly file: $asmFile")
+      try {
+        // For valid files, expect successful compilation
+        assert(compileExitCode == 0, s"Compilation failed for $fileName with exit code $compileExitCode")
 
-      // Assemble the generated assembly file
-      val assembleCmd = s"aarch64-linux-gnu-gcc -o $exeFile -z noexecstack -march=armv8-a $asmFile"
-      assert(assembleCmd.! == 0, s"Assembly failed for $asmFile")
+        // Write the assembly file using our utility
+        FileUtil.writeFile(asmFile, BackendCompiler.outputString) match {
+          case scala.util.Success(_)  =>
+          case scala.util.Failure(ex) =>
+            fail(s"Failed to write assembly file: ${ex.getMessage}")
+        }
 
-      // Run the executable in QEMU and capture its output
-      val actualOutput = s"qemu-aarch64 -L $qemuPath $exeFile".!!
+        // The assembly file should be generated
+        assert(new File(asmFile).exists(), s"Missing assembly file: $asmFile")
+
+        // Assemble the generated assembly file
+        val assembleCmd = s"aarch64-linux-gnu-gcc -o $exeFile -z noexecstack -march=armv8-a $asmFile"
+        assert(assembleCmd.! == 0, s"Assembly failed for $asmFile")
+
+        // Run the executable in QEMU and capture its output
+        val actualOutput = s"qemu-aarch64 -L $qemuPath $exeFile".!!
+        
+        // Read expected output using Using for resource management
+        val expectedOutput = Using(Source.fromFile(expectedOutputFile)) { source =>
+          source.getLines().mkString("\n")
+        }.getOrElse("")
+
+        assert(actualOutput.trim == expectedOutput.trim, s"Output mismatch for $fileName")
+      } finally {
+        FileUtil.deleteFile(asmFile)
+      }
+    
       
-      // Read expected output using Using for resource management
-      val expectedOutput = Using(Source.fromFile(expectedOutputFile)) { source =>
-        source.getLines().mkString("\n")
-      }.getOrElse("")
-
-      assert(actualOutput.trim == expectedOutput.trim, s"Output mismatch for $fileName")
     } else {
       // For invalid files, expect exit code 100 or 200 and no assembly file
       assert(
@@ -50,10 +67,11 @@ class BackendSpec extends AnyFunSuite {
       )
       assert(!new File(asmFile).exists(), s"Assembly file $asmFile should NOT be generated for invalid program")
     }
+
   }
 
   /* Run tests for all valid and invalid files */
   
-  // validFiles.foreach(testFile(_, isValid = true))
+  validFiles.foreach(testFile(_, isValid = true))
   invalidFiles.foreach(testFile(_, isValid = false))
 }

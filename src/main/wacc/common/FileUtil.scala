@@ -14,4 +14,21 @@ object FileUtil {
       writer.write(content)
     }
   }
+
+  /** Deletes the file at the given path.
+    * @param fileName the file path
+    * @return a Try[Unit] that is Success if deletion succeeded or Failure otherwise.
+    */
+  def deleteFile(fileName: String): Try[Unit] = {
+    val file = new File(fileName)
+    if (file.exists()) {
+      if (file.delete()) {
+        scala.util.Success(())
+      } else {
+        scala.util.Failure(new Exception(s"Failed to delete file: $fileName"))
+      }
+    } else {
+      scala.util.Success(())
+    }
+  }
 }

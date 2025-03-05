@@ -1,9 +1,8 @@
 package wacc
 
-import java.io.{File, PrintWriter}
-import scala.util.{Using, Success, Failure}
-import scala.io.Source
+import scala.util.{Success, Failure}
 import backend.BackendCompiler
+import common.FileUtil
 
 object Main {
   val exitStatusSuccess       = 0
@@ -27,9 +26,7 @@ object Main {
       val baseName = fileName.substring(fileName.lastIndexOf('/') + 1).replace(".wacc", ".s")
       
       // Use Using to safely write the output.
-      Using(new PrintWriter(new File(baseName))) { writer =>
-        writer.write(BackendCompiler.outputString)
-      } match {
+      FileUtil.writeFile(baseName, BackendCompiler.outputString) match {
         case Success(_) =>
           println(s"Assembly code written to $baseName")
         case Failure(ex) =>
