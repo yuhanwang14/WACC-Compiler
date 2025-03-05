@@ -66,13 +66,14 @@ sealed abstract class PredefinedArrLoad(
     val byte: Int
 ) extends PredefinedFunc(name):
   override val toAsmFunc: AsmFunction =
-    val setupRegister: AsmSnippet = byte match
-      case 1: Int => LDRB(WRegister(7), RegisterAddress(XRegister(7), XRegister(17)))
-      case 4: Int =>
+    val setupRegister: AsmSnippet = byte match {
+      case 1 => LDRB(WRegister(7), RegisterAddress(XRegister(7), XRegister(17)))
+      case 4 =>
         LDR(WRegister(7), RegisterAddress(XRegister(7), XRegister(17), Some(LSL(ImmVal(2)))))
-      case 8: Int =>
+      case 8 =>
         LDR(XRegister(7), RegisterAddress(XRegister(7), XRegister(17), Some(LSL(ImmVal(3)))))
-      case _: Int => EmptyAsmSnippet
+      case _ => EmptyAsmSnippet
+    }
     AsmFunction(
       STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
       CMP(WRegister(17), ImmVal(0)),
@@ -194,4 +195,3 @@ object PredefinedFunctions:
   private val asmFunclist: List[AsmFunction] = funcList.map(_.toAsmFunc)
 
   val predefinedFunctions: Map[PredefinedFunc, AsmFunction] = funcList.zip(asmFunclist).toMap
-
