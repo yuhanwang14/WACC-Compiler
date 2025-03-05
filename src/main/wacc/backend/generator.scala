@@ -381,18 +381,12 @@ object Generator {
       symbolTable: SymbolTable
   ): AsmSnippet = {
     val asmLines: ListBuffer[AsmSnippet] = ListBuffer()
-    val x1 = XRegister(1)
-    val x9 = XRegister(9)
-    val x10 = XRegister(10)
-    val x11 = XRegister(11)
-    val w9 = WRegister(9)
-    val w10 = WRegister(10)
-    val w11 = WRegister(11)
+
     expr match {
       case IntLiter(x)  => asmLines += MOV(dest.asW, ImmVal(x))
       case BoolLiter(x) => asmLines += MOV(dest.asW, ImmVal(if (x) then 1 else 0))
       case CharLiter(c) => asmLines += MOV(dest.asW, ImmVal(c))
-      case StrLiter(s) => {
+      case StrLiter(s)  => {
         var index = _stringConsts.size
         if (_stringConsts.contains(s)) {
           index = _stringConsts(s)
@@ -410,71 +404,61 @@ object Generator {
       }
       case ArrayElem(identName, exprs) => ??? // TODO: Array
       case Paren(e)                    => generateExpr(e, allocator, scope, dest)
+      case e: UnaryOp  => asmLines += generateUnary(e, allocator, scope, dest)    // Unary Operations
+      case e: BinaryOp => asmLines += generateBinary(e, allocator, scope, dest)  // Binary Operations
+    }
 
-      // Binary Operations
-      case Or(expr1, expr2) => {
-        asmLines += generateExpr(expr2, allocator, scope, dest.asW)
-        asmLines += CMP(dest.asW, ImmVal(1))
+    AsmFunction(asmLines.toList*)
+  }
+
+  private def generateBinary(
+    binaryOp: BinaryOp,
+    allocator: RegisterAllocator,
+    scope: Scope,
+    dest: Register = XRegister(8)
+  )(implicit
+      symbolTable: SymbolTable
+  ): AsmSnippet = {
+    val asmLines: ListBuffer[AsmSnippet] = ListBuffer()
+    val w9  = WRegister(9)
+    val w10 = WRegister(10)
+    val w11 = WRegister(11)
+
+    binaryOp match {
+      case Or(expr1, expr2) => 
+        {
+        asmLines += generateExpr(expr2, allocator, scope, dest)
+        asmLines += CMP(dest, ImmVal(1))
         val orLabel = asmLocal ~ localLabelCount
         asmLines += BCond(orLabel, Cond.EQ)
         localLabelCount += 1
-        asmLines += generateExpr(expr2, allocator, scope, dest.asW)
-        asmLines += CMP(dest.asW, ImmVal(1))
+        asmLines += generateExpr(expr2, allocator, scope, dest)
+        asmLines += CMP(dest, ImmVal(1))
         asmLines += LabelHeader(orLabel)
-        asmLines += CSET(dest.asW, Cond.EQ)
+        asmLines += CSET(dest, Cond.EQ)
       }
       case And(expr1, expr2) => {
-        asmLines += generateExpr(expr2, allocator, scope, dest.asW)
-        asmLines += CMP(dest.asW, ImmVal(1))
+        asmLines += generateExpr(expr2, allocator, scope, dest)
+        asmLines += CMP(dest, ImmVal(1))
         val andLabel = asmLocal ~ localLabelCount
         asmLines += BCond(andLabel, Cond.NE)
         localLabelCount += 1
-        asmLines += generateExpr(expr2, allocator, scope, dest.asW)
-        asmLines += CMP(dest.asW, ImmVal(1))
+        asmLines += generateExpr(expr2, allocator, scope, dest)
+        asmLines += CMP(dest, ImmVal(1))
         asmLines += LabelHeader(andLabel)
-        asmLines += CSET(dest.asW, Cond.EQ)
+        asmLines += CSET(dest, Cond.EQ)
       }
 
-      case Equal(expr1, expr2) => {
-        asmLines += generateExpr(expr1, allocator, scope, w9)
-        asmLines += generateExpr(expr2, allocator, scope, dest.asW)
-        asmLines += CMP(dest.asW, w9)
-        asmLines += CSET(dest.asW, Cond.EQ)
-      }
-      case NotEqual(expr1, expr2) => {
-        asmLines += generateExpr(expr1, allocator, scope, w9)
-        asmLines += generateExpr(expr2, allocator, scope, dest.asW)
-        asmLines += CMP(dest.asW, w9)
-        asmLines += CSET(dest.asW, Cond.NE)
-      }
-      case Less(expr1, expr2) => {
-        asmLines += generateExpr(expr1, allocator, scope, w9)
-        asmLines += generateExpr(expr2, allocator, scope, dest.asW)
-        asmLines += CMP(dest.asW, w9)
-        asmLines += CSET(dest.asW, Cond.LT)
-      }
-      case LessEqual(expr1, expr2) => {
-        asmLines += generateExpr(expr1, allocator, scope, w9)
-        asmLines += generateExpr(expr2, allocator, scope, dest.asW)
-        asmLines += CMP(dest.asW, w9)
-        asmLines += CSET(dest.asW, Cond.LE)
-      }
-      case Greater(expr1, expr2) => {
-        asmLines += generateExpr(expr1, allocator, scope, w9)
-        asmLines += generateExpr(expr2, allocator, scope, dest.asW)
-        asmLines += CMP(dest.asW, w9)
-        asmLines += CSET(dest.asW, Cond.GT)
-      }
-      case GreaterEqual(expr1, expr2) => {
-        asmLines += generateExpr(expr1, allocator, scope, w9)
-        asmLines += generateExpr(expr2, allocator, scope, dest.asW)
-        asmLines += CMP(dest.asW, w9)
-        asmLines += CSET(dest.asW, Cond.GE)
-      }
+      case Equal(expr1, expr2)        => generateComp(expr1, expr2, Cond.EQ, allocator, scope, dest)
+      case NotEqual(expr1, expr2)     => generateComp(expr1, expr2, Cond.NE, allocator, scope, dest)
+      case Less(expr1, expr2)         => generateComp(expr1, expr2, Cond.LT, allocator, scope, dest)
+      case LessEqual(expr1, expr2)    => generateComp(expr1, expr2, Cond.LE, allocator, scope, dest)
+      case Greater(expr1, expr2)      => generateComp(expr1, expr2, Cond.GT, allocator, scope, dest)
+      case GreaterEqual(expr1, expr2) => generateComp(expr1, expr2, Cond.GE, allocator, scope, dest)
 
       case Add(expr1, expr2) => {
         asmLines += generateExpr(expr1, allocator, scope, w9)
-        asmLines += generateExpr(expr2, allocator, scope,w10)
+        asmLines += generateExpr(expr2, allocator, scope, w10)
         asmLines += ADDS(dest.asW, w9, w10)
         asmLines += BCond(asmGlobal ~ "_errOverflow", Cond.VS)
         _predefinedFuncs += "_errOverflow"
@@ -516,8 +500,44 @@ object Generator {
         asmLines += SDIV(w11, w10, w9)
         asmLines += MSUB(dest.asW, w11, w9, w10)
       }
+    }
 
-      // Unary Operations
+    AsmFunction(asmLines.toList*)
+  }
+
+  private def generateComp(
+      expr1: Expr,
+      expr2: Expr,
+      cond: Cond,
+      allocator: RegisterAllocator,
+      scope: Scope,
+      dest: Register = XRegister(8)
+  )(implicit
+      symbolTable: SymbolTable
+  ): AsmSnippet = {
+    val w9 = WRegister(9)
+
+    AsmFunction(
+      generateExpr(expr1, allocator, scope, w9),
+      generateExpr(expr2, allocator, scope, dest.asW),
+      CMP(dest.asW, w9),
+      CSET(dest.asW, cond)
+    )
+  }
+
+  private def generateUnary(
+      unaryOp: UnaryOp,
+      allocator: RegisterAllocator,
+      scope: Scope,
+      dest: Register = XRegister(8)
+  )(implicit
+      symbolTable: SymbolTable
+  ): AsmSnippet = {
+    val asmLines: ListBuffer[AsmSnippet] = ListBuffer()
+    val x1 = XRegister(1)
+    val w9 = WRegister(9)
+
+    unaryOp match {
       case Not(e) => {
         asmLines += generateExpr(e, allocator, scope, w9)
         asmLines += CMP(w9, ImmVal(1))
@@ -530,7 +550,7 @@ object Generator {
         _predefinedFuncs += "_errOverflow"
         _predefinedFuncs += "_prints"
       }
-      case Len(e)    => ??? // TODO: Array
+      case Len(e) => ??? // TODO: Array
       case Ord(e) => {
         asmLines += generateExpr(e, allocator, scope, w9)
         asmLines += MOV(dest.asW, w9)
