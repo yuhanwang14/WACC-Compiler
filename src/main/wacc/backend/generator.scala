@@ -3,7 +3,6 @@ package backend
 import ast.*
 import common.SymbolTable
 import common.types.TypeBridge
-import instructions.*
 import instructions.AsmLabeling.*
 import scala.collection.mutable.ListBuffer
 import common.Scope
@@ -534,39 +533,40 @@ object Generator {
   )(implicit
       symbolTable: SymbolTable
   ): AsmSnippet = {
-    val asmLines: ListBuffer[AsmSnippet] = ListBuffer()
     val x1 = XRegister(1)
     val w9 = WRegister(9)
 
-    unaryOp match {
+    val asmLines: List[AsmSnippet] = unaryOp match {
       case Not(e) => {
-        asmLines += generateExpr(e, allocator, scope, w9)
-        asmLines += CMP(w9, ImmVal(1))
-        asmLines += CSET(dest.asW, Cond.NE)
+        generateExpr(e, allocator, scope, w9) ::
+        CMP(w9, ImmVal(1)) ::
+        CSET(dest.asW, Cond.NE) :: Nil
       }
       case Negate(e) => {
-        asmLines += generateExpr(e, allocator, scope, w9)
-        asmLines += NEGS(dest.asW, w9);
-        asmLines += BCond(asmGlobal ~ P_ErrOverflow, Cond.VS)
         _predefinedFuncs += P_ErrOverflow
         _predefinedFuncs += P_Prints
+
+        generateExpr(e, allocator, scope, w9) ::
+        NEGS(dest.asW, w9) ::
+        BCond(asmGlobal ~ P_ErrOverflow, Cond.VS) :: Nil
       }
       case Len(e) => ??? // TODO: Array
       case Ord(e) => {
-        asmLines += generateExpr(e, allocator, scope, w9)
-        asmLines += MOV(dest.asW, w9)
+        generateExpr(e, allocator, scope, w9) ::
+        MOV(dest.asW, w9) :: Nil
       }
       case Chr(e) => {
-        asmLines += generateExpr(e, allocator, scope, dest.asW)
-        asmLines += TST(dest.asW, ImmVal(0xffffff80))
-        asmLines += CSEL(x1, dest, x1, Cond.NE) 
-        asmLines += BCond(asmGlobal ~ P_ErrBadChar, Cond.NE)
         _predefinedFuncs += P_ErrBadChar
         _predefinedFuncs += P_Prints
+
+        generateExpr(e, allocator, scope, dest.asW) :: 
+        TST(dest.asW, ImmVal(0xffffff80)) ::
+        CSEL(x1, dest, x1, Cond.NE) ::
+        BCond(asmGlobal ~ P_ErrBadChar, Cond.NE) :: Nil
       }
     }
 
-    AsmFunction(asmLines.toList*)
+    AsmFunction(asmLines*)
   }
 
   /** Generate assemply code to calculate a list of expr and push them into the stack. Return a list
