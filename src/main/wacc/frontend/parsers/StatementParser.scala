@@ -1,13 +1,13 @@
-package parsers
+package frontend.parsers
 
-import ast.*
-import parsers.TypeParser.*
+import ExpressionParser.*
+import TypeParser.*
+import frontend.ast.*
 import frontend.lexer.*
 import frontend.lexer.implicits.implicitSymbol
 import parsley.Parsley.*, parsley.Parsley
 import parsley.combinator.*
 import parsley.lift.*
-import parsers.ExpressionParser.*
 import parsley.errors.combinator.*
 import parsley.errors.patterns.*
 

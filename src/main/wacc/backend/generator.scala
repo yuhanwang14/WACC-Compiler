@@ -1,11 +1,10 @@
 package backend
 
-import ast.*
-import common.SymbolTable
+import frontend.ast.*
+import common.{Scope, SymbolTable}
 import instructions.AsmLabeling.*
 import allocator.*
 import scala.collection.mutable.ListBuffer
-import common.Scope
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.Map as MutableMap
 import scala.collection.mutable.Set as MutableSet

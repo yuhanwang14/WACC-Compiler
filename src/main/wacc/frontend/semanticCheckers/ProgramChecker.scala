@@ -1,6 +1,6 @@
 package semanticCheckers
 
-import ast.*
+import frontend.*, frontend.ast.*, frontend.semanticCheckers.SemanticChecker
 import errors.*
 import scala.collection.mutable.{ListBuffer, Set}
 import common.SymbolTable

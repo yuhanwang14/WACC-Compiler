@@ -2,6 +2,7 @@ package common
 
 import scala.collection.mutable.{ArrayBuffer, Map}
 import types.FunctionSignature
+import frontend.ast
 
 /** A `SymbolTable` instance stores all already-added variables and function signature.
   *

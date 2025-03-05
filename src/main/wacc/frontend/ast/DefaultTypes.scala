@@ -1,4 +1,4 @@
-package ast
+package frontend.ast
 
 object DefaultTypes {
   val defaultPos: (Int, Int) = (-1, -1)
