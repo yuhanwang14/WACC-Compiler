@@ -1,8 +1,8 @@
 package common
 
 import scala.collection.mutable.{ArrayBuffer, Map}
-import ast.WaccType as FrontEndType
-import types.{WaccType, TypeBridge}
+import ast.{WaccType as FrontEndType, TypeBridge}
+import types.WaccType
 
 /** A `Scope` instance stores all variables and their respective types in a scope. This includes
   * variables from higher scopes.
