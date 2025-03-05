@@ -65,21 +65,21 @@ sealed abstract class PredefinedPrint(
 
 sealed abstract class PredefinedMemory(override val name: String) extends PredefinedFunc(name)
 
-case object PErrDivZero extends PredefinedErrMsg("errDivZero", "division or modulo by zero")
-case object PErrOutOfMemory extends PredefinedErrMsg("errOutOfMemory", "out of memory")
-case object PErrOverflow extends PredefinedErrMsg("errOverflow", "integer overflow or underflow occurred")
-case object PErrNull extends PredefinedErrMsg("errNull", "null pair dereferenced or freed")
-case object PErrOutOfBounds extends PredefinedErrMsg("errOutOfBounds", "array index %d out of bounds")
-case object PErrBadChar extends PredefinedErrMsg("errBadChar", "pint %d is not ascii character 0-127")
+case object P_ErrDivZero extends PredefinedErrMsg("errDivZero", "division or modulo by zero")
+case object P_ErrOutOfMemory extends PredefinedErrMsg("errOutOfMemory", "out of memory")
+case object P_ErrOverflow extends PredefinedErrMsg("errOverflow", "integer overflow or underflow occurred")
+case object P_ErrNull extends PredefinedErrMsg("errNull", "null pair dereferenced or freed")
+case object P_ErrOutOfBounds extends PredefinedErrMsg("errOutOfBounds", "array index %d out of bounds")
+case object P_ErrBadChar extends PredefinedErrMsg("errBadChar", "pint %d is not ascii character 0-127")
 
-case object PReadc extends PredefinedRead("readc", "%c")
-case object PReadi extends PredefinedRead("readi", "%d")
+case object P_Readc extends PredefinedRead("readc", "%c")
+case object P_Readi extends PredefinedRead("readi", "%d")
 
-case object PPrintp extends PredefinedPrint("printp", "%p", Seq(MOV(XRegister(1), XRegister(0))))
-case object PPrintln extends PredefinedPrint("println", "")
-case object PPrinti extends PredefinedPrint("printi", "%d", Seq(MOV(XRegister(1), XRegister(0))))
-case object PPrintc extends PredefinedPrint("printc", "%c", Seq(MOV(XRegister(1), XRegister(0))))
-case object PPrints extends PredefinedPrint(
+case object P_Printp extends PredefinedPrint("printp", "%p", Seq(MOV(XRegister(1), XRegister(0))))
+case object P_Println extends PredefinedPrint("println", "")
+case object P_Printi extends PredefinedPrint("printi", "%d", Seq(MOV(XRegister(1), XRegister(0))))
+case object P_Printc extends PredefinedPrint("printc", "%c", Seq(MOV(XRegister(1), XRegister(0))))
+case object P_Prints extends PredefinedPrint(
   "prints",
   "%.*s",
   Seq(
@@ -87,7 +87,7 @@ case object PPrints extends PredefinedPrint(
     LDUR(WRegister(1), Offset(XRegister(0), ImmVal(-4)))
   )
 )
-case object PPrintb extends PredefinedPrint("printb", "") {
+case object P_Printb extends PredefinedPrint("printb", "") {
   override def toAsmFunc(): AsmFunction = {
     val falseStr = asmLocal ~ "._printb_str0"
     val trueStr = asmLocal ~ "._printb_str1"
@@ -117,7 +117,7 @@ case object PPrintb extends PredefinedPrint("printb", "") {
   }
 }
 
-case object PFreepair extends PredefinedMemory("freepair") {
+case object P_Freepair extends PredefinedMemory("freepair") {
   override def toAsmFunc(): AsmFunction = AsmFunction(
     LabelHeader(asmGlobal ~ "_freepair"),
     STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
@@ -127,7 +127,7 @@ case object PFreepair extends PredefinedMemory("freepair") {
     RET
   )
 }
-case object PMalloc extends PredefinedMemory("malloc") {
+case object P_Malloc extends PredefinedMemory("malloc") {
   override def toAsmFunc(): AsmFunction = AsmFunction(
     LabelHeader(asmGlobal ~ "_malloc"),
     STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
@@ -140,22 +140,22 @@ case object PMalloc extends PredefinedMemory("malloc") {
 
 object PredefinedFunctions {
   private val funcList: List[PredefinedFunc] = List(
-    PErrOutOfBounds,
-    PErrNull,
-    PErrOverflow,
-    PErrDivZero,
-    PErrOutOfMemory,
-    PErrBadChar,
-    PReadc,
-    PReadi,
-    PFreepair,
-    PMalloc,
-    PPrintp,
-    PPrintln,
-    PPrinti,
-    PPrintc,
-    PPrints,
-    PPrintb
+    P_ErrOutOfBounds,
+    P_ErrNull,
+    P_ErrOverflow,
+    P_ErrDivZero,
+    P_ErrOutOfMemory,
+    P_ErrBadChar,
+    P_Readc,
+    P_Readi,
+    P_Freepair,
+    P_Malloc,
+    P_Printp,
+    P_Println,
+    P_Printi,
+    P_Printc,
+    P_Prints,
+    P_Printb
   )
 
   private val asmFunclist: List[AsmFunction] = funcList.map(_.toAsmFunc())
