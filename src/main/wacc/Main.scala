@@ -19,8 +19,7 @@ object Main {
       case Some(fn) => fn
       case None => {
         println(
-          "No argument given!\n" +
-            "Example usage: compile my_code.wacc"
+          "No argument given!\nExample usage: compile my_code.wacc"
         )
         System.exit(exitStatusFailure)
         ""
