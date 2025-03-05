@@ -4,6 +4,7 @@ import ast.*
 import common.SymbolTable
 import instructions.*
 import instructions.AsmLabeling.*
+import allocator.* 
 import scala.collection.mutable.ListBuffer
 import common.Scope
 import scala.collection.mutable.ArrayBuffer
@@ -39,7 +40,7 @@ object Generator {
       STP(fp, lr, PreIndex(sp, ImmVal(-16))),
       // pushCode,
       MOV(fp, sp),
-      generateBlock(prog.s, RegisterMap(), symbolTable.currentScope.children.head),
+      generateBlock(prog.s, RegisterMap(Nil, 10), symbolTable.currentScope.children.head),
       // popCode,
       Comment("pop {fp, lr}")(4),
       LDP(fp, lr, PreIndex(sp, ImmVal(-16))),
@@ -52,7 +53,7 @@ object Generator {
 
   private def generateBlock(
       block: Stmt,
-      allocator: RegisterMap,
+      _registerMap: RegisterMap,
       scope: Scope
   )(implicit
       symbolTable: SymbolTable
@@ -67,10 +68,11 @@ object Generator {
 
     // calculate the extra stack space needed for local variables within current scope
     // allocate register or stack space for locak variables within currentScope
-    val offsetBefore: Int = math.floorDiv(allocator.varOffset, 16) * 16
-    scope.localVars.foreach(x => allocator.allocate(x._1, x._2.byteSize))
-    val offsetAfter: Int = math.floorDiv(allocator.varOffset, 16) * 16
-    val extraStackSpace: Int = offsetBefore - offsetAfter
+
+    val offsetBefore: Int = ((_registerMap.stackOffset + 15) / 16) * 16
+    val registerMap: RegisterMap = _registerMap :+ scope.localVars
+    val offsetAfter: Int = ((registerMap.stackOffset + 15) / 16) * 16
+    val extraStackSpace: Int = offsetAfter - offsetBefore
 
     val asmLines: ListBuffer[AsmSnippet] = ListBuffer()
 
@@ -85,20 +87,18 @@ object Generator {
         case If(cond, b1, b2) => {
           val thenLabel = asmLocal ~ localLabelCount
           val afterLabel = asmLocal ~ (localLabelCount + 1)
-          var newAllocator: RegisterMap = allocator.clone()
 
           localLabelCount += 2
           asmLines += Comment(s"TODO: evaluate $cond and bcond to $thenLabel")(4)
 
           // generate `else` block
-          asmLines += generateBlock(b2, newAllocator, subScopes.head)
+          asmLines += generateBlock(b2, registerMap, subScopes.head)
           subScopes = subScopes.tail
           asmLines += B(afterLabel)
 
           // generate `then` block
-          newAllocator = allocator.clone()
           asmLines += LabelHeader(thenLabel)
-          asmLines += generateBlock(b1, newAllocator, subScopes.head)
+          asmLines += generateBlock(b1, registerMap, subScopes.head)
           subScopes = subScopes.tail
 
           asmLines += LabelHeader(afterLabel)
@@ -108,12 +108,11 @@ object Generator {
         case While(cond, block) => {
           val afterLabel = asmLocal ~ localLabelCount
           val loopLabel = asmLocal ~ (localLabelCount + 1)
-          val newAllocator: RegisterMap = allocator.clone()
           localLabelCount += 2
 
           asmLines += B(loopLabel)
           asmLines += LabelHeader(loopLabel)
-          asmLines += generateBlock(block, newAllocator, subScopes.head)
+          asmLines += generateBlock(block, registerMap, subScopes.head)
           subScopes = subScopes.tail
 
           asmLines += LabelHeader(afterLabel)
@@ -121,26 +120,23 @@ object Generator {
         }
 
         case Begin(block) => {
-          val newAllocator: RegisterMap = allocator.clone()
-          asmLines += generateBlock(block, newAllocator, subScopes.head)
+          asmLines += generateBlock(block, registerMap, subScopes.head)
           subScopes = subScopes.tail
         }
 
         case Exit(expr) => {
-          asmLines += generateExpr(expr, allocator, scope, XRegister(0))
+          asmLines += generateExpr(expr, registerMap, scope, XRegister(0))
           asmLines += BL("exit")
         }
 
         case Declare(ti, rvalue) => {
-          asmLines += generateRValue(rvalue, allocator, scope)
+          asmLines += generateRValue(rvalue, registerMap, scope)
           val name: String = ti._2.name
           val varType = ti._1
-          scope.shadow(name)
-          val prefixedName = scope.shadower(name).getOrElse("")
-          val location = allocator.getLocation(prefixedName)
+          val location = registerMap(name)
           location match {
-            case Left(reg) => asmLines += MOV(reg, XRegister(8))
-            case Right(offset) => {
+            case reg: Register => asmLines += MOV(reg, XRegister(8))
+            case offset: Int => {
               varType match {
                 case BoolType() | CharType() => STURB(WRegister(8), Offset(fp, ImmVal(offset)))
                 case IntType()               => STUR(WRegister(8), Offset(fp, ImmVal(offset)))
@@ -155,23 +151,25 @@ object Generator {
 
         // TODO: need the type of expr to decide the location of result (x0 or x8)
         case Return(expr) => {
-          asmLines += generateExpr(expr, allocator, scope)
+          asmLines += generateExpr(expr, registerMap, scope)
         }
 
         // TODO: need the type of expr to decide the function called for print
         case Print(expr) => {
-          val (pushCode, popCode) = pushAndPopRegisters(allocator.callerRegister)
+          val (pushCode, popCode) = 
+            pushAndPopRegisters(registerMap.usedCallerRegisters.map(XRegister(_)).to(ArrayBuffer))
           asmLines += pushCode
-          asmLines += generateExpr(expr, allocator, scope, XRegister(0))
+          asmLines += generateExpr(expr, registerMap, scope, XRegister(0))
           // asmLines += ???
           asmLines += popCode
         }
 
         // TODO: need the type of expr to decide the function called for print
         case Println(expr) => {
-          val (pushCode, popCode) = pushAndPopRegisters(allocator.callerRegister)
+          val (pushCode, popCode) =
+            pushAndPopRegisters(registerMap.usedCallerRegisters.map(XRegister(_)).to(ArrayBuffer))
           asmLines += pushCode
-          asmLines += generateExpr(expr, allocator, scope, XRegister(0))
+          asmLines += generateExpr(expr, registerMap, scope, XRegister(0))
           // asmLines += ???
           asmLines += AsmSnippet("_println")(0)
           asmLines += popCode
@@ -201,20 +199,18 @@ object Generator {
     val asmLines: ListBuffer[AsmSnippet] = ListBuffer()
     symbolTable.enterFunctionScope(funcName)
 
+    // extract all parameters from symbolTable, allocate register or memory
+    // a naive way of retrieving all parameters, can be modified
+    val params =
+      func.ps.fold(List())(x => x.ps).map(
+        x => (s"_func_${funcName}_params::" + x.i.name, TypeBridge.fromAst(x.t)))
+    val numOfParams: Int = params.size
+
     // temporarily push all registers saved by Callee
     val numOfVariables = 10
     val calleeRegisters: ArrayBuffer[Register] = (19 to 28).map(n => XRegister(n)).to(ArrayBuffer)
     val (pushCode, popCode) = pushAndPopRegisters(calleeRegisters)
-
-    // extract all parameters from symbolTable, allocate register or memory
-    // a naive way of retrieving all parameters, can be modified
-    val params =
-      func.ps.fold(List())(x => x.ps).map(x => (s"_func_${funcName}_params::" + x.i.name, x.t))
-    val numOfParams: Int = params.size
-    val allocator: RegisterMap = RegisterMap(numOfVariables, numOfParams)
-    for ((name, paramType) <- params) {
-      allocator.addParam(name, TypeBridge.fromAst(paramType).byteSize)
-    }
+    val registerMap: RegisterMap = RegisterMap(params, numOfVariables)
 
     asmLines += AsmFunction(
       LabelHeader(f"wacc_$funcName"),
@@ -223,7 +219,7 @@ object Generator {
       pushCode,
       MOV(fp, sp),
       // the current scope is for parameters
-      generateBlock(func.s, allocator, symbolTable.currentScope.children.head),
+      generateBlock(func.s, registerMap, symbolTable.currentScope.children.head),
       popCode,
       Comment("pop {fp, lr}")(4),
       LDP(fp, lr, PreIndex(sp, ImmVal(-16))),
@@ -236,7 +232,7 @@ object Generator {
     */
   private def generateRValue(
       rvalue: RValue,
-      allocator: RegisterMap,
+      registerMap: RegisterMap,
       scope: Scope
   )(implicit
       symbolTable: SymbolTable
@@ -246,9 +242,10 @@ object Generator {
     rvalue match
 
       case Call(Ident(funcName), ArgList(argList)) => {
-        val (pushCode, popCode) = pushAndPopRegisters(allocator.callerRegister)
+        val (pushCode, popCode) = 
+          pushAndPopRegisters(registerMap.usedCallerRegisters.map(XRegister(_)).to(ArrayBuffer))
         asmLines += pushCode
-        val (argPushCode, offset) = pushArgs(funcName, argList, allocator, scope)
+        val (argPushCode, offset) = pushArgs(funcName, argList, registerMap, scope)
         if (offset > 0)
           asmLines += SUBS(sp, sp, ImmVal(offset))
         asmLines += argPushCode
@@ -263,7 +260,8 @@ object Generator {
       // TODO: need the type of expr to infer the size of array
       // Currently assume that the size of element is 4
       case ArrayLiter(exprs) => {
-        val (pushCode, popCode) = pushAndPopRegisters(allocator.callerRegister)
+        val (pushCode, popCode) =
+          pushAndPopRegisters(registerMap.usedCallerRegisters.map(XRegister(_)).to(ArrayBuffer))
         val typeSize = 4
         val arrayLen = exprs.length
         asmLines += AsmFunction(
@@ -277,23 +275,24 @@ object Generator {
           STUR(WRegister(8), Offset(ip0, ImmVal(-4)))
         )
         exprs.zipWithIndex.map { (expr, ind) =>
-          asmLines += generateExpr(expr, allocator, scope)
+          asmLines += generateExpr(expr, registerMap, scope)
           asmLines += STUR(WRegister(8), Offset(ip0, ImmVal(ind * typeSize)))
         }
         asmLines += MOV(XRegister(8), ip0)
       }
 
       case NewPair(expr1, expr2) => {
-        val (pushCode, popCode) = pushAndPopRegisters(allocator.callerRegister)
+        val (pushCode, popCode) =
+          pushAndPopRegisters(registerMap.usedCallerRegisters.map(XRegister(_)).to(ArrayBuffer))
         asmLines += AsmFunction(
           pushCode,
           MOV(WRegister(0), ImmVal(16)),
           BL("_malloc"),
           MOV(ip0, XRegister(0)),
           popCode,
-          generateExpr(expr1, allocator, scope),
+          generateExpr(expr1, registerMap, scope),
           STUR(XRegister(8), Offset(ip0, ImmVal(0))),
-          generateExpr(expr2, allocator, scope),
+          generateExpr(expr2, registerMap, scope),
           STUR(XRegister(8), Offset(ip0, ImmVal(8))),
           MOV(XRegister(8), ip0)
         )
@@ -301,8 +300,8 @@ object Generator {
 
       case First(lvalue) => {
         lvalue match {
-          case pairElem: PairElem => generateRValue(pairElem, allocator, scope)
-          case otherwise: Expr    => generateExpr(otherwise, allocator, scope)
+          case pairElem: PairElem => generateRValue(pairElem, registerMap, scope)
+          case otherwise: Expr    => generateExpr(otherwise, registerMap, scope)
         }
         asmLines += AsmFunction(
           CMP(XRegister(8), ImmVal(0)),
@@ -314,8 +313,8 @@ object Generator {
 
       case Second(lValue) => {
         lValue match {
-          case pairElem: PairElem => generateRValue(pairElem, allocator, scope)
-          case otherwise: Expr    => generateExpr(otherwise, allocator, scope)
+          case pairElem: PairElem => generateRValue(pairElem, registerMap, scope)
+          case otherwise: Expr    => generateExpr(otherwise, registerMap, scope)
         }
         asmLines += AsmFunction(
           CMP(XRegister(8), ImmVal(0)),
@@ -336,7 +335,7 @@ object Generator {
     */
   private def generateLValue(
       lValue: LValue,
-      allocator: RegisterMap,
+      registerMap: RegisterMap,
       scope: Scope
   )(implicit
       symbolTable: SymbolTable
@@ -346,12 +345,11 @@ object Generator {
     lValue match {
 
       case Ident(name) => {
-        val prefixedName = scope.shadower(name).getOrElse("")
-        val location = allocator.getLocation(prefixedName)
-        val varType = scope.lookupSymbol(prefixedName).getOrElse(anyType)
+        val location = registerMap(name)
+        val varType = scope.lookupSymbol(name).getOrElse(anyType)
         location match {
-          case Left(reg) => asmLines += MOV(reg, XRegister(8))
-          case Right(offset) => {
+          case reg: Register => asmLines += MOV(reg, XRegister(8))
+          case offset: Int => {
             varType match {
               case BoolType() | CharType() =>
                 asmLines += STURB(WRegister(8), Offset(fp, ImmVal(offset)))
@@ -374,7 +372,7 @@ object Generator {
     */
   private def generateExpr(
       expr: Expr,
-      allocator: RegisterMap,
+      registerMap: RegisterMap,
       scope: Scope,
       dest: Register = XRegister(8)
   )(implicit
@@ -398,14 +396,14 @@ object Generator {
       }
       case PairLiter() => asmLines += MOV(dest, ImmVal(0))
       case Ident(name) => {
-        allocator.getLocation(scope.shadower(name).getOrElse("")) match
-          case Left(reg)     => asmLines += MOV(dest, reg)
-          case Right(offset) => asmLines += LDUR(dest, Offset(fp, ImmVal(offset)))
+        registerMap(name) match
+          case reg: Register => asmLines += MOV(dest, reg)
+          case offset: Int   => asmLines += LDUR(dest, Offset(fp, ImmVal(offset)))
       }
       case ArrayElem(identName, exprs) => ??? // TODO: Array
-      case Paren(e)                    => generateExpr(e, allocator, scope, dest)
-      case e: UnaryOp  => asmLines += generateUnary(e, allocator, scope, dest)    // Unary Operations
-      case e: BinaryOp => asmLines += generateBinary(e, allocator, scope, dest)  // Binary Operations
+      case Paren(e)                    => generateExpr(e, registerMap, scope, dest)
+      case e: UnaryOp  => asmLines += generateUnary(e, registerMap, scope, dest)    // Unary Operations
+      case e: BinaryOp => asmLines += generateBinary(e, registerMap, scope, dest)  // Binary Operations
     }
 
     AsmFunction(asmLines.toList*)
@@ -413,7 +411,7 @@ object Generator {
 
   private def generateBinary(
     binaryOp: BinaryOp,
-    allocator: RegisterMap,
+    registerMap: RegisterMap,
     scope: Scope,
     dest: Register = XRegister(8)
   )(implicit
@@ -427,54 +425,54 @@ object Generator {
     binaryOp match {
       case Or(expr1, expr2) => 
         {
-        asmLines += generateExpr(expr2, allocator, scope, dest)
+        asmLines += generateExpr(expr2, registerMap, scope, dest)
         asmLines += CMP(dest, ImmVal(1))
         val orLabel = asmLocal ~ localLabelCount
         asmLines += BCond(orLabel, Cond.EQ)
         localLabelCount += 1
-        asmLines += generateExpr(expr2, allocator, scope, dest)
+        asmLines += generateExpr(expr2, registerMap, scope, dest)
         asmLines += CMP(dest, ImmVal(1))
         asmLines += LabelHeader(orLabel)
         asmLines += CSET(dest, Cond.EQ)
       }
       case And(expr1, expr2) => {
-        asmLines += generateExpr(expr2, allocator, scope, dest)
+        asmLines += generateExpr(expr2, registerMap, scope, dest)
         asmLines += CMP(dest, ImmVal(1))
         val andLabel = asmLocal ~ localLabelCount
         asmLines += BCond(andLabel, Cond.NE)
         localLabelCount += 1
-        asmLines += generateExpr(expr2, allocator, scope, dest)
+        asmLines += generateExpr(expr2, registerMap, scope, dest)
         asmLines += CMP(dest, ImmVal(1))
         asmLines += LabelHeader(andLabel)
         asmLines += CSET(dest, Cond.EQ)
       }
 
-      case Equal(expr1, expr2)        => generateComp(expr1, expr2, Cond.EQ, allocator, scope, dest)
-      case NotEqual(expr1, expr2)     => generateComp(expr1, expr2, Cond.NE, allocator, scope, dest)
-      case Less(expr1, expr2)         => generateComp(expr1, expr2, Cond.LT, allocator, scope, dest)
-      case LessEqual(expr1, expr2)    => generateComp(expr1, expr2, Cond.LE, allocator, scope, dest)
-      case Greater(expr1, expr2)      => generateComp(expr1, expr2, Cond.GT, allocator, scope, dest)
-      case GreaterEqual(expr1, expr2) => generateComp(expr1, expr2, Cond.GE, allocator, scope, dest)
+      case Equal(expr1, expr2)        => generateComp(expr1, expr2, Cond.EQ, registerMap, scope, dest)
+      case NotEqual(expr1, expr2)     => generateComp(expr1, expr2, Cond.NE, registerMap, scope, dest)
+      case Less(expr1, expr2)         => generateComp(expr1, expr2, Cond.LT, registerMap, scope, dest)
+      case LessEqual(expr1, expr2)    => generateComp(expr1, expr2, Cond.LE, registerMap, scope, dest)
+      case Greater(expr1, expr2)      => generateComp(expr1, expr2, Cond.GT, registerMap, scope, dest)
+      case GreaterEqual(expr1, expr2) => generateComp(expr1, expr2, Cond.GE, registerMap, scope, dest)
 
       case Add(expr1, expr2) => {
-        asmLines += generateExpr(expr1, allocator, scope, w9)
-        asmLines += generateExpr(expr2, allocator, scope, w10)
+        asmLines += generateExpr(expr1, registerMap, scope, w9)
+        asmLines += generateExpr(expr2, registerMap, scope, w10)
         asmLines += ADDS(dest.asW, w9, w10)
         asmLines += BCond(asmGlobal ~ P_ErrOverflow, Cond.VS)
         _predefinedFuncs += P_ErrOverflow
         _predefinedFuncs += P_Prints
       }
       case Sub(expr1, expr2) => {
-        asmLines += generateExpr(expr1, allocator, scope, w9)
-        asmLines += generateExpr(expr2, allocator, scope, w10)
+        asmLines += generateExpr(expr1, registerMap, scope, w9)
+        asmLines += generateExpr(expr2, registerMap, scope, w10)
         asmLines += SUBS(dest.asW, w9, w10)
         asmLines += BCond(asmGlobal ~ P_ErrOverflow, Cond.VS)
         _predefinedFuncs += P_ErrOverflow
         _predefinedFuncs += P_Prints
       }
       case Mul(expr1, expr2) => {
-        asmLines += generateExpr(expr1, allocator, scope, w9)
-        asmLines += generateExpr(expr2, allocator, scope, w10)
+        asmLines += generateExpr(expr1, registerMap, scope, w9)
+        asmLines += generateExpr(expr2, registerMap, scope, w10)
         asmLines += SMULL(dest, w9, w10)
         asmLines += CMP(dest, dest.asW, Some(Extend.SXTW))
         asmLines += BCond(asmGlobal ~ P_ErrOverflow, Cond.NE)
@@ -482,21 +480,21 @@ object Generator {
         _predefinedFuncs += P_Prints
       }
       case Div(expr1, expr2) => {
-        asmLines += generateExpr(expr2, allocator, scope, w9)
+        asmLines += generateExpr(expr2, registerMap, scope, w9)
         asmLines += CMP(w9, ImmVal(0))
         asmLines += BCond(asmGlobal ~ P_ErrDivZero, Cond.EQ)
         _predefinedFuncs += P_ErrDivZero
         _predefinedFuncs += P_Prints
-        asmLines += generateExpr(expr1, allocator, scope, w10)
+        asmLines += generateExpr(expr1, registerMap, scope, w10)
         asmLines += SDIV(dest.asW, w10, w9)
       }
       case Mod(expr1, expr2) => {
-        asmLines += generateExpr(expr2, allocator, scope, w9)
+        asmLines += generateExpr(expr2, registerMap, scope, w9)
         asmLines += CMP(w9, ImmVal(0))
         asmLines += BCond(asmGlobal ~ P_ErrDivZero, Cond.EQ)
         _predefinedFuncs += P_ErrDivZero
         _predefinedFuncs += P_Prints
-        asmLines += generateExpr(expr1, allocator, scope, w10)
+        asmLines += generateExpr(expr1, registerMap, scope, w10)
         asmLines += SDIV(w11, w10, w9)
         asmLines += MSUB(dest.asW, w11, w9, w10)
       }
@@ -509,7 +507,7 @@ object Generator {
       expr1: Expr,
       expr2: Expr,
       cond: Cond,
-      allocator: RegisterMap,
+      registerMap: RegisterMap,
       scope: Scope,
       dest: Register = XRegister(8)
   )(implicit
@@ -518,8 +516,8 @@ object Generator {
     val w9 = WRegister(9)
 
     AsmFunction(
-      generateExpr(expr1, allocator, scope, w9),
-      generateExpr(expr2, allocator, scope, dest.asW),
+      generateExpr(expr1, registerMap, scope, w9),
+      generateExpr(expr2, registerMap, scope, dest.asW),
       CMP(dest.asW, w9),
       CSET(dest.asW, cond)
     )
@@ -527,7 +525,7 @@ object Generator {
 
   private def generateUnary(
       unaryOp: UnaryOp,
-      allocator: RegisterMap,
+      registerMap: RegisterMap,
       scope: Scope,
       dest: Register = XRegister(8)
   )(implicit
@@ -539,12 +537,12 @@ object Generator {
 
     unaryOp match {
       case Not(e) => {
-        asmLines += generateExpr(e, allocator, scope, w9)
+        asmLines += generateExpr(e, registerMap, scope, w9)
         asmLines += CMP(w9, ImmVal(1))
         asmLines += CSET(dest.asW, Cond.NE)
       }
       case Negate(e) => {
-        asmLines += generateExpr(e, allocator, scope, w9)
+        asmLines += generateExpr(e, registerMap, scope, w9)
         asmLines += NEGS(dest.asW, w9);
         asmLines += BCond(asmGlobal ~ P_ErrOverflow, Cond.VS)
         _predefinedFuncs += P_ErrOverflow
@@ -552,11 +550,11 @@ object Generator {
       }
       case Len(e) => ??? // TODO: Array
       case Ord(e) => {
-        asmLines += generateExpr(e, allocator, scope, w9)
+        asmLines += generateExpr(e, registerMap, scope, w9)
         asmLines += MOV(dest.asW, w9)
       }
       case Chr(e) => {
-        asmLines += generateExpr(e, allocator, scope, dest.asW)
+        asmLines += generateExpr(e, registerMap, scope, dest.asW)
         asmLines += TST(dest.asW, ImmVal(0xffffff80))
         asmLines += CSEL(x1, dest, x1, Cond.NE) 
         asmLines += BCond(asmGlobal ~ P_ErrBadChar, Cond.NE)
@@ -574,7 +572,7 @@ object Generator {
   private def pushArgs(
       funcName: String,
       argList: List[Expr],
-      allocator: RegisterMap,
+      registerMap: RegisterMap,
       scope: Scope
   )(implicit
       symbolTable: SymbolTable
@@ -588,9 +586,9 @@ object Generator {
       val paramSize: Int = TypeBridge.fromAst(paramType).byteSize
       val dest = if paramSize > 4 then XRegister(paramCount) else WRegister(paramCount)
       if (paramCount < 8) {
-        asmLines += generateExpr(expr, allocator, scope, dest)
+        asmLines += generateExpr(expr, registerMap, scope, dest)
       } else {
-        asmLines += generateExpr(expr, allocator = allocator, scope = scope)
+        asmLines += generateExpr(expr, registerMap = registerMap, scope = scope)
         asmLines += STR(dest, Offset(sp, ImmVal(offset)))
         offset += paramSize
         paramCount -= 1

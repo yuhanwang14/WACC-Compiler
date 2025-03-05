@@ -32,11 +32,12 @@ class RegisterMap private (
       RegisterMap.mapParams(params, (calleeRegisterCount + 1) / 2 * 16)
     )(LocationIterator(params.size))
 
-  def +:(vars: Iterable[(String, WaccType)]): RegisterMap = RegisterMap(vars, varMap)
+  def :+(vars: Iterable[(String, WaccType)]): RegisterMap = RegisterMap(vars, varMap)
 
   export varMap.apply
 
   export locationIterator.usedCallerRegisters
+  export locationIterator.stackOffset
 
 object RegisterMap:
   private def mapParams(params: Iterable[(String, WaccType)], start: Int): Iterable[(String, (Location, Int))] =
