@@ -1,4 +1,4 @@
-package testCode
+package testcode
 
 import org.scalatest.funsuite.AnyFunSuite
 import scala.sys.process._
@@ -7,6 +7,7 @@ import scala.io.Source
 import scala.util.Using
 import wacc.backend.BackendCompiler  
 import common.FileUtil
+
 class BackendSpec extends AnyFunSuite {
 
   // Update test lists before running
@@ -23,8 +24,6 @@ class BackendSpec extends AnyFunSuite {
     val expectedOutputFile = fileName.stripSuffix(".wacc") + ".expected"
 
     val compileExitCode = BackendCompiler.compile(fileName)
-
-
 
     if (isValid) {
       try {

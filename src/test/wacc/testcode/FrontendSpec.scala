@@ -1,4 +1,4 @@
-package testCode
+package testcode
 
 import frontend.parser.*
 import org.scalatest.funsuite.AnyFunSuite

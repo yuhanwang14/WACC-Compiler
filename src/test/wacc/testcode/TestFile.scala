@@ -1,4 +1,4 @@
-package testCode
+package testcode
 
 import scala.sys.process._
 import java.nio.file.{Files, Paths}
