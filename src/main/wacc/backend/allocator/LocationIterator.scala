@@ -1,6 +1,6 @@
 package backend.allocator
 
-import instructions.{WRegister, XRegister}
+import backend.instructions.{WRegister, XRegister}
 
 class LocationIterator(paramCount: Int):
   private val calleeRegs: Seq[Int] = (19 to 28)

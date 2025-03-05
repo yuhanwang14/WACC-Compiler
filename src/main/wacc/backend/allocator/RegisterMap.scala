@@ -1,6 +1,6 @@
 package backend.allocator
 
-import instructions.*
+import backend.instructions.*
 import scala.collection.mutable.{Map as MutableMap}
 import common.types.WaccType
 

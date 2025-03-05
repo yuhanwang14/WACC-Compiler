@@ -1,38 +1,31 @@
-package instructions
+package backend.instructions
 
-sealed trait Register extends Operand {
+sealed trait Register extends Operand:
   val number: Int
   def asW: WRegister = WRegister(number)
   def asX: XRegister = XRegister(number)
-}
 
-class XRegister(override val number: Int) extends Register {
-  override def toString(): String = f"x$number"
-}
+class XRegister(override val number: Int) extends Register:
+  override def toString: String = f"x$number"
 
-class WRegister(override val number: Int) extends Register {
-  override def toString(): String = f"w$number"
-}
+class WRegister(override val number: Int) extends Register:
+  override def toString: String = f"w$number"
 
 case object ip0 extends XRegister(16)
 case object ip1 extends XRegister(17)
 case object pr extends XRegister(18)
 
-case object fp extends XRegister(29) {
-  override def toString(): String = "fp"
-}
-case object lr extends XRegister(30) {
-  override def toString(): String = "lr"
-}
+case object fp extends XRegister(29):
+  override def toString: String = "fp"
 
-case object sp extends XRegister(31) {
-  override def toString(): String = "sp"
-}
+case object lr extends XRegister(30):
+  override def toString: String = "lr"
 
-case object xzr extends XRegister(32) {
-  override def toString(): String = "xzr"
-}
+case object sp extends XRegister(31):
+  override def toString: String = "sp"
 
-case object wzr extends WRegister(32) {
-  override def toString(): String = "wzr"
-}
+case object xzr extends XRegister(32):
+  override def toString: String = "xzr"
+
+case object wzr extends WRegister(32):
+  override def toString: String = "wzr"

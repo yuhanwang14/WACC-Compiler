@@ -1,8 +1,7 @@
-package instructions
+package backend.instructions
 
-trait Extend(val name: String, val imm: Option[Imm] = None) extends Operand {
-  override def toString: String = "name" ++ imm.map(i => s" $i").getOrElse("")
-}
+trait Extend(val name: String, val imm: Option[Imm] = None) extends Operand:
+  override def toString: String = name ++ imm.map(i => f" $i").getOrElse("")
 
 case class UXTB(override val imm: Option[Imm] = None) extends Extend("uxtb", imm)
 case class UXTH(override val imm: Option[Imm] = None) extends Extend("uxth", imm)

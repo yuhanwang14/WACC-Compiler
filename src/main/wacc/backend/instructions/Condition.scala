@@ -1,4 +1,4 @@
-package instructions
+package backend.instructions
 
 enum Cond(override val toString: String):
   case EQ extends Cond("eq") // Equal

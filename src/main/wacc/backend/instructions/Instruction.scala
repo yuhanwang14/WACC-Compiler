@@ -1,4 +1,4 @@
-package instructions
+package backend.instructions
 
 sealed class Instruction(code: String) extends AsmSnippet(code)(4)
 
