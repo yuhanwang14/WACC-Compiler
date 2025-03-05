@@ -2,14 +2,14 @@ package instructions
 
 import AsmLabeling._
 
-
 sealed abstract class PredefinedFunc(val name: String) {
   def toAsmFunc(): AsmFunction
 
   override def toString: String = s"_$name"
 }
 
-sealed abstract class PredefinedErrMsg(override val name: String, val errMsg: String) extends PredefinedFunc(name) {
+sealed abstract class PredefinedErrMsg(override val name: String, val errMsg: String)
+    extends PredefinedFunc(name) {
   override def toAsmFunc(): AsmFunction = AsmFunction(
     LabelledStringConst(
       asmLocal ~ s"._${name}_str0",
@@ -23,7 +23,8 @@ sealed abstract class PredefinedErrMsg(override val name: String, val errMsg: St
   )
 }
 
-sealed abstract class PredefinedRead(override val name: String, val fmt: String) extends PredefinedFunc(name) {
+sealed abstract class PredefinedRead(override val name: String, val fmt: String)
+    extends PredefinedFunc(name) {
   override def toAsmFunc(): AsmFunction = AsmFunction(
     LabelledStringConst(asmLocal ~ s"._${name}_str0", fmt),
     LabelHeader(asmGlobal ~ s"_$name"),
@@ -44,7 +45,9 @@ sealed abstract class PredefinedRead(override val name: String, val fmt: String)
 }
 
 sealed abstract class PredefinedPrint(
-  override val name: String, val fmt: String, val setupRegisters: Seq[Instruction] = Nil
+    override val name: String,
+    val fmt: String,
+    val setupRegisters: Seq[Instruction] = Nil
 ) extends PredefinedFunc(name) {
   override def toAsmFunc(): AsmFunction = {
     val fmtStr = asmLocal ~ s"._${name}_str0"
@@ -63,14 +66,42 @@ sealed abstract class PredefinedPrint(
   }
 }
 
+sealed abstract class PredefinedArrLoad(
+    override val name: String,
+    val byte: Int
+) extends PredefinedFunc(name) {
+  override def toAsmFunc(): AsmFunction =
+    val setupRegister: AsmSnippet = byte match
+      case 1: Int => LDRB(WRegister(7), Register(XRegister(7), XRegister(17)))
+      case 4: Int => LDR(WRegister(7), Register(XRegister(7), XRegister(17), Some(LSL(ImmVal(2)))))
+      case 8: Int => LDR(XRegister(7), Register(XRegister(7), XRegister(17), Some(LSL(ImmVal(3)))))
+      case _: Int => EmptyAsmSnippet
+    AsmFunction(
+      STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
+      CMP(WRegister(17), ImmVal(0)),
+      CSEL(XRegister(1), XRegister(17), XRegister(1), Cond.LT),
+      BCond("_errOutOfBounds", Cond.LT),
+      LDUR(WRegister(30), Offset(XRegister(7), ImmVal(-4))),
+      CMP(WRegister(17), WRegister(30)),
+      CSEL(XRegister(1), XRegister(17), XRegister(1), Cond.GE),
+      BCond("_errOutOfBounds", Cond.GE),
+      setupRegister,
+      LDP(lr, xzr, PostIndex(sp, ImmVal(16))),
+      RET
+    )
+}
+
 sealed abstract class PredefinedMemory(override val name: String) extends PredefinedFunc(name)
 
 case object P_ErrDivZero extends PredefinedErrMsg("errDivZero", "division or modulo by zero")
 case object P_ErrOutOfMemory extends PredefinedErrMsg("errOutOfMemory", "out of memory")
-case object P_ErrOverflow extends PredefinedErrMsg("errOverflow", "integer overflow or underflow occurred")
+case object P_ErrOverflow
+    extends PredefinedErrMsg("errOverflow", "integer overflow or underflow occurred")
 case object P_ErrNull extends PredefinedErrMsg("errNull", "null pair dereferenced or freed")
-case object P_ErrOutOfBounds extends PredefinedErrMsg("errOutOfBounds", "array index %d out of bounds")
-case object P_ErrBadChar extends PredefinedErrMsg("errBadChar", "pint %d is not ascii character 0-127")
+case object P_ErrOutOfBounds
+    extends PredefinedErrMsg("errOutOfBounds", "array index %d out of bounds")
+case object P_ErrBadChar
+    extends PredefinedErrMsg("errBadChar", "pint %d is not ascii character 0-127")
 
 case object P_Readc extends PredefinedRead("readc", "%c")
 case object P_Readi extends PredefinedRead("readi", "%d")
@@ -79,14 +110,15 @@ case object P_Printp extends PredefinedPrint("printp", "%p", Seq(MOV(XRegister(1
 case object P_Println extends PredefinedPrint("println", "")
 case object P_Printi extends PredefinedPrint("printi", "%d", Seq(MOV(XRegister(1), XRegister(0))))
 case object P_Printc extends PredefinedPrint("printc", "%c", Seq(MOV(XRegister(1), XRegister(0))))
-case object P_Prints extends PredefinedPrint(
-  "prints",
-  "%.*s",
-  Seq(
-    MOV(XRegister(2), XRegister(0)),
-    LDUR(WRegister(1), Offset(XRegister(0), ImmVal(-4)))
-  )
-)
+case object P_Prints
+    extends PredefinedPrint(
+      "prints",
+      "%.*s",
+      Seq(
+        MOV(XRegister(2), XRegister(0)),
+        LDUR(WRegister(1), Offset(XRegister(0), ImmVal(-4)))
+      )
+    )
 case object P_Printb extends PredefinedPrint("printb", "") {
   override def toAsmFunc(): AsmFunction = {
     val falseStr = asmLocal ~ "._printb_str0"
@@ -138,6 +170,12 @@ case object P_Malloc extends PredefinedMemory("malloc") {
   )
 }
 
+case object P_ArrLoad1 extends PredefinedArrLoad("arrLoad1", 1) 
+
+case object P_ArrLoad4 extends PredefinedArrLoad("arrLoad4", 4) 
+
+case object P_ArrLoad8 extends PredefinedArrLoad("arrLoad8", 8) 
+
 object PredefinedFunctions {
   private val funcList: List[PredefinedFunc] = List(
     P_ErrOutOfBounds,
@@ -155,7 +193,10 @@ object PredefinedFunctions {
     P_Printi,
     P_Printc,
     P_Prints,
-    P_Printb
+    P_Printb, 
+    P_ArrLoad1, 
+    P_ArrLoad4, 
+    P_ArrLoad8
   )
 
   private val asmFunclist: List[AsmFunction] = funcList.map(_.toAsmFunc())
