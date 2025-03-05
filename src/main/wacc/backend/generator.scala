@@ -12,12 +12,13 @@ import scala.collection.mutable.Map as MutableMap
 import scala.collection.mutable.Set as MutableSet
 import scala.math
 import instructions.PredefinedFunctions.*
+import instructions.*
 
 object Generator {
 
   private var localLabelCount: Int = 0
   private val _stringConsts: MutableMap[String, Int] = MutableMap()
-  private val _predefinedFuncs: MutableSet[String] = MutableSet()
+  private val _predefinedFuncs: MutableSet[PredefinedFunc] = MutableSet()
 
   def generate(prog: Program)(implicit
       symbolTable: SymbolTable
@@ -460,42 +461,42 @@ object Generator {
         asmLines += generateExpr(expr1, allocator, scope, w9)
         asmLines += generateExpr(expr2, allocator, scope, w10)
         asmLines += ADDS(dest.asW, w9, w10)
-        asmLines += BCond(asmGlobal ~ "_errOverflow", Cond.VS)
-        _predefinedFuncs += "_errOverflow"
-        _predefinedFuncs += "_prints"
+        asmLines += BCond(asmGlobal ~ P_ErrOverflow, Cond.VS)
+        _predefinedFuncs += P_ErrOverflow
+        _predefinedFuncs += P_Prints
       }
       case Sub(expr1, expr2) => {
         asmLines += generateExpr(expr1, allocator, scope, w9)
         asmLines += generateExpr(expr2, allocator, scope, w10)
         asmLines += SUBS(dest.asW, w9, w10)
-        asmLines += BCond(asmGlobal ~ "_errOverflow", Cond.VS)
-        _predefinedFuncs += "_errOverflow"
-        _predefinedFuncs += "_prints"
+        asmLines += BCond(asmGlobal ~ P_ErrOverflow, Cond.VS)
+        _predefinedFuncs += P_ErrOverflow
+        _predefinedFuncs += P_Prints
       }
       case Mul(expr1, expr2) => {
         asmLines += generateExpr(expr1, allocator, scope, w9)
         asmLines += generateExpr(expr2, allocator, scope, w10)
         asmLines += SMULL(dest, w9, w10)
         asmLines += CMP(dest, dest.asW, Some(Extend.SXTW))
-        asmLines += BCond(asmGlobal ~ "_errOverflow", Cond.NE)
-        _predefinedFuncs += "_errOverflow"
-        _predefinedFuncs += "_prints"
+        asmLines += BCond(asmGlobal ~ P_ErrOverflow, Cond.NE)
+        _predefinedFuncs += P_ErrOverflow
+        _predefinedFuncs += P_Prints
       }
       case Div(expr1, expr2) => {
         asmLines += generateExpr(expr2, allocator, scope, w9)
         asmLines += CMP(w9, ImmVal(0))
-        asmLines += BCond(asmGlobal ~ "_errDivZero", Cond.EQ)
-        _predefinedFuncs += "_errDivZero"
-        _predefinedFuncs += "_prints"
+        asmLines += BCond(asmGlobal ~ P_ErrDivZero, Cond.EQ)
+        _predefinedFuncs += P_ErrDivZero
+        _predefinedFuncs += P_Prints
         asmLines += generateExpr(expr1, allocator, scope, w10)
         asmLines += SDIV(dest.asW, w10, w9)
       }
       case Mod(expr1, expr2) => {
         asmLines += generateExpr(expr2, allocator, scope, w9)
         asmLines += CMP(w9, ImmVal(0))
-        asmLines += BCond(asmGlobal ~ "_errDivZero", Cond.EQ)
-        _predefinedFuncs += "_errDivZero"
-        _predefinedFuncs += "_prints"
+        asmLines += BCond(asmGlobal ~ P_ErrDivZero, Cond.EQ)
+        _predefinedFuncs += P_ErrDivZero
+        _predefinedFuncs += P_Prints
         asmLines += generateExpr(expr1, allocator, scope, w10)
         asmLines += SDIV(w11, w10, w9)
         asmLines += MSUB(dest.asW, w11, w9, w10)
@@ -546,9 +547,9 @@ object Generator {
       case Negate(e) => {
         asmLines += generateExpr(e, allocator, scope, w9)
         asmLines += NEGS(dest.asW, w9);
-        asmLines += BCond(asmGlobal ~ "_errOverflow", Cond.VS)
-        _predefinedFuncs += "_errOverflow"
-        _predefinedFuncs += "_prints"
+        asmLines += BCond(asmGlobal ~ P_ErrOverflow, Cond.VS)
+        _predefinedFuncs += P_ErrOverflow
+        _predefinedFuncs += P_Prints
       }
       case Len(e) => ??? // TODO: Array
       case Ord(e) => {
@@ -559,9 +560,9 @@ object Generator {
         asmLines += generateExpr(e, allocator, scope, dest.asW)
         asmLines += TST(dest.asW, ImmVal(0xffffff80))
         asmLines += CSEL(x1, dest, x1, Cond.NE) 
-        asmLines += BCond(asmGlobal ~ "_errBadChar", Cond.NE)
-        _predefinedFuncs += "_errBadChar"
-        _predefinedFuncs += "_prints"
+        asmLines += BCond(asmGlobal ~ P_ErrBadChar, Cond.NE)
+        _predefinedFuncs += P_ErrBadChar
+        _predefinedFuncs += P_Prints
       }
     }
 

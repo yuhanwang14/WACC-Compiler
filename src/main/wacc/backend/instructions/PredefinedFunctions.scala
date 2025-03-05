@@ -160,5 +160,5 @@ object PredefinedFunctions {
 
   private val asmFunclist: List[AsmFunction] = funcList.map(_.toAsmFunc())
 
-  val predefinedFunctions: Map[String, AsmFunction] = funcList.map(_.toString).zip(asmFunclist).toMap
+  val predefinedFunctions: Map[PredefinedFunc, AsmFunction] = funcList.zip(asmFunclist).toMap
 }
