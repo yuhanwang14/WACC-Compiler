@@ -25,7 +25,7 @@ object ProgramChecker {
       }
     }
     val newFuncs = prog.fs.map(checkFunction(_))
-    symbolTable.exitToGlobalScope()
+    symbolTable.exitToGlobalScope
     val newStmt = SemanticChecker.verifyStmt(prog.s)
     return if errors.isEmpty then Right((Program(newFuncs, newStmt)(prog.pos), symbolTable))
     else Left(errors)

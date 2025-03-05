@@ -2,10 +2,8 @@ package backend
 
 import ast.*
 import common.SymbolTable
-
-import instructions.*
 import instructions.AsmLabeling.*
-import allocator.* 
+import allocator.*
 import scala.collection.mutable.ListBuffer
 import common.Scope
 import scala.collection.mutable.ArrayBuffer
@@ -157,7 +155,7 @@ object Generator {
 
         // TODO: need the type of expr to decide the function called for print
         case Print(expr) => {
-          val (pushCode, popCode) = 
+          val (pushCode, popCode) =
             pushAndPopRegisters(registerMap.usedCallerRegisters.map(XRegister(_)).to(ArrayBuffer))
           asmLines += pushCode
           asmLines += generateExpr(expr, registerMap, scope, XRegister(0))
@@ -203,8 +201,9 @@ object Generator {
     // extract all parameters from symbolTable, allocate register or memory
     // a naive way of retrieving all parameters, can be modified
     val params =
-      func.ps.fold(List())(x => x.ps).map(
-        x => (s"_func_${funcName}_params::" + x.i.name, TypeBridge.fromAst(x.t)))
+      func.ps
+        .fold(List())(x => x.ps)
+        .map(x => (s"_func_${funcName}_params::" + x.i.name, TypeBridge.fromAst(x.t)))
 
     // TODO: temporarily push all registers saved by Callee
     val numOfVariables = 10
@@ -242,7 +241,7 @@ object Generator {
     rvalue match
 
       case Call(Ident(funcName), ArgList(argList)) => {
-        val (pushCode, popCode) = 
+        val (pushCode, popCode) =
           pushAndPopRegisters(registerMap.usedCallerRegisters.map(XRegister(_)).to(ArrayBuffer))
         asmLines += pushCode
         val (argPushCode, offset) = pushArgs(funcName, argList, registerMap, scope)
@@ -384,7 +383,7 @@ object Generator {
       case IntLiter(x)  => asmLines += MOV(dest.asW, ImmVal(x))
       case BoolLiter(x) => asmLines += MOV(dest.asW, ImmVal(if (x) then 1 else 0))
       case CharLiter(c) => asmLines += MOV(dest.asW, ImmVal(c))
-      case StrLiter(s)  => {
+      case StrLiter(s) => {
         var index = _stringConsts.size
         if (_stringConsts.contains(s)) {
           index = _stringConsts(s)
@@ -402,29 +401,29 @@ object Generator {
       }
       case ArrayElem(identName, exprs) => ??? // TODO: Array
       case Paren(e)                    => generateExpr(e, registerMap, scope, dest)
-      case e: UnaryOp  => asmLines += generateUnary(e, registerMap, scope, dest)    // Unary Operations
-      case e: BinaryOp => asmLines += generateBinary(e, registerMap, scope, dest)  // Binary Operations
+      case e: UnaryOp => asmLines += generateUnary(e, registerMap, scope, dest) // Unary Operations
+      case e: BinaryOp =>
+        asmLines += generateBinary(e, registerMap, scope, dest) // Binary Operations
     }
 
     AsmFunction(asmLines.toList*)
   }
 
   private def generateBinary(
-    binaryOp: BinaryOp,
-    registerMap: RegisterMap,
-    scope: Scope,
-    dest: Register = XRegister(8)
+      binaryOp: BinaryOp,
+      registerMap: RegisterMap,
+      scope: Scope,
+      dest: Register = XRegister(8)
   )(implicit
       symbolTable: SymbolTable
   ): AsmSnippet = {
     val asmLines: ListBuffer[AsmSnippet] = ListBuffer()
-    val w9  = WRegister(9)
+    val w9 = WRegister(9)
     val w10 = WRegister(10)
     val w11 = WRegister(11)
 
     binaryOp match {
-      case Or(expr1, expr2) => 
-        {
+      case Or(expr1, expr2) => {
         asmLines += generateExpr(expr2, registerMap, scope, dest)
         asmLines += CMP(dest, ImmVal(1))
         val orLabel = asmLocal ~ localLabelCount
@@ -447,57 +446,26 @@ object Generator {
         asmLines += CSET(dest, Cond.EQ)
       }
 
-      case Equal(expr1, expr2)        => generateComp(expr1, expr2, Cond.EQ, registerMap, scope, dest)
-      case NotEqual(expr1, expr2)     => generateComp(expr1, expr2, Cond.NE, registerMap, scope, dest)
-      case Less(expr1, expr2)         => generateComp(expr1, expr2, Cond.LT, registerMap, scope, dest)
-      case LessEqual(expr1, expr2)    => generateComp(expr1, expr2, Cond.LE, registerMap, scope, dest)
-      case Greater(expr1, expr2)      => generateComp(expr1, expr2, Cond.GT, registerMap, scope, dest)
-      case GreaterEqual(expr1, expr2) => generateComp(expr1, expr2, Cond.GE, registerMap, scope, dest)
+      case Equal(expr1, expr2)     => generateComp(expr1, expr2, Cond.EQ, registerMap, scope, dest)
+      case NotEqual(expr1, expr2)  => generateComp(expr1, expr2, Cond.NE, registerMap, scope, dest)
+      case Less(expr1, expr2)      => generateComp(expr1, expr2, Cond.LT, registerMap, scope, dest)
+      case LessEqual(expr1, expr2) => generateComp(expr1, expr2, Cond.LE, registerMap, scope, dest)
+      case Greater(expr1, expr2)   => generateComp(expr1, expr2, Cond.GT, registerMap, scope, dest)
+      case GreaterEqual(expr1, expr2) =>
+        generateComp(expr1, expr2, Cond.GE, registerMap, scope, dest)
 
-      case Add(expr1, expr2) => {
-        asmLines += generateExpr(expr1, registerMap, scope, w9)
-        asmLines += generateExpr(expr2, registerMap, scope, w10)
-        asmLines += ADDS(dest.asW, w9, w10)
-        asmLines += BCond(asmGlobal ~ P_ErrOverflow, Cond.VS)
-        _predefinedFuncs += P_ErrOverflow
-        _predefinedFuncs += P_Prints
-      }
-      case Sub(expr1, expr2) => {
-        asmLines += generateExpr(expr1, registerMap, scope, w9)
-        asmLines += generateExpr(expr2, registerMap, scope, w10)
-        asmLines += SUBS(dest.asW, w9, w10)
-        asmLines += BCond(asmGlobal ~ P_ErrOverflow, Cond.VS)
-        _predefinedFuncs += P_ErrOverflow
-        _predefinedFuncs += P_Prints
-      }
-      case Mul(expr1, expr2) => {
-        asmLines += generateExpr(expr1, registerMap, scope, w9)
-        asmLines += generateExpr(expr2, registerMap, scope, w10)
-        asmLines += SMULL(dest, w9, w10)
-        asmLines += CMP(dest, dest.asW, Some(SXTW()))
-        asmLines += BCond(asmGlobal ~ P_ErrOverflow, Cond.NE)
-        _predefinedFuncs += P_ErrOverflow
-        _predefinedFuncs += P_Prints
-      }
-      case Div(expr1, expr2) => {
-        asmLines += generateExpr(expr2, registerMap, scope, w9)
-        asmLines += CMP(w9, ImmVal(0))
-        asmLines += BCond(asmGlobal ~ P_ErrDivZero, Cond.EQ)
-        _predefinedFuncs += P_ErrDivZero
-        _predefinedFuncs += P_Prints
-        asmLines += generateExpr(expr1, registerMap, scope, w10)
-        asmLines += SDIV(dest.asW, w10, w9)
-      }
-      case Mod(expr1, expr2) => {
-        asmLines += generateExpr(expr2, registerMap, scope, w9)
-        asmLines += CMP(w9, ImmVal(0))
-        asmLines += BCond(asmGlobal ~ P_ErrDivZero, Cond.EQ)
-        _predefinedFuncs += P_ErrDivZero
-        _predefinedFuncs += P_Prints
-        asmLines += generateExpr(expr1, registerMap, scope, w10)
-        asmLines += SDIV(w11, w10, w9)
-        asmLines += MSUB(dest.asW, w11, w9, w10)
-      }
+      case Add(expr1, expr2) =>
+        asmLines += generateArithmetic1(expr1, expr2, "ADD", registerMap, scope, dest)
+      case Sub(expr1, expr2) =>
+        asmLines += generateArithmetic1(expr1, expr2, "SUB", registerMap, scope, dest)
+      case Mul(expr1, expr2) =>
+        asmLines += generateArithmetic1(expr1, expr2, "MUL", registerMap, scope, dest)
+
+      case Div(expr1, expr2) =>
+        asmLines += generateArithmetic2(expr1, expr2, "DIV", registerMap, scope, dest)
+      case Mod(expr1, expr2) =>
+        asmLines += generateArithmetic2(expr1, expr2, "MOD", registerMap, scope, dest)
+
     }
 
     AsmFunction(asmLines.toList*)
@@ -521,6 +489,75 @@ object Generator {
       CMP(dest.asW, w9),
       CSET(dest.asW, cond)
     )
+  }
+
+  private def generateArithmetic1(
+      expr1: Expr,
+      expr2: Expr,
+      operation: String,
+      registerMap: RegisterMap,
+      scope: Scope,
+      dest: Register
+  )(implicit
+      symbolTable: SymbolTable
+  ): AsmSnippet = {
+    val asmLines: ListBuffer[AsmSnippet] = ListBuffer()
+    val w9 = WRegister(9)
+    val w10 = WRegister(10)
+
+    asmLines += generateExpr(expr1, registerMap, scope, w9)
+    asmLines += generateExpr(expr2, registerMap, scope, w10)
+
+    operation match {
+      case "ADD" =>
+        asmLines += ADDS(dest.asW, w9, w10)
+        asmLines += BCond(asmGlobal ~ P_ErrOverflow, Cond.VS)
+      case "SUB" =>
+        asmLines += SUBS(dest.asW, w9, w10)
+        asmLines += BCond(asmGlobal ~ P_ErrOverflow, Cond.VS)
+      case "MUL" =>
+        asmLines += SMULL(dest, w9, w10)
+        asmLines += CMP(dest, dest.asW, Some(SXTW()))
+        asmLines += BCond(asmGlobal ~ P_ErrOverflow, Cond.NE)
+    }
+
+    _predefinedFuncs += P_ErrOverflow
+    _predefinedFuncs += P_Prints
+
+    AsmFunction(asmLines.toList*)
+  }
+
+  private def generateArithmetic2(
+      expr1: Expr,
+      expr2: Expr,
+      operation: String,
+      registerMap: RegisterMap,
+      scope: Scope,
+      dest: Register
+  )(implicit
+      symbolTable: SymbolTable
+  ): AsmSnippet = {
+    val asmLines: ListBuffer[AsmSnippet] = ListBuffer()
+    val w9 = WRegister(9)
+    val w10 = WRegister(10)
+    val w11 = WRegister(11)
+
+    asmLines += generateExpr(expr2, registerMap, scope, w9)
+    asmLines += CMP(w9, ImmVal(0))
+    asmLines += BCond(asmGlobal ~ P_ErrDivZero, Cond.EQ)
+    _predefinedFuncs += P_ErrDivZero
+    _predefinedFuncs += P_Prints
+    asmLines += generateExpr(expr1, registerMap, scope, w10)
+
+    operation match {
+      case "DIV" =>
+        asmLines += SDIV(dest.asW, w10, w9)
+      case "MOD" =>
+        asmLines += SDIV(w11, w10, w9)
+        asmLines += MSUB(dest.asW, w11, w9, w10)
+    }
+
+    AsmFunction(asmLines.toList*)
   }
 
   private def generateUnary(
@@ -556,7 +593,7 @@ object Generator {
       case Chr(e) => {
         asmLines += generateExpr(e, registerMap, scope, dest.asW)
         asmLines += TST(dest.asW, ImmVal(0xffffff80))
-        asmLines += CSEL(x1, dest, x1, Cond.NE) 
+        asmLines += CSEL(x1, dest, x1, Cond.NE)
         asmLines += BCond(asmGlobal ~ P_ErrBadChar, Cond.NE)
         _predefinedFuncs += P_ErrBadChar
         _predefinedFuncs += P_Prints
