@@ -13,7 +13,9 @@ object PredefinedFunctions {
     "._errNull_str0" ->
       "fatal error: null pair dereferenced or freed\n",
     "._errOutOfBounds_str0" ->
-      "fatal error: array index %d out of bounds\n"
+      "fatal error: array index %d out of bounds\n",
+    "_errBadChar_str0" ->
+      "fatal error: int %d is not ascii character 0-127 \n"
   )
 
   private def _err(errName: String) = AsmFunction(
@@ -37,6 +39,8 @@ object PredefinedFunctions {
   private val _errDivZero = _err("errDivZero")
 
   private val _errOutOfMemory = _err("errOutOfMemory")
+
+  private val _errBadChar = _err("errBadChar")
 
   def _read(name: String, fmt: String) = AsmFunction(
     LabelledStringConst(asmLocal ~ s"._${name}_str0", fmt),
@@ -145,6 +149,7 @@ object PredefinedFunctions {
     "_errOverflow" -> _errOverflow,
     "_errDivZero" -> _errDivZero,
     "_errOutOfMemory" -> _errOutOfMemory,
+    "_errBadChar" -> _errBadChar,
     "_readc" -> _readc,
     "_readi" -> _readi,
     "_freepair" -> _freepair,

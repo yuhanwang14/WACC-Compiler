@@ -20,9 +20,13 @@ case class STURB(Rt: Register, address: Address) extends Instruction(f"sturb $Rt
 
 case class MOV(Rd: Register, opr: Operand) extends Instruction(f"mov $Rd, $opr")
 
-case class CMP(Rd: Register, opr: Operand) extends Instruction(f"cmp $Rd, $opr")
+case class CMP(Rd: Register, opr: Operand, extend: Option[Extend] = None)
+    extends Instruction(f"cmp $Rd, $opr" + extend.map(e => s", $e").getOrElse(""))
 
 case class CSET(Rd: Register, cond: Cond) extends Instruction(f"cset $Rd, $cond")
+
+case class CSEL(Rd: Register, Rn: Register, Rm: Register, cond: Cond)
+    extends Instruction(f"csel $Rd, $Rn, $Rm, $cond")
 
 case class ADD(Rd: Register, Rn: Register, opr: Operand) extends Instruction(f"add $Rd, $Rn, $opr")
 
@@ -31,6 +35,19 @@ case class ADDS(Rd: Register, Rn: Register, opr: Operand)
 
 case class SUBS(Rd: Register, Rn: Register, opr: Operand)
     extends Instruction(f"subs $Rd, $Rn, $opr")
+
+case class SMULL(Rd: Register, Rn: Register, opr: Operand)
+    extends Instruction(f"smull $Rd, $Rn, $opr")
+
+case class SDIV(Rd: Register, Rn: Register, opr: Operand)
+    extends Instruction(f"smull $Rd, $Rn, $opr")
+
+case class MSUB(Rd: Register, Rn: Register, Rm: Register, Ra: Register)
+    extends Instruction(f"msub $Rd, $Rn, $Rm, $Ra")
+
+case class TST(Rd: Register, opr: Operand) extends Instruction(f"tst $Rd, $opr")
+
+case class NEGS(Rd: Register, Rn: Register) extends Instruction(f"negs $Rd, $Rn")
 
 case class CBZ(Rd: Register, label: String) extends Instruction(f"cbz $Rd, $label")
 

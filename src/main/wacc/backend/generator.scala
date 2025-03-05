@@ -381,11 +381,17 @@ object Generator {
       symbolTable: SymbolTable
   ): AsmSnippet = {
     val asmLines: ListBuffer[AsmSnippet] = ListBuffer()
+    val x1 = XRegister(1)
     val x9 = XRegister(9)
+    val x10 = XRegister(10)
+    val x11 = XRegister(11)
+    val w9 = WRegister(9)
+    val w10 = WRegister(10)
+    val w11 = WRegister(11)
     expr match {
-      case IntLiter(x)  => asmLines += MOV(dest, ImmVal(x))
-      case BoolLiter(x) => asmLines += MOV(dest, ImmVal(if (x) then 1 else 0))
-      case CharLiter(c) => asmLines += MOV(dest, ImmVal(c))
+      case IntLiter(x)  => asmLines += MOV(dest.asW, ImmVal(x))
+      case BoolLiter(x) => asmLines += MOV(dest.asW, ImmVal(if (x) then 1 else 0))
+      case CharLiter(c) => asmLines += MOV(dest.asW, ImmVal(c))
       case StrLiter(s) => {
         var index = _stringConsts.size
         if (_stringConsts.contains(s)) {
@@ -407,84 +413,136 @@ object Generator {
 
       // Binary Operations
       case Or(expr1, expr2) => {
-        asmLines += generateExpr(expr2, allocator, scope, dest)
-        asmLines += CMP(dest, ImmVal(1))
+        asmLines += generateExpr(expr2, allocator, scope, dest.asW)
+        asmLines += CMP(dest.asW, ImmVal(1))
         val orLabel = asmLocal ~ localLabelCount
         asmLines += BCond(orLabel, Cond.EQ)
         localLabelCount += 1
-        asmLines += generateExpr(expr2, allocator, scope, dest)
-        asmLines += CMP(dest, ImmVal(1))
+        asmLines += generateExpr(expr2, allocator, scope, dest.asW)
+        asmLines += CMP(dest.asW, ImmVal(1))
         asmLines += LabelHeader(orLabel)
-        asmLines += CSET(dest, Cond.EQ)
+        asmLines += CSET(dest.asW, Cond.EQ)
       }
       case And(expr1, expr2) => {
-        asmLines += generateExpr(expr2, allocator, scope, dest)
-        asmLines += CMP(dest, ImmVal(1))
+        asmLines += generateExpr(expr2, allocator, scope, dest.asW)
+        asmLines += CMP(dest.asW, ImmVal(1))
         val andLabel = asmLocal ~ localLabelCount
         asmLines += BCond(andLabel, Cond.NE)
         localLabelCount += 1
-        asmLines += generateExpr(expr2, allocator, scope, dest)
-        asmLines += CMP(dest, ImmVal(1))
+        asmLines += generateExpr(expr2, allocator, scope, dest.asW)
+        asmLines += CMP(dest.asW, ImmVal(1))
         asmLines += LabelHeader(andLabel)
-        asmLines += CSET(dest, Cond.EQ)
+        asmLines += CSET(dest.asW, Cond.EQ)
       }
 
       case Equal(expr1, expr2) => {
-        asmLines += generateExpr(expr1, allocator, scope, x9)
-        asmLines += generateExpr(expr2, allocator, scope, dest)
-        asmLines += CMP(dest, x9)
-        asmLines += CSET(dest, Cond.EQ)
+        asmLines += generateExpr(expr1, allocator, scope, w9)
+        asmLines += generateExpr(expr2, allocator, scope, dest.asW)
+        asmLines += CMP(dest.asW, w9)
+        asmLines += CSET(dest.asW, Cond.EQ)
       }
       case NotEqual(expr1, expr2) => {
-        asmLines += generateExpr(expr1, allocator, scope, x9)
-        asmLines += generateExpr(expr2, allocator, scope, dest)
-        asmLines += CMP(dest, x9)
-        asmLines += CSET(dest, Cond.NE)
+        asmLines += generateExpr(expr1, allocator, scope, w9)
+        asmLines += generateExpr(expr2, allocator, scope, dest.asW)
+        asmLines += CMP(dest.asW, w9)
+        asmLines += CSET(dest.asW, Cond.NE)
       }
       case Less(expr1, expr2) => {
-        asmLines += generateExpr(expr1, allocator, scope, x9)
-        asmLines += generateExpr(expr2, allocator, scope, dest)
-        asmLines += CMP(dest, x9)
-        asmLines += CSET(dest, Cond.LT)
+        asmLines += generateExpr(expr1, allocator, scope, w9)
+        asmLines += generateExpr(expr2, allocator, scope, dest.asW)
+        asmLines += CMP(dest.asW, w9)
+        asmLines += CSET(dest.asW, Cond.LT)
       }
       case LessEqual(expr1, expr2) => {
-        asmLines += generateExpr(expr1, allocator, scope, x9)
-        asmLines += generateExpr(expr2, allocator, scope, dest)
-        asmLines += CMP(dest, x9)
-        asmLines += CSET(dest, Cond.LE)
+        asmLines += generateExpr(expr1, allocator, scope, w9)
+        asmLines += generateExpr(expr2, allocator, scope, dest.asW)
+        asmLines += CMP(dest.asW, w9)
+        asmLines += CSET(dest.asW, Cond.LE)
       }
       case Greater(expr1, expr2) => {
-        asmLines += generateExpr(expr1, allocator, scope, x9)
-        asmLines += generateExpr(expr2, allocator, scope, dest)
-        asmLines += CMP(dest, x9)
-        asmLines += CSET(dest, Cond.GT)
+        asmLines += generateExpr(expr1, allocator, scope, w9)
+        asmLines += generateExpr(expr2, allocator, scope, dest.asW)
+        asmLines += CMP(dest.asW, w9)
+        asmLines += CSET(dest.asW, Cond.GT)
       }
       case GreaterEqual(expr1, expr2) => {
-        asmLines += generateExpr(expr1, allocator, scope, x9)
-        asmLines += generateExpr(expr2, allocator, scope, dest)
-        asmLines += CMP(dest, x9)
-        asmLines += CSET(dest, Cond.GE)
+        asmLines += generateExpr(expr1, allocator, scope, w9)
+        asmLines += generateExpr(expr2, allocator, scope, dest.asW)
+        asmLines += CMP(dest.asW, w9)
+        asmLines += CSET(dest.asW, Cond.GE)
       }
 
-      case Add(expr1, expr2) => ???
-      case Sub(expr1, expr2) => ???
-      case Mul(expr1, expr2) => ???
-      case Div(expr1, expr2) => ???
-      case Mod(expr1, expr2) => ???
+      case Add(expr1, expr2) => {
+        asmLines += generateExpr(expr1, allocator, scope, w9)
+        asmLines += generateExpr(expr2, allocator, scope,w10)
+        asmLines += ADDS(dest.asW, w9, w10)
+        asmLines += BCond(asmGlobal ~ "_errOverflow", Cond.VS)
+        _predefinedFuncs += "_errOverflow"
+        _predefinedFuncs += "_prints"
+      }
+      case Sub(expr1, expr2) => {
+        asmLines += generateExpr(expr1, allocator, scope, w9)
+        asmLines += generateExpr(expr2, allocator, scope, w10)
+        asmLines += SUBS(dest.asW, w9, w10)
+        asmLines += BCond(asmGlobal ~ "_errOverflow", Cond.VS)
+        _predefinedFuncs += "_errOverflow"
+        _predefinedFuncs += "_prints"
+      }
+      case Mul(expr1, expr2) => {
+        asmLines += generateExpr(expr1, allocator, scope, w9)
+        asmLines += generateExpr(expr2, allocator, scope, w10)
+        asmLines += SMULL(dest, w9, w10)
+        asmLines += CMP(dest, dest.asW, Some(Extend.SXTW))
+        asmLines += BCond(asmGlobal ~ "_errOverflow", Cond.NE)
+        _predefinedFuncs += "_errOverflow"
+        _predefinedFuncs += "_prints"
+      }
+      case Div(expr1, expr2) => {
+        asmLines += generateExpr(expr2, allocator, scope, w9)
+        asmLines += CMP(w9, ImmVal(0))
+        asmLines += BCond(asmGlobal ~ "_errDivZero", Cond.EQ)
+        _predefinedFuncs += "_errDivZero"
+        _predefinedFuncs += "_prints"
+        asmLines += generateExpr(expr1, allocator, scope, w10)
+        asmLines += SDIV(dest.asW, w10, w9)
+      }
+      case Mod(expr1, expr2) => {
+        asmLines += generateExpr(expr2, allocator, scope, w9)
+        asmLines += CMP(w9, ImmVal(0))
+        asmLines += BCond(asmGlobal ~ "_errDivZero", Cond.EQ)
+        _predefinedFuncs += "_errDivZero"
+        _predefinedFuncs += "_prints"
+        asmLines += generateExpr(expr1, allocator, scope, w10)
+        asmLines += SDIV(w11, w10, w9)
+        asmLines += MSUB(dest.asW, w11, w9, w10)
+      }
 
       // Unary Operations
       case Not(e) => {
-        asmLines += generateExpr(e, allocator, scope, x9)
-        asmLines += CMP(x9, ImmVal(1))
-        asmLines += CSET(dest, Cond.NE)
+        asmLines += generateExpr(e, allocator, scope, w9)
+        asmLines += CMP(w9, ImmVal(1))
+        asmLines += CSET(dest.asW, Cond.NE)
       }
-      case Negate(e) => ???
-      case Len(e)    => ???
+      case Negate(e) => {
+        asmLines += generateExpr(e, allocator, scope, w9)
+        asmLines += NEGS(dest.asW, w9);
+        asmLines += BCond(asmGlobal ~ "_errOverflow", Cond.VS)
+        _predefinedFuncs += "_errOverflow"
+        _predefinedFuncs += "_prints"
+      }
+      case Len(e)    => ??? // TODO: Array
       case Ord(e) => {
-        asmLines += generateExpr(e, allocator, scope, x9)
-        asmLines += MOV(dest, x9)
+        asmLines += generateExpr(e, allocator, scope, w9)
+        asmLines += MOV(dest.asW, w9)
       }
-      case Chr(e) => ???
+      case Chr(e) => {
+        asmLines += generateExpr(e, allocator, scope, dest.asW)
+        asmLines += TST(dest.asW, ImmVal(0xffffff80))
+        asmLines += CSEL(x1, dest, x1, Cond.NE) 
+        asmLines += BCond(asmGlobal ~ "_errBadChar", Cond.NE)
+        _predefinedFuncs += "_errBadChar"
+        _predefinedFuncs += "_prints"
+      }
     }
 
     AsmFunction(asmLines.toList*)
