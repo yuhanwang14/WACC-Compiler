@@ -1,4 +1,4 @@
-// package testCode
+// package testcode
 
 // import org.scalatest.funsuite.AnyFunSuite
 // import scala.sys.process._

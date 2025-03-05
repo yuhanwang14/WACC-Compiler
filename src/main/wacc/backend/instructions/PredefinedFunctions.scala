@@ -2,6 +2,7 @@ package backend.instructions
 
 import AsmLabeling.*
 
+
 sealed abstract class PredefinedFunc(val name: String):
   val toAsmFunc: AsmFunction
 
@@ -15,9 +16,9 @@ sealed abstract class PredefinedErrMsg(override val name: String, val errMsg: St
       f"fatal error: $errMsg\n"
     ),
     LabelHeader(name),
-    ADR(XRegister(0), asmLocal ~ f"._${name}_str0"),
+    ADR(x0, asmLocal ~ s"._${name}_str0"),
     BL(asmGlobal ~ "_prints"),
-    MOV(WRegister(0), ImmVal(-1)),
+    MOV(w0, ImmVal(-1)),
     BL(asmGlobal ~ "exit")
   )
 
@@ -34,10 +35,10 @@ sealed abstract class PredefinedRead(override val name: String, val fmt: String)
         "might as well merge the stores"
     )(4),
     STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
-    MOV(XRegister(1), sp),
-    ADR(XRegister(0), asmLocal ~ f"._${name}_str0"),
+    MOV(x1, sp),
+    ADR(x0, asmLocal ~ s"._${name}_str0"),
     BL(asmGlobal ~ "scanf"),
-    LDP(XRegister(0), lr, PostIndex(sp, ImmVal(16))),
+    LDP(x0, lr, PostIndex(sp, ImmVal(16))),
     RET
   )
 
@@ -53,9 +54,9 @@ sealed abstract class PredefinedPrint(
       LabelHeader(asmGlobal ~ f"_$name"),
       STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
       AsmFunction(setupRegisters*),
-      ADR(XRegister(0), fmtStr),
+      ADR(x0, fmtStr),
       BL(asmGlobal ~ (if (name == "println") "puts" else "printf")),
-      MOV(XRegister(0), ImmVal(0)),
+      MOV(x0, ImmVal(0)),
       BL(asmGlobal ~ "fflush"),
       LDP(lr, xzr, PostIndex(sp, ImmVal(16))),
       RET
@@ -103,21 +104,20 @@ case object P_ErrBadChar
 case object P_Readc extends PredefinedRead("readc", "%c")
 case object P_Readi extends PredefinedRead("readi", "%d")
 
-case object P_Printp extends PredefinedPrint("printp", "%p", Seq(MOV(XRegister(1), XRegister(0))))
+case object P_Printp extends PredefinedPrint("printp", "%p", Seq(MOV(x1, x0)))
 case object P_Println extends PredefinedPrint("println", "")
-case object P_Printi extends PredefinedPrint("printi", "%d", Seq(MOV(XRegister(1), XRegister(0))))
-case object P_Printc extends PredefinedPrint("printc", "%c", Seq(MOV(XRegister(1), XRegister(0))))
-case object P_Prints
-    extends PredefinedPrint(
-      "prints",
-      "%.*f",
-      Seq(
-        MOV(XRegister(2), XRegister(0)),
-        LDUR(WRegister(1), Offset(XRegister(0), ImmVal(-4)))
-      )
-    )
-case object P_Printb extends PredefinedPrint("printb", ""):
-  override val toAsmFunc: AsmFunction =
+case object P_Printi extends PredefinedPrint("printi", "%d", Seq(MOV(x1, x0)))
+case object P_Printc extends PredefinedPrint("printc", "%c", Seq(MOV(x1, x0)))
+case object P_Prints extends PredefinedPrint(
+  "prints",
+  "%.*s",
+  Seq(
+    MOV(x2, x0),
+    LDUR(w1, Offset(x0, ImmVal(-4)))
+  )
+)
+case object P_Printb extends PredefinedPrint("printb", "") {
+  override val toAsmFunc: AsmFunction = {
     val falseStr = asmLocal ~ "._printb_str0"
     val trueStr = asmLocal ~ "._printb_str1"
     val fmtStr = asmLocal ~ "._printb_str2"
@@ -128,48 +128,50 @@ case object P_Printb extends PredefinedPrint("printb", ""):
       LabelledStringConst(fmtStr, "%.*f"),
       LabelHeader(asmGlobal ~ "_printb"),
       STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
-      CMP(WRegister(0), ImmVal(0)),
+      CMP(w0, ImmVal(0)),
       BCond(asmLocal ~ "_printb0", Cond.NE),
-      ADR(XRegister(2), falseStr),
+      ADR(x2, falseStr),
       B(asmLocal ~ "_printb1"),
       LabelHeader(asmLocal ~ "_printb0"),
-      ADR(XRegister(2), trueStr),
+      ADR(x2, trueStr),
       LabelHeader(asmLocal ~ "_printb1"),
-      LDUR(WRegister(1), Offset(XRegister(2), ImmVal(-4))),
-      ADR(XRegister(0), fmtStr),
+      LDUR(w1, Offset(x2, ImmVal(-4))),
+      ADR(x0, fmtStr),
       BL(asmGlobal ~ "printf"),
-      MOV(XRegister(0), ImmVal(0)),
+      MOV(x0, ImmVal(0)),
       BL(asmGlobal ~ "fflush"),
       LDP(lr, xzr, PostIndex(sp, ImmVal(16))),
       RET
     )
-
-case object P_Freepair extends PredefinedMemory("freepair"):
+  }
+}
+case object P_Freepair extends PredefinedMemory("freepair") {
   override val toAsmFunc: AsmFunction = AsmFunction(
     LabelHeader(asmGlobal ~ "_freepair"),
     STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
-    CBZ(XRegister(0), asmGlobal ~ "_errNull"),
+    CBZ(x0, asmGlobal ~ "_errNull"),
     BL(asmGlobal ~ "free"),
     LDP(lr, xzr, PostIndex(sp, ImmVal(16))),
     RET
   )
-case object P_Malloc extends PredefinedMemory("malloc"):
+}
+case object P_Malloc extends PredefinedMemory("malloc") {
   override val toAsmFunc: AsmFunction = AsmFunction(
     LabelHeader(asmGlobal ~ "_malloc"),
     STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
     BL(asmGlobal ~ "malloc"),
-    CBZ(XRegister(0), asmGlobal ~ "_errOutOfMemory"),
+    CBZ(x0, asmGlobal ~ "_errOutOfMemory"),
     LDP(lr, xzr, PostIndex(sp, ImmVal(16))),
     RET
   )
-
+}
 case object P_ArrLoad1 extends PredefinedArrLoad("arrLoad1", 1)
 
 case object P_ArrLoad4 extends PredefinedArrLoad("arrLoad4", 4)
 
 case object P_ArrLoad8 extends PredefinedArrLoad("arrLoad8", 8)
 
-object PredefinedFunctions:
+object PredefinedFunctions {
   private val funcList: List[PredefinedFunc] = List(
     P_ErrOutOfBounds,
     P_ErrNull,
@@ -195,3 +197,5 @@ object PredefinedFunctions:
   private val asmFunclist: List[AsmFunction] = funcList.map(_.toAsmFunc)
 
   val predefinedFunctions: Map[PredefinedFunc, AsmFunction] = funcList.zip(asmFunclist).toMap
+}
+
