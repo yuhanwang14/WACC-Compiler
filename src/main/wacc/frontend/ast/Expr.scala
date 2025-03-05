@@ -42,7 +42,8 @@ case class BoolLiter(x: Boolean)(val pos: (Int, Int)) extends Expr
 case class CharLiter(c: Char)(val pos: (Int, Int)) extends Expr
 case class StrLiter(s: String)(val pos: (Int, Int)) extends Expr
 case class PairLiter()(val pos: (Int, Int)) extends Expr
-case class Ident(name: String)(val pos: (Int, Int)) extends Expr with LValue
+case class Ident(name: String)(val pos: (Int, Int)) extends Expr with LValue:
+    def renamed(name: String) = Ident(name)(pos)
 case class ArrayElem(identName: Ident, exprs: List[Expr])(val pos: (Int, Int)) extends Expr with LValue
 case class Paren(x: Expr)(val pos: (Int, Int)) extends Expr
 

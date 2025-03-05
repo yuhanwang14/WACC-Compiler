@@ -40,105 +40,102 @@ object SemanticChecker {
       errors: ListBuffer[Error],
       lines: Seq[String],
       source: String
-  ): WaccType = es.map(getType).distinct match {
-    case Nil => ArrayType(anyType)(defaultPos)
-    case ts @ (head :: tail) =>
-      val (resultType, invalid) = tail.foldLeft((head, false)) {
-        case ((currentType, isInvalid), t) =>
-          if (isInvalid) (currentType, true)
-          else if (compatible(currentType, t)) (t, false)
-          else if (compatible(t, currentType)) (currentType, false)
-          else (currentType, true)
-      }
-      if (invalid) {
-        errors += ErrorBuilder.specializedError(
-          Seq(
-            "Type Error: array literal mismatch",
-            s"literal contains mix of ${ts.mkString(", ")}"
-          ),
-          es.head.pos
-        )
-        anyType
-      } else {
-        ArrayType(resultType)(defaultPos)
-      }
-  }
+  ): (WaccType, List[Expr]) =
+    val tes = es.map(getType)
+    (
+      tes.map(_._1).distinct match {
+        case Nil => arrayType
+        case ts @ (head :: tail) =>
+          val (resultType, invalid) = tail.foldLeft((head, false)) {
+            case ((currentType, isInvalid), t) =>
+              if (isInvalid) (currentType, true)
+              else if (compatible(currentType, t)) (t, false)
+              else if (compatible(t, currentType)) (currentType, false)
+              else (currentType, true)
+          }
+          if (invalid) {
+            errors += ErrorBuilder.specializedError(
+              Seq(
+                "Type Error: array literal mismatch",
+                s"literal contains mix of ${ts.mkString(", ")}"
+              ),
+              es.head.pos
+            )
+            anyType
+          } else {
+            resultType
+          }
+      },
+      tes.map(_._2)
+    )
 
   private def getType(expr: Expr)(implicit
       st: SymbolTable,
       errors: ListBuffer[Error],
       lines: Seq[String],
       source: String
-  ): WaccType = expr match {
+  ): (WaccType, Expr) = expr match {
     // Literal cases
-    case IntLiter(_)  => intType
-    case BoolLiter(_) => boolType
-    case CharLiter(_) => charType
-    case StrLiter(_)  => stringType
+    case IntLiter(_)  => intType -> expr
+    case BoolLiter(_) => boolType -> expr
+    case CharLiter(_) => charType -> expr
+    case StrLiter(_)  => stringType -> expr
     case PairLiter() =>
       NonErasedPairType(anyType, anyType)(
         defaultPos
-      )
-
-    // Parentheses
+      ) -> expr
     case Paren(e) => getType(e)
 
     // Unary operators
     case e @ Not(_) =>
-      verifyUnary(e)
-      boolType
+      boolType -> verifyUnary(e)
     case e @ (Negate(_) | Len(_) | Ord(_)) =>
-      verifyUnary(e)
-      intType
+      intType -> verifyUnary(e)
     case e @ Chr(_) =>
-      verifyUnary(e)
-      charType
+      charType -> verifyUnary(e)
 
     // Binary operators producing Int results
     case e @ (Mul(_, _) | Div(_, _) | Mod(_, _) | Add(_, _) | Sub(_, _)) =>
-      verifyBinary(e)
-      intType
+      intType -> verifyBinary(e)
 
     // Binary operators producing Bool results
     case e @ (Less(_, _) | LessEqual(_, _) | Greater(_, _) | GreaterEqual(_, _) | Equal(_, _) |
         NotEqual(_, _) | And(_, _) | Or(_, _)) =>
-      verifyBinary(e)
-      boolType
+      boolType -> verifyBinary(e)
 
     // Identifiers
     case (id @ Ident(name)) =>
       st.lookupSymbol(name) match {
-        case Some(t) => t
+        case Some(t) => (t, Ident(st.unshadow(name).get)(id.pos))
         case None => {
           errors +=
             ErrorBuilder.specializedError(
               Seq(s"Scope error: variable $name has not been declared in this scope"),
               id.pos
             )
-          anyType
+          anyType -> id
         }
       }
 
     // Array elements
     case ArrayElem(id, es) =>
-      def getArrayElemType(t: WaccType, exprs: List[Expr]): WaccType = {
-        (t, exprs) match {
-          case (t, Nil) => t
+      def getArrayElemType(t: WaccType, exprs: List[Expr]): (WaccType, List[Expr]) =
+        (t, exprs) match
+          case (t, Nil) => (t, List())
           case (ArrayType(t), head :: tail) =>
-            verifyType(head, intType)
-            getArrayElemType(t, tail)
-          case (t, _) => {
+            val e = verifyType(head, intType)._2
+            val rem = getArrayElemType(t, tail)
+            (rem._1, e +: rem._2)
+          case (t, _) =>
             errors +=
               ErrorBuilder.specializedError(
                 Seq(s"index error: bad indexing on variable ${id.name} of type ${t}"),
                 id.pos
               )
-            anyType
-          }
-        }
-      }
-      val t: WaccType = getType(id: Expr)
-      getArrayElemType(t, es)
+            (anyType, exprs)
+      val (t, newId) = getType(id: Expr).asInstanceOf[(WaccType, Ident)]
+      val (_, newEs) = getArrayElemType(t, es)
+      t -> ArrayElem(newId, newEs)(expr.pos)
   }
 
   private def getType(rVal: RValue)(implicit
@@ -146,18 +143,18 @@ object SemanticChecker {
       errors: ListBuffer[Error],
       lines: Seq[String],
       source: String
-  ): WaccType = rVal match {
+  ): (WaccType, RValue) = rVal match {
     case ArrayLiter(es) =>
-      commonAncestor(es)
+      val (t, newEs) = commonAncestor(es)
+      (t, ArrayLiter(newEs)(rVal.pos))
 
     case NewPair(e1, e2) => {
-      val t1 = getType(e1)
-      val t2 = getType(e2)
-      NonErasedPairType(t1, t2)(defaultPos)
+      val (t1, newE1) = getType(e1)
+      val (t2, newE2) = getType(e2)
+      NonErasedPairType(t1, t2)(defaultPos) -> NewPair(newE1, newE2)(rVal.pos)
     }
 
-    case Call(id @ Ident(name), ArgList(es)) => {
-
+    case Call(id @ Ident(name), args @ ArgList(es)) => {
       st.lookupFunction(name) match {
         case Some(f) => {
           if (es.size != f.paramTypes.size) {
@@ -171,8 +168,9 @@ object SemanticChecker {
                 id.pos
               )
           }
-          es.zip(f.paramTypes).foreach { case (e, t) =>
-            if (!compatible(t, getType(e))) {
+          val newEs = es.zip(f.paramTypes).map { (e, expT) =>
+            val (t, newE) = getType(e)
+            if (!compatible(expT, t)) {
               errors +=
                 ErrorBuilder.vanillaError(
                   s"${t.toString()}",
@@ -181,8 +179,9 @@ object SemanticChecker {
                   e.pos
                 )
             }
+            newE
           }
-          f.returnType
+          f.returnType -> Call(id, ArgList(newEs)(args.pos))(rVal.pos)
         }
         case None => {
           errors +=
@@ -190,7 +189,7 @@ object SemanticChecker {
               Seq(s"Undefined error: function $name has not been defined"),
               id.pos
             )
-          anyType
+          anyType -> rVal
         }
       }
     }
@@ -198,22 +197,26 @@ object SemanticChecker {
     case e: Expr => getType(e)
 
     case First(insideLVal) =>
-      getType(insideLVal) match {
+      val (t, newE) = getType(insideLVal)
+      (t match
         case NonErasedPairType(t, _) => t
         case ErasedPairType()        => unknownType
         case errT @ (FirstErrorType(_) | SecondErrorType(_)) =>
           FirstErrorType(errT)(errT.pos)
         case t => FirstErrorType(t)(insideLVal.pos)
-      }
+      )
+        -> First(newE)(rVal.pos)
 
     case Second(insideLVal) =>
-      getType(insideLVal) match {
+      val (t, newE) = getType(insideLVal)
+      (t match
         case NonErasedPairType(_, t) => t
         case ErasedPairType()        => unknownType
         case errT @ (FirstErrorType(_) | SecondErrorType(_)) =>
           SecondErrorType(errT)(errT.pos)
         case t => SecondErrorType(t)(insideLVal.pos)
-      }
+      )
+        -> Second(newE)(rVal.pos)
   }
 
   private def getType(lVal: LValue)(implicit
@@ -221,46 +224,41 @@ object SemanticChecker {
       errors: ListBuffer[Error],
       lines: Seq[String],
       source: String
-  ): WaccType = lVal match {
-    case v: RValue => getType(v: RValue)
+  ): (WaccType, LValue) = lVal match {
+    case v: RValue => getType(v: RValue).asInstanceOf[(WaccType, LValue)]
   }
 
-  private def verifyTypeHelper(
-      t: WaccType,
-      expT: Seq[WaccType],
-      pos: (Int, Int)
-  )(implicit
+  private def verifyType[T <: LValue | RValue](expr: T, expT: WaccType*)(implicit
+      st: SymbolTable,
       errors: ListBuffer[Error],
       lines: Seq[String],
       source: String
-  ): Unit =
+  ): (WaccType, T) =
+    val (t, newE) = expr match
+      case e: LValue => getType(e)
+      case e: RValue => getType(e)
+
     if (expT.forall(!compatible(t, _)))
       errors +=
         ErrorBuilder.vanillaError(
           s"${t.toString()}",
           expT.mkString(", "),
           Seq(),
-          pos
+          expr.pos
         )
-
-  private def verifyType(e: Expr, expT: WaccType*)(implicit
-      st: SymbolTable,
-      errors: ListBuffer[Error],
-      lines: Seq[String],
-      source: String
-  ): Unit = verifyTypeHelper(getType(e), expT, e.pos)
+    (t, newE.asInstanceOf[T])
 
   private def verifyUnary(expr: UnaryOp)(implicit
       st: SymbolTable,
       errors: ListBuffer[Error],
       lines: Seq[String],
       source: String
-  ): Unit = expr match {
-    case Not(e)    => verifyType(e, boolType)
-    case Negate(e) => verifyType(e, intType)
-    case Len(e)    => verifyType(e, ArrayType(anyType)(defaultPos))
-    case Ord(e)    => verifyType(e, charType)
-    case Chr(e)    => verifyType(e, intType)
+  ): Expr = expr match {
+    case Not(e)    => Not(verifyType(e, boolType)._2)(expr.pos)
+    case Negate(e) => Negate(verifyType(e, intType)._2)(expr.pos)
+    case Len(e)    => Len(verifyType(e, arrayType)._2)(expr.pos)
+    case Ord(e)    => Ord(verifyType(e, charType)._2)(expr.pos)
+    case Chr(e)    => Chr(verifyType(e, intType)._2)(expr.pos)
   }
 
   private def verifyBinary(expr: BinaryOp)(implicit
@@ -268,44 +266,39 @@ object SemanticChecker {
       errors: ListBuffer[Error],
       lines: Seq[String],
       source: String
-  ): Unit = expr match {
+  ): Expr = expr match {
     case Mul(e1, e2) =>
-      verifyType(e1, intType)
-      verifyType(e2, intType)
+      Mul(verifyType(e1, intType)._2, verifyType(e2, intType)._2)(expr.pos)
     case Div(e1, e2) =>
-      verifyType(e1, intType)
-      verifyType(e2, intType)
+      Div(verifyType(e1, intType)._2, verifyType(e2, intType)._2)(expr.pos)
     case Mod(e1, e2) =>
-      verifyType(e1, intType)
-      verifyType(e2, intType)
+      Mod(verifyType(e1, intType)._2, verifyType(e2, intType)._2)(expr.pos)
     case Add(e1, e2) =>
-      verifyType(e1, intType)
-      verifyType(e2, intType)
+      Add(verifyType(e1, intType)._2, verifyType(e2, intType)._2)(expr.pos)
     case Sub(e1, e2) =>
-      verifyType(e1, intType)
-      verifyType(e2, intType)
+      Sub(verifyType(e1, intType)._2, verifyType(e2, intType)._2)(expr.pos)
     case Greater(e1, e2) =>
-      verifyType(e1, intType, charType)
-      verifyType(e2, intType, charType)
+      Greater(verifyType(e1, intType, charType)._2, verifyType(e2, intType, charType)._2)(expr.pos)
     case GreaterEqual(e1, e2) =>
-      verifyType(e1, intType, charType)
-      verifyType(e2, intType, charType)
+      GreaterEqual(verifyType(e1, intType, charType)._2, verifyType(e2, intType, charType)._2)(
+        expr.pos
+      )
     case Less(e1, e2) =>
-      verifyType(e1, intType, charType)
-      verifyType(e2, intType, charType)
+      Less(verifyType(e1, intType, charType)._2, verifyType(e2, intType, charType)._2)(expr.pos)
     case LessEqual(e1, e2) =>
-      verifyType(e1, intType, charType)
-      verifyType(e2, intType, charType)
+      LessEqual(verifyType(e1, intType, charType)._2, verifyType(e2, intType, charType)._2)(
+        expr.pos
+      )
     case Equal(e1, e2) =>
-      verifyType(e2, getType(e1))
+      val (t1, newE1) = getType(e1)
+      Equal(newE1, verifyType(e2, t1)._2)(expr.pos)
     case NotEqual(e1, e2) =>
-      verifyType(e2, getType(e1))
+      val (t1, newE1) = getType(e1)
+      NotEqual(newE1, verifyType(e2, t1)._2)(expr.pos)
     case And(e1, e2) =>
-      verifyType(e1, boolType)
-      verifyType(e2, boolType)
+      And(verifyType(e1, boolType)._2, verifyType(e2, boolType)._2)(expr.pos)
     case Or(e1, e2) =>
-      verifyType(e1, boolType)
-      verifyType(e2, boolType)
+      Or(verifyType(e1, boolType)._2, verifyType(e2, boolType)._2)(expr.pos)
   }
 
   private def errorTypePrettyPrint(t: WaccType, innerType: WaccType): (String, String) = t match {
@@ -337,20 +330,32 @@ object SemanticChecker {
       errors: ListBuffer[Error],
       lines: Seq[String],
       source: String
-  ): Unit = stmt match {
-    case Exit(e) => verifyType(e, intType)
-    case If(e, s1, s2) =>
-      verifyType(e, boolType)
-      verifyStmt(s2)
-      verifyStmt(s1)
-    case While(e, s) =>
-      verifyType(e, boolType)
-      verifyStmt(s)
-    case Print(e)   => verifyType(e, anyType)
-    case Println(e) => verifyType(e, anyType)
+  ): Stmt = stmt match
+    case Exit(e)       => Exit(verifyType(e, intType)._2)(stmt.pos)
+    case If(e, s1, s2) => If(verifyType(e, boolType)._2, verifyStmt(s2), verifyStmt(s1))(stmt.pos)
+    case While(e, s)   => While(verifyType(e, boolType)._2, verifyStmt(s))(stmt.pos)
+    case Print(e) =>
+      verifyType(e, anyType) match
+        case (BoolType(), newE)              => PrintB(newE)(stmt.pos)
+        case (CharType(), newE)              => PrintC(newE)(stmt.pos)
+        case (IntType(), newE)               => PrintI(newE)(stmt.pos)
+        case (StringType(), newE)            => PrintS(newE)(stmt.pos)
+        case (ArrayType(_), newE)            => PrintA(newE)(stmt.pos)
+        case (NonErasedPairType(_, _), newE) => PrintP(newE)(stmt.pos)
+        case _                               => stmt
+
+    case Println(e) =>
+      verifyType(e, anyType) match
+        case (BoolType(), newE)              => PrintlnB(newE)(stmt.pos)
+        case (CharType(), newE)              => PrintlnC(newE)(stmt.pos)
+        case (IntType(), newE)               => PrintlnI(newE)(stmt.pos)
+        case (StringType(), newE)            => PrintlnS(newE)(stmt.pos)
+        case (ArrayType(_), newE)            => PrintlnA(newE)(stmt.pos)
+        case (NonErasedPairType(_, _), newE) => PrintlnP(newE)(stmt.pos)
+        case _                               => stmt
     case Read(e) =>
       getType(e) match {
-        case UnknownType() =>
+        case (UnknownType(), _) =>
           errors +=
             ErrorBuilder.specializedError(
               Seq(
@@ -359,7 +364,8 @@ object SemanticChecker {
               ),
               stmt.pos
             )
-        case errT @ (FirstErrorType(_) | SecondErrorType(_)) =>
+          stmt
+        case (errT @ (FirstErrorType(_) | SecondErrorType(_)), _) =>
           val (unMsg, msgChar) =
             errorTypePrettyPrint(errT, charType)
           val (_, msgInt) =
@@ -371,30 +377,21 @@ object SemanticChecker {
               Seq(),
               errT.pos
             )
-        case t =>
-          if (!compatible(t, intType) && !compatible(t, charType))
-            errors +=
-              ErrorBuilder.vanillaError(
-                t.toString(),
-                s"int or char",
-                Seq(),
-                stmt.pos
-              )
+          stmt
+        case _ =>
+          verifyType(e, intType, charType) match
+            case (CharType(), newE) => ReadC(newE)(stmt.pos)
+            case (IntType(), newE)  => ReadI(newE)(stmt.pos)
+            case _                  => stmt
       }
-    case Declare((t, Ident(name)), v) => {
-      if (!st.addSymbol(name, t)) {
-        errors +=
-          ErrorBuilder.specializedError(
-            Seq(s"Scope error: illegal redeclaration of variable $name "),
-            stmt.pos
-          )
-      }
-      getType(v) match {
+    case Declare((t, id @ Ident(name)), e) =>
+      val (vt, newE) = getType(e)
+      vt match
         case errT @ (FirstErrorType(_) | SecondErrorType(_)) =>
           val (unMsg, msg) = errorTypePrettyPrint(errT, t)
           errors +=
             ErrorBuilder.vanillaError(unMsg, msg, Seq(), errT.pos)
-        case vt =>
+        case _ =>
           if (!compatible(vt, t))
             errors +=
               ErrorBuilder.vanillaError(
@@ -403,14 +400,20 @@ object SemanticChecker {
                 Seq(),
                 stmt.pos
               )
+      if (!st.addSymbol(name, t)) {
+        errors +=
+          ErrorBuilder.specializedError(
+            Seq(s"Scope error: illegal redeclaration of variable $name "),
+            stmt.pos
+          )
       }
-    }
-    case Assign(v1, v2) =>
-      (getType(v1), getType(v2)) match {
+      Declare((t, id.renamed(st.unshadow(name).get)), newE)(stmt.pos)
+    case Assign(e1, e2) =>
+      (getType(e1), getType(e2)) match
         case (
-              FirstErrorType(_) | SecondErrorType(_),
-              FirstErrorType(_) | SecondErrorType(_)
-            ) | (UnknownType(), UnknownType()) =>
+              (FirstErrorType(_) | SecondErrorType(_)) -> _,
+              (FirstErrorType(_) | SecondErrorType(_)) -> _
+            ) | (UnknownType() -> _, UnknownType() -> _) =>
           errors +=
             ErrorBuilder.specializedError(
               Seq(
@@ -420,15 +423,18 @@ object SemanticChecker {
               ),
               stmt.pos
             )
-        case (errT @ (FirstErrorType(_) | SecondErrorType(_)), t) =>
+          stmt
+        case ((errT @ (FirstErrorType(_) | SecondErrorType(_))) -> _, t -> _) =>
           val (unMsg, msg) = errorTypePrettyPrint(errT, t)
           errors +=
             ErrorBuilder.vanillaError(unMsg, msg, Seq(), errT.pos)
-        case (t, errT @ (FirstErrorType(_) | SecondErrorType(_))) =>
+          stmt
+        case (t -> _, (errT @ (FirstErrorType(_) | SecondErrorType(_))) -> _) =>
           val (unMsg, msg) = errorTypePrettyPrint(errT, t)
           errors +=
             ErrorBuilder.vanillaError(unMsg, msg, Seq(), errT.pos)
-        case (t1, t2) =>
+          stmt
+        case (t1 -> newE1, t2 -> newE2) =>
           if (!compatible(t1, t2))
             errors +=
               ErrorBuilder.vanillaError(
@@ -437,19 +443,23 @@ object SemanticChecker {
                 Seq(),
                 stmt.pos
               )
-      }
+          Assign(newE1, newE2)(stmt.pos)
     case Begin(stmt) => verifyStmt(stmt)
     case Block(sts) =>
       st.enterScope()
-      sts.foreach(verifyStmt)
+      val newSts = sts.map(verifyStmt)
       st.exitScope()
-    case Skip() =>
+      Block(newSts)(stmt.pos)
+    case Skip() => stmt
     case Free(e) =>
       verifyType(
         e,
-        ArrayType(anyType)(defaultPos),
+        arrayType,
         NonErasedPairType(anyType, anyType)(defaultPos)
-      )
+      ) match
+        case ArrayType(_) -> newE            => FreeA(newE)(stmt.pos)
+        case NonErasedPairType(_, _) -> newE => FreeP(newE)(stmt.pos)
+        case _                               => stmt
     case Return(e) =>
       st.returnType match
         case None =>
@@ -460,5 +470,7 @@ object SemanticChecker {
             )
         case Some(returnType) =>
           verifyType(e, returnType)
-  }
+      stmt
+
+    case _ => stmt
 }
