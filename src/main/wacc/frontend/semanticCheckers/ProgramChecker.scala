@@ -2,7 +2,7 @@ package semanticCheckers
 
 import ast.*
 import errors.*
-import scala.collection.mutable.ListBuffer
+import scala.collection.mutable.{ListBuffer, Set}
 import common.SymbolTable
 
 object ProgramChecker {
@@ -41,8 +41,9 @@ object ProgramChecker {
     // add params to symbol table
     f.ps match {
       case Some(ParamList(params)) =>
+        val paramSet: Set[(String, WaccType)] = Set()
         params.foreach { (p: Param) =>
-          if (!st.addSymbol("::check_" ++ p.i.name, p.t)) {
+          if (!paramSet.add((p.i.name, p.t))) {
             errors +=
               ErrorBuilder.specializedError(
                 Seq(

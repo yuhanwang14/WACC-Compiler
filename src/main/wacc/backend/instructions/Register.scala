@@ -2,18 +2,16 @@ package instructions
 
 sealed trait Register extends Operand {
   val number: Int
+  def asW: WRegister = WRegister(number)
+  def asX: XRegister = XRegister(number)
 }
 
 class XRegister(override val number: Int) extends Register {
   override def toString(): String = f"x$number"
-
-  def asW: WRegister = WRegister(number)
 }
 
 class WRegister(override val number: Int) extends Register {
   override def toString(): String = f"w$number"
-
-  def asX: XRegister = XRegister(number)
 }
 
 case object ip0 extends XRegister(16)
