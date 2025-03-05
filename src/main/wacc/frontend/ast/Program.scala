@@ -53,13 +53,11 @@ case class Print(e: Expr)(val pos: (Int, Int)) extends Stmt:
   def asC: Stmt = PrintC(e)(pos)
   def asS: Stmt = PrintS(e)(pos)
   def asP: Stmt = PrintP(e)(pos)
-  def asA: Stmt = PrintA(e)(pos)
 case class PrintB(e: Expr)(val pos: (Int, Int)) extends Stmt
 case class PrintI(e: Expr)(val pos: (Int, Int)) extends Stmt
 case class PrintC(e: Expr)(val pos: (Int, Int)) extends Stmt
 case class PrintS(e: Expr)(val pos: (Int, Int)) extends Stmt
 case class PrintP(e: Expr)(val pos: (Int, Int)) extends Stmt
-case class PrintA(e: Expr)(val pos: (Int, Int)) extends Stmt
 
 // Generic `Println` and type-specific variations
 case class Println(e: Expr)(val pos: (Int, Int)) extends Stmt:
@@ -68,13 +66,11 @@ case class Println(e: Expr)(val pos: (Int, Int)) extends Stmt:
   def asC: Stmt = PrintlnC(e)(pos)
   def asS: Stmt = PrintlnS(e)(pos)
   def asP: Stmt = PrintlnP(e)(pos)
-  def asA: Stmt = PrintlnA(e)(pos)
 case class PrintlnB(e: Expr)(val pos: (Int, Int)) extends Stmt
 case class PrintlnI(e: Expr)(val pos: (Int, Int)) extends Stmt
 case class PrintlnC(e: Expr)(val pos: (Int, Int)) extends Stmt
 case class PrintlnS(e: Expr)(val pos: (Int, Int)) extends Stmt
 case class PrintlnP(e: Expr)(val pos: (Int, Int)) extends Stmt
-case class PrintlnA(e: Expr)(val pos: (Int, Int)) extends Stmt
 
 case class If(cond: Expr, t: Stmt, e: Stmt)(val pos: (Int, Int)) extends Stmt
 case class While(cond: Expr, s: Stmt)(val pos: (Int, Int)) extends Stmt

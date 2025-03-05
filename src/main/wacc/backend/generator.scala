@@ -37,10 +37,8 @@ object Generator {
       LabelHeader("main"),
       Comment("push {fp, lr}")(4),
       STP(fp, lr, PreIndex(sp, ImmVal(-16))),
-      // pushCode,
       MOV(fp, sp),
       generateBlock(prog.s, RegisterMap(Seq(), 10), symbolTable.currentScope.children.head),
-      // popCode,
       Comment("pop {fp, lr}")(4),
       LDP(fp, lr, PreIndex(sp, ImmVal(-16))),
       RET
@@ -77,8 +75,7 @@ object Generator {
 
     if (extraStackSpace > 0)
       asmLines += SUBS(sp, sp, ImmVal(extraStackSpace))
-
-    // TODO: implement all statement cases
+      
     for (stmt <- stmts) {
       stmt match {
 
@@ -116,6 +113,7 @@ object Generator {
 
           asmLines += LabelHeader(afterLabel)
           asmLines += Comment(s"TODO: evaluate $cond and bcond to $loopLabel")(4)
+          asmLines += generateExpr(cond, registerMap, scope)
         }
 
         case Begin(block) => {
@@ -137,48 +135,63 @@ object Generator {
             case reg: Register => asmLines += MOV(reg, XRegister(8))
             case offset: Int => {
               varType match {
-                case BoolType() | CharType() => STURB(WRegister(8), Offset(fp, ImmVal(offset)))
-                case IntType()               => STUR(WRegister(8), Offset(fp, ImmVal(offset)))
-                case _                       => STUR(XRegister(8), Offset(fp, ImmVal(offset)))
+                case BoolType() | CharType() => asmLines += STURB(WRegister(8), Offset(fp, ImmVal(offset)))
+                case IntType()               => asmLines += STUR(WRegister(8), Offset(fp, ImmVal(offset)))
+                case _                       => asmLines += STUR(XRegister(8), Offset(fp, ImmVal(offset)))
               }
             }
           }
         }
 
-        // TODO: need to implement generateLValue
-        case Assign(lValue, rValue) => ???
+        case Assign(lValue, rValue) => {
+          asmLines += AsmFunction(
+            generateRValue(rValue, registerMap, scope),
+            generateLValue(lValue, registerMap, scope)
+          )
+        }
 
-        // TODO: need the type of expr to decide the location of result (x0 or x8)
         case Return(expr) => {
           asmLines += generateExpr(expr, registerMap, scope)
+          asmLines += MOV(XRegister(0), XRegister(8))
         }
 
-        // TODO: need the type of expr to decide the function called for print
-        case Print(expr) => {
-          val (pushCode, popCode) =
+        case PrintB(expr) => asmLines += generatePrint(expr, registerMap, scope, 'b')
+        case PrintC(expr) => asmLines += generatePrint(expr, registerMap, scope, 'c')
+        case PrintI(expr) => asmLines += generatePrint(expr, registerMap, scope, 'i')
+        case PrintP(expr) => asmLines += generatePrint(expr, registerMap, scope, 'p')
+        case PrintS(expr) => asmLines += generatePrint(expr, registerMap, scope, 's')
+
+        case PrintlnB(expr) => asmLines += generatePrint(expr, registerMap, scope, 'b', true)
+        case PrintlnC(expr) => asmLines += generatePrint(expr, registerMap, scope, 'c', true)
+        case PrintlnI(expr) => asmLines += generatePrint(expr, registerMap, scope, 'i', true)
+        case PrintlnP(expr) => asmLines += generatePrint(expr, registerMap, scope, 'p', true)
+        case PrintlnS(expr) => asmLines += generatePrint(expr, registerMap, scope, 's', true)
+
+        case FreeP(expr) => {
+          val (pushCode, popCode) = 
             pushAndPopRegisters(registerMap.usedCallerRegisters.map(XRegister(_)).to(ArrayBuffer))
-          asmLines += pushCode
-          asmLines += generateExpr(expr, registerMap, scope, XRegister(0))
-          // asmLines += ???
-          asmLines += popCode
+          asmLines += AsmFunction(
+            pushCode,
+            generateExpr(expr, registerMap, scope),
+            SUBS(XRegister(0), XRegister(8), ImmVal(4)),
+            BL("free"),
+            popCode
+          )
+          _predefinedFuncs += P_Freepair
         }
 
-        // TODO: need the type of expr to decide the function called for print
-        case Println(expr) => {
-          val (pushCode, popCode) =
+        case FreeA(expr) => {
+          val (pushCode, popCode) = 
             pushAndPopRegisters(registerMap.usedCallerRegisters.map(XRegister(_)).to(ArrayBuffer))
-          asmLines += pushCode
-          asmLines += generateExpr(expr, registerMap, scope, XRegister(0))
-          // asmLines += ???
-          asmLines += AsmSnippet("_println")(0)
-          asmLines += popCode
+          asmLines += AsmFunction(
+            pushCode,
+            generateExpr(expr, registerMap, scope),
+            BL("_freepair")
+          )
         }
 
-        // TODO: need the type of expr to decide the content of freeing
-        case Free(expr) => ???
-
-        // TODO: need to implement generateLValue
-        case Read(lvalue) => ???
+        case ReadC(lValue) => asmLines += generateRead(lValue, registerMap, scope, 'c')
+        case ReadI(lValue) => asmLines += generateRead(lValue, registerMap, scope, 'i')
 
         case _ =>
       }
@@ -188,6 +201,53 @@ object Generator {
       asmLines += ADDS(sp, sp, ImmVal(extraStackSpace))
 
     AsmFunction(asmLines.to(Seq)*)
+  }
+
+  // TODO: need to add corresponding predefined function
+  private def generatePrint(
+    expr: Expr, 
+    registerMap: RegisterMap,
+    scope: Scope,
+    suffix: Char,
+    newline: Boolean = false
+  )(implicit
+    symbolTable: SymbolTable
+  ): AsmSnippet = {
+    val (pushCode, popCode) = 
+      pushAndPopRegisters(registerMap.usedCallerRegisters.map(XRegister(_)).to(ArrayBuffer))
+    AsmFunction(
+      pushCode,
+      generateExpr(expr, registerMap, scope, XRegister(0)),
+      BL(f"_print${suffix}"),
+      if newline then BL("_println") else EmptyAsmSnippet,
+      popCode
+    )
+  }
+
+  private def generateRead(
+    lValue: LValue,
+    registerMap: RegisterMap,
+    scope: Scope,
+    suffix: Char
+  )(implicit
+    symbolTable: SymbolTable
+  ): AsmSnippet = {
+    val (pushCode, popCode) = 
+      pushAndPopRegisters(registerMap.usedCallerRegisters.map(XRegister(_)).to(ArrayBuffer))
+    val code = AsmFunction(
+      pushCode,
+      lValue match {
+        case pairElem: PairElem => generateRValue(pairElem, registerMap, scope)
+        case otherwise: Expr    => generateExpr(otherwise, registerMap, scope)
+      },
+      MOV(WRegister(0), WRegister(8)),
+      BL(f"_read$suffix"),
+      MOV(WRegister(8), WRegister(0)),
+      popCode,
+      generateLValue(lValue, registerMap, scope)
+    )
+    _predefinedFuncs += (if suffix == 'i' then P_Readi else P_Readc)
+    code
   }
 
   private def generateFunc(func: Func)(implicit
@@ -206,8 +266,9 @@ object Generator {
         .map(x => (s"_func_${funcName}_params::" + x.i.name, TypeBridge.fromAst(x.t)))
 
     // TODO: temporarily push all registers saved by Callee
-    val numOfVariables = 10
-    val calleeRegisters: ArrayBuffer[Register] = (19 to 28).map(n => XRegister(n)).to(ArrayBuffer)
+    val numOfVariables = symbolTable.currentScope.maxConcurrentVars
+    println(numOfVariables)
+    val calleeRegisters: ArrayBuffer[Register] = (1 to numOfVariables).map(n => XRegister(19 + n - 1)).to(ArrayBuffer)
     val (pushCode, popCode) = pushAndPopRegisters(calleeRegisters)
     val registerMap: RegisterMap = RegisterMap(params, numOfVariables)
 
@@ -299,8 +360,8 @@ object Generator {
 
       case First(lvalue) => {
         lvalue match {
-          case pairElem: PairElem => generateRValue(pairElem, registerMap, scope)
-          case otherwise: Expr    => generateExpr(otherwise, registerMap, scope)
+          case pairElem: PairElem => asmLines += generateRValue(pairElem, registerMap, scope)
+          case otherwise: Expr    => asmLines += generateExpr(otherwise, registerMap, scope)
         }
         asmLines += AsmFunction(
           CMP(XRegister(8), ImmVal(0)),
@@ -312,8 +373,8 @@ object Generator {
 
       case Second(lValue) => {
         lValue match {
-          case pairElem: PairElem => generateRValue(pairElem, registerMap, scope)
-          case otherwise: Expr    => generateExpr(otherwise, registerMap, scope)
+          case pairElem: PairElem => asmLines += generateRValue(pairElem, registerMap, scope)
+          case otherwise: Expr    => asmLines += generateExpr(otherwise, registerMap, scope)
         }
         asmLines += AsmFunction(
           CMP(XRegister(8), ImmVal(0)),
@@ -323,7 +384,7 @@ object Generator {
         )
       }
 
-      case expr: Expr =>
+      case expr: Expr => asmLines += generateExpr(expr, registerMap, scope)
 
       case _ =>
 
