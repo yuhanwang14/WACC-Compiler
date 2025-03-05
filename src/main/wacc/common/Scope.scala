@@ -74,10 +74,10 @@ class GlobalScope extends Scope:
 class FunctionScope(
     identifer: String,
     override val returnType: Option[FrontEndType],
-    paramList: Iterable[(String, FrontEndType)]
+    val params: Iterable[(String, FrontEndType)]
 ) extends Scope:
   override val prefix = Scope.FunctionIdentifierPrefix + identifer
-  paramList.map((identifier, varType) =>
+  params.map((identifier, varType) =>
     val prefixedId = prefix + Scope.FunctionParameterPrefix + Scope.PrefixSeparator + identifier
     shadower(identifier) = prefixedId
     varTable(prefixedId) = varType
