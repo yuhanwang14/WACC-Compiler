@@ -399,7 +399,9 @@ object Generator {
           case reg: Register => asmLines += MOV(dest, reg)
           case offset: Int   => asmLines += LDUR(dest, Offset(fp, ImmVal(offset)))
       }
-      case ArrayElem(identName, exprs) => ??? // TODO: Array
+      case ArrayElem(ident, exprs) => {
+
+      }
       case Paren(e)                    => generateExpr(e, registerMap, scope, dest)
       case e: UnaryOp => asmLines += generateUnary(e, registerMap, scope, dest) // Unary Operations
       case e: BinaryOp =>
@@ -418,9 +420,6 @@ object Generator {
       symbolTable: SymbolTable
   ): AsmSnippet = {
     val asmLines: ListBuffer[AsmSnippet] = ListBuffer()
-    val w9 = WRegister(9)
-    val w10 = WRegister(10)
-    val w11 = WRegister(11)
 
     binaryOp match {
       case Or(expr1, expr2) => {
@@ -570,6 +569,7 @@ object Generator {
   ): AsmSnippet = {
     val asmLines: ListBuffer[AsmSnippet] = ListBuffer()
     val x1 = XRegister(1)
+    val x9 = WRegister(9)
     val w9 = WRegister(9)
 
     unaryOp match {
@@ -585,7 +585,10 @@ object Generator {
         _predefinedFuncs += P_ErrOverflow
         _predefinedFuncs += P_Prints
       }
-      case Len(e) => ??? // TODO: Array
+      case Len(e) => {
+        asmLines += generateExpr(e, registerMap, scope, x9)
+        asmLines += LDUR(dest.asW, Offset(x9, ImmVal(-4)))
+      }
       case Ord(e) => {
         asmLines += generateExpr(e, registerMap, scope, w9)
         asmLines += MOV(dest.asW, w9)
