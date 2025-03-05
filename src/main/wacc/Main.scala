@@ -7,6 +7,7 @@ import java.io.File
 import scala.util.*
 import scala.io.Source
 import scala.collection.mutable.ListBuffer
+import _root_.backend.Generator
 
 object Main {
   val exitStatusSuccess = 0

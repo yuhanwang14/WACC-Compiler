@@ -474,7 +474,7 @@ object Generator {
         asmLines += generateExpr(expr1, registerMap, scope, w9)
         asmLines += generateExpr(expr2, registerMap, scope, w10)
         asmLines += SMULL(dest, w9, w10)
-        asmLines += CMP(dest, dest.asW, Some(Extend.SXTW))
+        asmLines += CMP(dest, dest.asW, Some(SXTW()))
         asmLines += BCond(asmGlobal ~ P_ErrOverflow, Cond.NE)
         _predefinedFuncs += P_ErrOverflow
         _predefinedFuncs += P_Prints
