@@ -42,32 +42,30 @@ object SemanticChecker {
       source: String
   ): (WaccType, List[Expr]) =
     val tes = es.map(getType)
-    (
-      tes.map(_._1).distinct match {
-        case Nil => arrayType
-        case ts @ (head :: tail) =>
-          val (resultType, invalid) = tail.foldLeft((head, false)) {
-            case ((currentType, isInvalid), t) =>
-              if (isInvalid) (currentType, true)
-              else if (compatible(currentType, t)) (t, false)
-              else if (compatible(t, currentType)) (currentType, false)
-              else (currentType, true)
-          }
-          if (invalid) {
-            errors += ErrorBuilder.specializedError(
-              Seq(
-                "Type Error: array literal mismatch",
-                s"literal contains mix of ${ts.mkString(", ")}"
-              ),
-              es.head.pos
-            )
-            anyType
-          } else {
-            resultType
-          }
-      },
-      tes.map(_._2)
+    (tes.map(_._1).distinct match
+      case Nil => anyType
+      case ts @ (head :: tail) =>
+        val (resultType, invalid) = tail.foldLeft((head, false)) {
+          case ((currentType, isInvalid), t) =>
+            if (isInvalid) (currentType, true)
+            else if (compatible(currentType, t)) (t, false)
+            else if (compatible(t, currentType)) (currentType, false)
+            else (currentType, true)
+        }
+        if (invalid) {
+          errors += ErrorBuilder.specializedError(
+            Seq(
+              "Type Error: array literal mismatch",
+              s"literal contains mix of ${ts.mkString(", ")}"
+            ),
+            es.head.pos
+          )
+          anyType
+        } else {
+          resultType
+        }
     )
+      -> tes.map(_._2)
 
   private def getType(expr: Expr)(implicit
       st: SymbolTable,
@@ -124,8 +122,8 @@ object SemanticChecker {
           case (t, Nil) => (t, List())
           case (ArrayType(t), head :: tail) =>
             val e = verifyType(head, intType)._2
-            val rem = getArrayElemType(t, tail)
-            (rem._1, e +: rem._2)
+            val (elemT, rem) = getArrayElemType(t, tail)
+            (elemT, e +: rem)
           case (t, _) =>
             errors +=
               ErrorBuilder.specializedError(
@@ -133,9 +131,19 @@ object SemanticChecker {
                 id.pos
               )
             (anyType, exprs)
-      val (t, newId) = getType(id: Expr).asInstanceOf[(WaccType, Ident)]
+      val (t, newId) = getType(id: Expr)
       val (_, newEs) = getArrayElemType(t, es)
-      t -> ArrayElem(newId, newEs)(expr.pos)
+      (t match
+        case ArrayType(elemT) => elemT
+        case _                => anyType
+      )
+        -> ArrayElem(
+          (newId match
+            case i: Ident => i
+            case _        => id
+          ),
+          newEs
+        )(expr.pos)
   }
 
   private def getType(rVal: RValue)(implicit
@@ -146,7 +154,7 @@ object SemanticChecker {
   ): (WaccType, RValue) = rVal match {
     case ArrayLiter(es) =>
       val (t, newEs) = commonAncestor(es)
-      (t, ArrayLiter(newEs)(rVal.pos))
+      (ArrayType(t)(defaultPos), ArrayLiter(newEs)(rVal.pos))
 
     case NewPair(e1, e2) => {
       val (t1, newE1) = getType(e1)
@@ -225,28 +233,46 @@ object SemanticChecker {
       lines: Seq[String],
       source: String
   ): (WaccType, LValue) = lVal match {
-    case v: RValue => getType(v: RValue).asInstanceOf[(WaccType, LValue)]
+    case v: RValue =>
+      getType(v: RValue) match
+        case (t, newE: LValue) => t -> newE
+        case (t, _)            => throw Exception()
   }
 
-  private def verifyType[T <: LValue | RValue](expr: T, expT: WaccType*)(implicit
+  private def verifyTypeHelper(t: WaccType, expT: Iterable[WaccType])(pos: (Int, Int))(implicit
       st: SymbolTable,
       errors: ListBuffer[Error],
       lines: Seq[String],
       source: String
-  ): (WaccType, T) =
-    val (t, newE) = expr match
-      case e: LValue => getType(e)
-      case e: RValue => getType(e)
-
+  ) =
     if (expT.forall(!compatible(t, _)))
       errors +=
         ErrorBuilder.vanillaError(
           s"${t.toString()}",
           expT.mkString(", "),
           Seq(),
-          expr.pos
+          pos
         )
-    (t, newE.asInstanceOf[T])
+
+  private def verifyType(expr: Expr, expT: WaccType*)(implicit
+      st: SymbolTable,
+      errors: ListBuffer[Error],
+      lines: Seq[String],
+      source: String
+  ): (WaccType, Expr) =
+    val (t, newE) = getType(expr)
+    verifyTypeHelper(t, expT)(expr.pos)
+    (t, newE)
+
+  private def verifyType(expr: LValue, expT: WaccType*)(implicit
+      st: SymbolTable,
+      errors: ListBuffer[Error],
+      lines: Seq[String],
+      source: String
+  ): (WaccType, LValue) =
+    val (t, newE) = getType(expr)
+    verifyTypeHelper(t, expT)(expr.pos)
+    (t, newE)
 
   private def verifyUnary(expr: UnaryOp)(implicit
       st: SymbolTable,
