@@ -16,38 +16,48 @@ class BackendSpec extends AnyFunSuite {
   val qemuPath = "/usr/aarch64-linux-gnu/"
 
   object CompilerRunner {
-      /* Runs the `compile` command as an external process */
-      def compile(fileName: String): Int = {
-          val compileCmd = s"./compile $fileName"
-          val exitCode = compileCmd.!  // Execute shell command
-          exitCode
-      }
+    /* Runs the `compile` command and captures both exit code and output */
+    def compile(fileName: String): (Int, String) = {
+      val compileCmd = s"./compile $fileName"
+      val output = new StringBuilder
+      val exitCode = compileCmd ! ProcessLogger(output.append(_))
+      (exitCode, output.toString)
+    }
   }
 
-  def testFile(fileName: String): Unit = test(s"Backend Test: $fileName") {
-      val asmFile = fileName.stripSuffix(".wacc") + ".s"
-      val exeFile = "program"
-      val expectedOutputFile = fileName.stripSuffix(".wacc") + ".expected"
+  def testFile(fileName: String, isValid: Boolean): Unit = test(s"${if (isValid) "Valid" else "Invalid"} Backend Test: $fileName") {
+    val asmFile = fileName.stripSuffix(".wacc") + ".s"
+    val exeFile = "program"
+    val expectedOutputFile = fileName.stripSuffix(".wacc") + ".expected"
 
-      // 🔹 Run the `compile` script and assert success
-      val compileExitCode = CompilerRunner.compile(fileName)
+    // Compile the file
+    val (compileExitCode, errorOutput) = CompilerRunner.compile(fileName)
+
+    if (isValid) {
+      // Expected behavior for valid files
       assert(compileExitCode == 0, s"Compilation failed for $fileName with exit code $compileExitCode")
-
-      // Ensure assembly file was created
       assert(new File(asmFile).exists(), s"Missing assembly file: $asmFile")
 
-      // Assemble the code using AArch64 GCC
+      // Assemble and run
       val assembleCmd = s"aarch64-linux-gnu-gcc -o $exeFile -z noexecstack -march=armv8-a $asmFile"
       assert(assembleCmd.! == 0, s"Assembly failed for $asmFile")
 
-      // Run the program in QEMU emulator
       val actualOutput = s"qemu-aarch64 -L $qemuPath $exeFile".!!
-
-      // Compare actual vs expected output
       val expectedOutput = Source.fromFile(expectedOutputFile).getLines().mkString("\n")
       assert(actualOutput.trim == expectedOutput.trim, s"Output mismatch for $fileName")
+
+    } else {
+      // Expected behavior for invalid files
+      assert(
+        compileExitCode == 100 || compileExitCode == 200,
+        s"Unexpected exit code $compileExitCode for $fileName (Expected 100 or 200)"
+      )
+      assert(!new File(asmFile).exists(), s"Assembly file $asmFile should NOT be generated for invalid program")
+      assert(errorOutput.contains("error"), s"Expected error message in output for $fileName")
+    }
   }
 
-  validFiles.foreach(testFile)
-  invalidFiles.foreach(testFile)
+  // Run tests for all files
+  validFiles.foreach(testFile(_, isValid = true))
+  invalidFiles.foreach(testFile(_, isValid = false))
 }
