@@ -1,41 +1,77 @@
-// package testCode
+package testCode
 
-// import org.scalatest.funsuite.AnyFunSuite
-// import scala.sys.process._
-// import java.io.File
-// import scala.io.Source
+import org.scalatest.funsuite.AnyFunSuite
+import scala.sys.process._
+import java.io.File
+import scala.io.Source
+import scala.util.Using
+import wacc.backend.BackendCompiler  
+import common.FileUtil
+class BackendSpec extends AnyFunSuite {
 
-// class BackendSpec extends AnyFunSuite {
+  // Update test lists before running
+  TestFiles.updateFileLists()
 
-//   // Update test lists before running
-//   TestFiles.updateFileLists()
+  val validFiles = TestFiles.validFiles
+  val invalidFiles = TestFiles.invalidFiles
 
-//   val validFiles = TestFiles.validFiles
-//   val invalidFiles = TestFiles.invalidFiles
+  val qemuPath = "/usr/aarch64-linux-gnu/"
 
-//   val qemuPath = "/usr/aarch64-linux-gnu/"
+  def testFile(fileName: String, isValid: Boolean): Unit = test(s"${if (isValid) "Valid" else "Invalid"} Backend Test: $fileName") {
+    val asmFile = fileName.stripSuffix(".wacc") + ".s"
+    val exeFile = "program"
+    val expectedOutputFile = fileName.stripSuffix(".wacc") + ".expected"
 
-//   def testFile(fileName: String): Unit = test(s"Backend Test: $fileName") {
-//       val asmFile = fileName.stripSuffix(".wacc") + ".s"
-//       val exeFile = "program"
-//       val expectedOutputFile = fileName.stripSuffix(".wacc") + ".expected"
+    val compileExitCode = BackendCompiler.compile(fileName)
 
-//       val compileCmd = s"./compile $fileName"
-//       assert(compileCmd.! == 0, s"Compilation failed for $fileName")
 
-//       // Ensure assembly file was created
-//       assert(new File(asmFile).exists(), s"Missing assembly file: $asmFile")
 
-//       val assembleCmd = s"aarch64-linux-gnu-gcc -o $exeFile -z noexecstack -march=armv8-a $asmFile"
-//       assert(assembleCmd.! == 0, s"Assembly failed for $asmFile")
+    if (isValid) {
+      try {
+        // For valid files, expect successful compilation
+        assert(compileExitCode == 0, s"Compilation failed for $fileName with exit code $compileExitCode")
 
-//       val actualOutput = s"qemu-aarch64 -L $qemuPath $exeFile".!!
-//       val expectedOutput = Source.fromFile(expectedOutputFile).getLines().mkString("\n")
+        // Write the assembly file using our utility
+        FileUtil.writeFile(asmFile, BackendCompiler.outputString) match {
+          case scala.util.Success(_)  =>
+          case scala.util.Failure(ex) =>
+            fail(s"Failed to write assembly file: ${ex.getMessage}")
+        }
 
-//       assert(actualOutput.trim == expectedOutput.trim, s"Output mismatch for $fileName")
-//     }
+        // The assembly file should be generated
+        assert(new File(asmFile).exists(), s"Missing assembly file: $asmFile")
 
-//   validFiles.foreach{ testFile }
+        // Assemble the generated assembly file
+        val assembleCmd = s"aarch64-linux-gnu-gcc -o $exeFile -z noexecstack -march=armv8-a $asmFile"
+        assert(assembleCmd.! == 0, s"Assembly failed for $asmFile")
 
-//   // invalidFiles.foreach{ testFile }
-// }
+        // Run the executable in QEMU and capture its output
+        val actualOutput = s"qemu-aarch64 -L $qemuPath $exeFile".!!
+        
+        // Read expected output using Using for resource management
+        val expectedOutput = Using(Source.fromFile(expectedOutputFile)) { source =>
+          source.getLines().mkString("\n")
+        }.getOrElse("")
+
+        assert(actualOutput.trim == expectedOutput.trim, s"Output mismatch for $fileName")
+      } finally {
+        FileUtil.deleteFile(asmFile)
+      }
+    
+      
+    } else {
+      // For invalid files, expect exit code 100 or 200 and no assembly file
+      assert(
+        compileExitCode == 100 || compileExitCode == 200,
+        s"Unexpected exit code $compileExitCode for $fileName (Expected 100 or 200)"
+      )
+      assert(!new File(asmFile).exists(), s"Assembly file $asmFile should NOT be generated for invalid program")
+    }
+
+  }
+
+  /* Run tests for all valid and invalid files */
+  
+  // validFiles.foreach(testFile(_, isValid = true))
+  invalidFiles.foreach(testFile(_, isValid = false))
+}
