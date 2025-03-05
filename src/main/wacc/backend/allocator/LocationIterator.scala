@@ -1,13 +1,12 @@
-package backend
+package backend.allocator
 
 import instructions.{WRegister, XRegister}
 
 class LocationIterator(paramCount: Int) {
-
   val regSeq: Seq[Int] = (19 to 28) ++ (paramCount to 7) ++ (10 to 15) :+ 18
   var at: Int = 0
   var stackOffset: Int = 0
-  
+
   def next(size: Int): Location =
     if at == regSeq.size then
       val retVal = stackOffset
@@ -18,3 +17,4 @@ class LocationIterator(paramCount: Int) {
       at += 1
       retVal
 }
+

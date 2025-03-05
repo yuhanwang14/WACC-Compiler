@@ -2,7 +2,6 @@ package backend
 
 import ast.*
 import common.SymbolTable
-import common.types.TypeBridge
 import instructions.*
 import instructions.AsmLabeling.*
 import scala.collection.mutable.ListBuffer
@@ -40,7 +39,7 @@ object Generator {
       STP(fp, lr, PreIndex(sp, ImmVal(-16))),
       // pushCode,
       MOV(fp, sp),
-      generateBlock(prog.s, RegisterAllocator(), symbolTable.currentScope.children.head),
+      generateBlock(prog.s, RegisterMap(), symbolTable.currentScope.children.head),
       // popCode,
       Comment("pop {fp, lr}")(4),
       LDP(fp, lr, PreIndex(sp, ImmVal(-16))),
@@ -53,7 +52,7 @@ object Generator {
 
   private def generateBlock(
       block: Stmt,
-      allocator: RegisterAllocator,
+      allocator: RegisterMap,
       scope: Scope
   )(implicit
       symbolTable: SymbolTable
@@ -86,7 +85,7 @@ object Generator {
         case If(cond, b1, b2) => {
           val thenLabel = asmLocal ~ localLabelCount
           val afterLabel = asmLocal ~ (localLabelCount + 1)
-          var newAllocator: RegisterAllocator = allocator.clone()
+          var newAllocator: RegisterMap = allocator.clone()
 
           localLabelCount += 2
           asmLines += Comment(s"TODO: evaluate $cond and bcond to $thenLabel")(4)
@@ -109,7 +108,7 @@ object Generator {
         case While(cond, block) => {
           val afterLabel = asmLocal ~ localLabelCount
           val loopLabel = asmLocal ~ (localLabelCount + 1)
-          val newAllocator: RegisterAllocator = allocator.clone()
+          val newAllocator: RegisterMap = allocator.clone()
           localLabelCount += 2
 
           asmLines += B(loopLabel)
@@ -122,7 +121,7 @@ object Generator {
         }
 
         case Begin(block) => {
-          val newAllocator: RegisterAllocator = allocator.clone()
+          val newAllocator: RegisterMap = allocator.clone()
           asmLines += generateBlock(block, newAllocator, subScopes.head)
           subScopes = subScopes.tail
         }
@@ -212,7 +211,7 @@ object Generator {
     val params =
       func.ps.fold(List())(x => x.ps).map(x => (s"_func_${funcName}_params::" + x.i.name, x.t))
     val numOfParams: Int = params.size
-    val allocator: RegisterAllocator = RegisterAllocator(numOfVariables, numOfParams)
+    val allocator: RegisterMap = RegisterMap(numOfVariables, numOfParams)
     for ((name, paramType) <- params) {
       allocator.addParam(name, TypeBridge.fromAst(paramType).byteSize)
     }
@@ -237,7 +236,7 @@ object Generator {
     */
   private def generateRValue(
       rvalue: RValue,
-      allocator: RegisterAllocator,
+      allocator: RegisterMap,
       scope: Scope
   )(implicit
       symbolTable: SymbolTable
@@ -337,7 +336,7 @@ object Generator {
     */
   private def generateLValue(
       lValue: LValue,
-      allocator: RegisterAllocator,
+      allocator: RegisterMap,
       scope: Scope
   )(implicit
       symbolTable: SymbolTable
@@ -375,7 +374,7 @@ object Generator {
     */
   private def generateExpr(
       expr: Expr,
-      allocator: RegisterAllocator,
+      allocator: RegisterMap,
       scope: Scope,
       dest: Register = XRegister(8)
   )(implicit
@@ -414,7 +413,7 @@ object Generator {
 
   private def generateBinary(
     binaryOp: BinaryOp,
-    allocator: RegisterAllocator,
+    allocator: RegisterMap,
     scope: Scope,
     dest: Register = XRegister(8)
   )(implicit
@@ -510,7 +509,7 @@ object Generator {
       expr1: Expr,
       expr2: Expr,
       cond: Cond,
-      allocator: RegisterAllocator,
+      allocator: RegisterMap,
       scope: Scope,
       dest: Register = XRegister(8)
   )(implicit
@@ -528,7 +527,7 @@ object Generator {
 
   private def generateUnary(
       unaryOp: UnaryOp,
-      allocator: RegisterAllocator,
+      allocator: RegisterMap,
       scope: Scope,
       dest: Register = XRegister(8)
   )(implicit
@@ -575,7 +574,7 @@ object Generator {
   private def pushArgs(
       funcName: String,
       argList: List[Expr],
-      allocator: RegisterAllocator,
+      allocator: RegisterMap,
       scope: Scope
   )(implicit
       symbolTable: SymbolTable
