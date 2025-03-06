@@ -53,6 +53,8 @@ case class TST(Rd: Register, opr: Operand) extends Instruction(f"tst $Rd, $opr")
 
 case class NEGS(Rd: Register, Rn: Register) extends Instruction(f"negs $Rd, $Rn")
 
+case class CBNZ(Rd: Register, label: String) extends Instruction(f"cbnz $Rd, $label")
+
 case class CBZ(Rd: Register, label: String) extends Instruction(f"cbz $Rd, $label")
 
 case class ADR(Rd: Register, label: String) extends Instruction(f"adr $Rd, $label")

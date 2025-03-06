@@ -54,7 +54,7 @@ object Generator {
   )(implicit
       symbolTable: SymbolTable
   ): AsmSnippet = {
-
+    val w8 = WRegister(8)
     val stmts: List[Stmt] = block match {
       case Block(sts) => sts
       case _          => List()
@@ -74,18 +74,17 @@ object Generator {
 
     if (extraStackSpace > 0)
       asmLines += SUBS(sp, sp, ImmVal(extraStackSpace))
-      
+
     for (stmt <- stmts) {
       stmt match {
 
-        // TODO: implement branching
         case If(cond, b1, b2) => {
           val thenLabel = asmLocal ~ localLabelCount
           val afterLabel = asmLocal ~ (localLabelCount + 1)
 
           localLabelCount += 2
-          asmLines += Comment(s"TODO: evaluate $cond and bcond to $thenLabel")(4)
-
+          asmLines += generateExpr(cond, registerMap, scope)
+          asmLines += CBNZ(w8, thenLabel)
           // generate `else` block
           asmLines += generateBlock(b2, registerMap, subScopes.head)
           subScopes = subScopes.tail
@@ -99,7 +98,6 @@ object Generator {
           asmLines += LabelHeader(afterLabel)
         }
 
-        // TODO: implement branching
         case While(cond, block) => {
           val afterLabel = asmLocal ~ localLabelCount
           val loopLabel = asmLocal ~ (localLabelCount + 1)
@@ -109,10 +107,9 @@ object Generator {
           asmLines += LabelHeader(loopLabel)
           asmLines += generateBlock(block, registerMap, subScopes.head)
           subScopes = subScopes.tail
-
           asmLines += LabelHeader(afterLabel)
-          asmLines += Comment(s"TODO: evaluate $cond and bcond to $loopLabel")(4)
           asmLines += generateExpr(cond, registerMap, scope)
+          asmLines += CBNZ(w8, loopLabel)
         }
 
         case Begin(block) => {
@@ -135,9 +132,10 @@ object Generator {
             case reg: Register => asmLines += MOV(reg, XRegister(8))
             case offset: Int => {
               varType match {
-                case BoolType() | CharType() => asmLines += STURB(WRegister(8), Offset(fp, ImmVal(offset)))
-                case IntType()               => asmLines += STUR(WRegister(8), Offset(fp, ImmVal(offset)))
-                case _                       => asmLines += STUR(XRegister(8), Offset(fp, ImmVal(offset)))
+                case BoolType() | CharType() =>
+                  asmLines += STURB(WRegister(8), Offset(fp, ImmVal(offset)))
+                case IntType() => asmLines += STUR(WRegister(8), Offset(fp, ImmVal(offset)))
+                case _         => asmLines += STUR(XRegister(8), Offset(fp, ImmVal(offset)))
               }
             }
           }
@@ -168,7 +166,7 @@ object Generator {
         case PrintlnS(expr) => asmLines += generatePrint(expr, registerMap, scope, 's', true)
 
         case FreeP(expr) => {
-          val (pushCode, popCode) = 
+          val (pushCode, popCode) =
             pushAndPopRegisters(registerMap.usedCallerRegisters.map(XRegister(_)).to(ArrayBuffer))
           asmLines += AsmFunction(
             pushCode,
@@ -181,7 +179,7 @@ object Generator {
         }
 
         case FreeA(expr) => {
-          val (pushCode, popCode) = 
+          val (pushCode, popCode) =
             pushAndPopRegisters(registerMap.usedCallerRegisters.map(XRegister(_)).to(ArrayBuffer))
           asmLines += AsmFunction(
             pushCode,
@@ -205,15 +203,15 @@ object Generator {
 
   // TODO: need to add corresponding predefined function
   private def generatePrint(
-    expr: Expr, 
-    registerMap: RegisterMap,
-    scope: Scope,
-    suffix: Char,
-    newline: Boolean = false
+      expr: Expr,
+      registerMap: RegisterMap,
+      scope: Scope,
+      suffix: Char,
+      newline: Boolean = false
   )(implicit
-    symbolTable: SymbolTable
+      symbolTable: SymbolTable
   ): AsmSnippet = {
-    val (pushCode, popCode) = 
+    val (pushCode, popCode) =
       pushAndPopRegisters(registerMap.usedCallerRegisters.map(XRegister(_)).to(ArrayBuffer))
     AsmFunction(
       pushCode,
@@ -226,14 +224,14 @@ object Generator {
   }
 
   private def generateRead(
-    lValue: LValue,
-    registerMap: RegisterMap,
-    scope: Scope,
-    suffix: Char
+      lValue: LValue,
+      registerMap: RegisterMap,
+      scope: Scope,
+      suffix: Char
   )(implicit
-    symbolTable: SymbolTable
+      symbolTable: SymbolTable
   ): AsmSnippet = {
-    val (pushCode, popCode) = 
+    val (pushCode, popCode) =
       pushAndPopRegisters(registerMap.usedCallerRegisters.map(XRegister(_)).to(ArrayBuffer))
     val code = AsmFunction(
       pushCode,
@@ -269,7 +267,8 @@ object Generator {
     // TODO: temporarily push all registers saved by Callee
     val numOfVariables = symbolTable.currentScope.maxConcurrentVars
     println(numOfVariables)
-    val calleeRegisters: ArrayBuffer[Register] = (1 to numOfVariables).map(n => XRegister(19 + n - 1)).to(ArrayBuffer)
+    val calleeRegisters: ArrayBuffer[Register] =
+      (1 to numOfVariables).map(n => XRegister(19 + n - 1)).to(ArrayBuffer)
     val (pushCode, popCode) = pushAndPopRegisters(calleeRegisters)
     val registerMap: RegisterMap = RegisterMap(params, numOfVariables)
 
@@ -434,7 +433,7 @@ object Generator {
   private def generateExpr(
       expr: Expr,
       registerMap: RegisterMap,
-      scope: Scope,
+      scope: Scope
   )(implicit
       symbolTable: SymbolTable
   ): AsmSnippet = {
@@ -461,10 +460,8 @@ object Generator {
           case reg: Register => asmLines += MOV(x8, reg)
           case offset: Int   => asmLines += LDUR(x8, Offset(fp, ImmVal(offset)))
       }
-      case ArrayElem(ident, exprs) => {
-
-      }
-      case Paren(e)                    => generateExpr(e, registerMap, scope)
+      case ArrayElem(ident, exprs) => ??? // TODO: Array load
+      case Paren(e)                => asmLines += generateExpr(e, registerMap, scope)
       case e: UnaryOp => asmLines += generateUnary(e, registerMap, scope) // Unary Operations
       case e: BinaryOp =>
         asmLines += generateBinary(e, registerMap, scope) // Binary Operations
@@ -476,13 +473,13 @@ object Generator {
   private def generateBinary(
       binaryOp: BinaryOp,
       registerMap: RegisterMap,
-      scope: Scope,
+      scope: Scope
   )(implicit
       symbolTable: SymbolTable
   ): AsmSnippet = {
     val asmLines: ListBuffer[AsmSnippet] = ListBuffer()
     val w8 = WRegister(8)
-    
+
     binaryOp match {
       case Or(expr1, expr2) => {
         asmLines += generateExpr(expr2, registerMap, scope)
@@ -537,7 +534,7 @@ object Generator {
       expr2: Expr,
       cond: Cond,
       registerMap: RegisterMap,
-      scope: Scope,
+      scope: Scope
   )(implicit
       symbolTable: SymbolTable
   ): AsmSnippet = {
@@ -557,7 +554,7 @@ object Generator {
       expr2: Expr,
       operation: String,
       registerMap: RegisterMap,
-      scope: Scope,
+      scope: Scope
   )(implicit
       symbolTable: SymbolTable
   ): AsmSnippet = {
@@ -596,7 +593,7 @@ object Generator {
       expr2: Expr,
       operation: String,
       registerMap: RegisterMap,
-      scope: Scope,
+      scope: Scope
   )(implicit
       symbolTable: SymbolTable
   ): AsmSnippet = {
@@ -626,7 +623,7 @@ object Generator {
   private def generateUnary(
       unaryOp: UnaryOp,
       registerMap: RegisterMap,
-      scope: Scope,
+      scope: Scope
   )(implicit
       symbolTable: SymbolTable
   ): AsmSnippet = {
@@ -672,7 +669,6 @@ object Generator {
 
     AsmFunction(asmLines.toList*)
   }
-
 
   /** Generate assemply code to calculate a list of expr and push them into the stack. Return a list
     * of code string and an offset indicating the amount of stack space needed
