@@ -3,7 +3,6 @@ package testcode
 import frontend.parser.*
 import org.scalatest.funsuite.AnyFunSuite
 import java.io.File
-import scala.jdk.CollectionConverters.*
 import scala.util.{Success, Failure}
 import scala.io.Source
 import semanticCheckers.ProgramChecker

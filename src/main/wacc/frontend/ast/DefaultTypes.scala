@@ -1,7 +1,5 @@
 package frontend.ast
 
-import scala.compiletime.ops.any
-
 object DefaultTypes {
   val defaultPos: (Int, Int) = (-1, -1)
   val anyType: WaccType = AnyType()(defaultPos)

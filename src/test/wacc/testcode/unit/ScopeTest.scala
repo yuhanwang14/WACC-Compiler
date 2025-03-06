@@ -1,6 +1,6 @@
 import org.scalatest.funsuite.AnyFunSuite
 
-import common.{Scope, GlobalScope, ChildScope, FunctionScope}
+import common.{Scope, GlobalScope, FunctionScope}
 import frontend.ast.{boolType, charType, intType, stringType, pairType, arrayType}
 
 class ScopeTest extends AnyFunSuite:
