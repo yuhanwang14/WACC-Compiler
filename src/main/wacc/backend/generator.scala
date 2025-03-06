@@ -431,12 +431,12 @@ object Generator {
           }
         }
       }
-
-      case ArrayElem(Ident(name), exprs) => {}
-      case First(lValue)                 =>
+      // TODO: Array & Pair
+      case ArrayElem(Ident(name), exprs) => ???
+      case First(lValue)                 => ???
 
       case Second(lValue)                => ???
-      case _                             =>
+      case _                             => throw Exception()
     }
     AsmFunction(asmLines.toList*)
   }
