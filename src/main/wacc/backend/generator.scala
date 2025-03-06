@@ -17,13 +17,16 @@ object Generator:
   private val stringConsts: MutableMap[String, Int] = MutableMap()
   private val predefFuncs: MutableSet[PredefinedFunc] = MutableSet()
 
+  private def addPredefFunc(f: PredefinedFunc) = synchronized(predefFuncs.add(f))
+
   def generate(prog: Program)(implicit symbolTable: FrozenSymbolTable): String =
     val mainFuture = Future(generateMain(prog.s))
-    val funcsFuture = 
-      prog.fs.map:
-        case f @ Func((_, Ident(name)), _, _) =>
-          Future(generateFunc(f, symbolTable.getFuncScope(name)))
-      .toSeq
+    val funcsFuture =
+      prog.fs
+        .map:
+          case f @ Func((_, Ident(name)), _, _) =>
+            Future(generateFunc(f, symbolTable.getFuncScope(name)))
+        .toSeq
 
     join(
       Await.result(mainFuture, Duration.Inf),
@@ -39,10 +42,12 @@ object Generator:
     join(
       DataHeader(),
       join(
-        stringConsts
-          .map: (str, index) =>
-            LabelledStringConst(asmLocal ~ f".str$index", str)
-          .toSeq*
+        stringConsts.synchronized(
+          stringConsts
+            .map: (str, index) =>
+              LabelledStringConst(asmLocal ~ f".str$index", str)
+            .toSeq
+        )*
       ),
       TextHeader(),
       GlobalHeader("main"),
@@ -181,7 +186,7 @@ object Generator:
           BL("free"),
           popCode
         )
-        predefFuncs += P_Freepair
+        addPredefFunc(P_Freepair)
 
       case FreeA(expr) =>
         val (pushCode, popCode) =
@@ -468,9 +473,11 @@ object Generator:
         case BoolLiter(x) => MOV(w8, ImmVal(if (x) then 1 else 0))
         case CharLiter(c) => MOV(w8, ImmVal(c))
         case StrLiter(s) =>
-          var index = stringConsts.size
-          if (stringConsts.contains(s)) then index = stringConsts(s)
-          else stringConsts(s) = index
+          val index = stringConsts.synchronized:
+            if stringConsts.contains(s) then stringConsts(s)
+            else
+              stringConsts(s) = stringConsts.size
+              stringConsts.size
           join(
             ADRP(x8, asmLocal ~ f".str$index"),
             ADD(x8, x8, Lo12(asmLocal ~ f".str$index"))
@@ -497,16 +504,16 @@ object Generator:
               varType match
                 case ArrayType(insideType) =>
                   subIndexing = unwrap(insideType, exprs.tail)
-                  predefFuncs += P_ArrLoad8
+                  addPredefFunc(P_ArrLoad8)
                   BL("_arrLoad8")
                 case x: IntType =>
-                  predefFuncs += P_ArrLoad4
+                  addPredefFunc(P_ArrLoad4)
                   BL("_arrLoad4")
                 case x: (BoolType | CharType) =>
-                  predefFuncs += P_ArrLoad1
+                  addPredefFunc(P_ArrLoad1)
                   BL("_arrLoad1")
                 case _ =>
-                  predefFuncs += P_ArrLoad8
+                  addPredefFunc(P_ArrLoad8)
                   BL("_arrLoad8")
               ,
               MOV(XRegister(8), XRegister(7)),
@@ -613,8 +620,8 @@ object Generator:
   )(implicit
       symbolTable: FrozenSymbolTable
   ): StringBuilder =
-    predefFuncs += P_ErrOverflow
-    predefFuncs += P_Prints
+    addPredefFunc(P_ErrOverflow)
+    addPredefFunc(P_Prints)
     val w8 = WRegister(8)
     val x8 = XRegister(8)
     val w9 = WRegister(9)
@@ -653,8 +660,8 @@ object Generator:
   )(implicit
       symbolTable: FrozenSymbolTable
   ): StringBuilder =
-    predefFuncs += P_ErrDivZero
-    predefFuncs += P_Prints
+    addPredefFunc(P_ErrDivZero)
+    addPredefFunc(P_Prints)
     val w8 = WRegister(8)
     val w9 = WRegister(9)
 
@@ -693,8 +700,8 @@ object Generator:
           CSET(w8, Cond.NE)
         )
       case Negate(e) =>
-        predefFuncs += P_ErrOverflow
-        predefFuncs += P_Prints
+        addPredefFunc(P_ErrOverflow)
+        addPredefFunc(P_Prints)
         join(
           generateExpr(e, registerMap, scope),
           MOV(w9, w8),
@@ -709,8 +716,8 @@ object Generator:
         )
       case Ord(e) => generateExpr(e, registerMap, scope)
       case Chr(e) =>
-        predefFuncs += P_ErrBadChar
-        predefFuncs += P_Prints
+        addPredefFunc(P_ErrBadChar)
+        addPredefFunc(P_Prints)
         join(
           generateExpr(e, registerMap, scope),
           TST(w8, ImmVal(0xffffff80)),
