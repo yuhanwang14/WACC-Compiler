@@ -85,6 +85,7 @@ sealed abstract class PredefinedArr(
       case _ => EmptyAsmSnippet
     }
     AsmFunction(
+      LabelHeader(asmGlobal ~ f"_$name"),
       STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
       CMP(WRegister(17), ImmVal(0)),
       CSEL(XRegister(1), XRegister(17), XRegister(1), Cond.LT),

@@ -129,7 +129,8 @@ object Generator {
           val varType = ti._1
           val location = registerMap(name)
           location._1 match {
-            case reg: Register => asmLines += MOV(reg, XRegister(8))
+            case reg: WRegister => asmLines += MOV(reg, WRegister(8))
+            case reg: XRegister => asmLines += MOV(reg, XRegister(8))
             case offset: Int => {
               varType match {
                 case BoolType() | CharType() =>
@@ -142,10 +143,8 @@ object Generator {
         }
 
         case Assign(lValue, rValue) => {
-          asmLines += AsmFunction(
-            generateRValue(rValue, registerMap, scope),
-            generateLValue(lValue, registerMap, scope)
-          )
+          asmLines += generateRValue(rValue, registerMap, scope)
+          asmLines += generateLValue(lValue, registerMap, scope)
         }
 
         case Return(expr) => {
@@ -218,7 +217,7 @@ object Generator {
       case 'i' => P_Printi
       case 'p' => P_Printp
       case 's' => P_Prints
-      case _ => P_Printp
+      case _   => P_Printp
     }
     _predefinedFuncs += printFunc
     AsmFunction(
@@ -341,10 +340,10 @@ object Generator {
       }
 
       case First(lValue) =>
-        asmLines += generatePairElem(lValue, 0, registerMap, scope)
+        asmLines += generatePairElemRValue(lValue, 0, registerMap, scope)
 
       case Second(lValue) =>
-        asmLines += generatePairElem(lValue, 1, registerMap, scope)
+        asmLines += generatePairElemRValue(lValue, 8, registerMap, scope)
 
       case expr: Expr => asmLines += generateExpr(expr, registerMap, scope)
 
@@ -354,7 +353,7 @@ object Generator {
     AsmFunction(asmLines.to(Seq)*)
   }
 
-  private def generatePairElem(
+  private def generatePairElemRValue(
       lValue: LValue,
       offset: Int,
       registerMap: RegisterMap,
@@ -421,7 +420,8 @@ object Generator {
         val location = registerMap(name)
         val varType = scope.lookupSymbol(name).getOrElse(anyType)
         location._1 match {
-          case reg: Register => asmLines += MOV(reg, XRegister(8))
+          case reg: WRegister => asmLines += MOV(reg, WRegister(8))
+          case reg: XRegister => asmLines += MOV(reg, XRegister(8))
           case offset: Int => {
             varType match {
               case BoolType() | CharType() =>
@@ -431,13 +431,38 @@ object Generator {
           }
         }
       }
-      // TODO: Array & Pair
+      // TODO: Array 
       case ArrayElem(Ident(name), exprs) => ???
-      case First(lValue)                 => ???
 
-      case Second(lValue)                => ???
-      case _                             => throw Exception()
+      case First(lValue)  => generatePairElemLValue(lValue, 0, registerMap, scope)
+      case Second(lValue) => generatePairElemLValue(lValue, 8, registerMap, scope)
+
+      case _ => throw Exception()
     }
+    AsmFunction(asmLines.toList*)
+  }
+
+  private def generatePairElemLValue(
+      lValue: LValue,
+      offset: Int,
+      registerMap: RegisterMap,
+      scope: Scope
+  )(implicit
+      symbolTable: SymbolTable
+  ): AsmSnippet = {
+    val asmLines: ListBuffer[AsmSnippet] = ListBuffer()
+    val x8 = XRegister(8)
+    val x9 = XRegister(9)
+    asmLines += STP(XRegister(8), xzr, PreIndex(sp, ImmVal(-16)))
+    lValue match {
+      case pairElem: PairElem => asmLines += generateRValue(pairElem, registerMap, scope)
+      case otherwise: Expr    => asmLines += generateExpr(otherwise, registerMap, scope)
+    }
+    asmLines += MOV(x9, x8)
+    asmLines += CMP(x9, ImmVal(0))
+    asmLines += BCond("_errNull", Cond.EQ)
+    asmLines += LDP(x8, xzr, PostIndex(sp, ImmVal(16)))
+    asmLines += STR(x8, Offset(x9, ImmVal(offset)))
     AsmFunction(asmLines.toList*)
   }
 
@@ -471,7 +496,8 @@ object Generator {
       case PairLiter() => asmLines += MOV(x8, ImmVal(0))
       case Ident(name) => {
         registerMap(name)._1 match
-          case reg: Register => asmLines += MOV(x8, reg)
+          case reg: WRegister => asmLines += MOV(w8, reg)
+          case reg: XRegister => asmLines += MOV(x8, reg)
           case offset: Int   => asmLines += LDUR(x8, Offset(fp, ImmVal(offset)))
       }
       case ArrayElem(Ident(name), exprs) => {
@@ -492,9 +518,9 @@ object Generator {
           var subIndexing: AsmSnippet = EmptyAsmSnippet
           varType match {
             case ArrayType(insideType) =>
-               _predefinedFuncs += P_ArrLoad8
-               asmLines += BL("_arrLoad8")
-               subIndexing = unwrap(insideType, exprs.tail)
+              _predefinedFuncs += P_ArrLoad8
+              asmLines += BL("_arrLoad8")
+              subIndexing = unwrap(insideType, exprs.tail)
             case x: IntType =>
               _predefinedFuncs += P_ArrLoad4
               asmLines += BL("_arrLoad4")
@@ -514,7 +540,7 @@ object Generator {
         val arrayType = scope.lookupSymbol(name).get
         asmLines += unwrap(arrayType, exprs)
       }
-      case Paren(e)                => generateExpr(e, registerMap, scope)
+      case Paren(e)   => generateExpr(e, registerMap, scope)
       case e: UnaryOp => asmLines += generateUnary(e, registerMap, scope) // Unary Operations
       case e: BinaryOp =>
         asmLines += generateBinary(e, registerMap, scope) // Binary Operations
