@@ -233,7 +233,8 @@ object Generator {
   ): AsmSnippet = {
     val (pushCode, popCode) =
       pushAndPopRegisters(registerMap.usedCallerRegisters.map(XRegister(_)).to(ArrayBuffer))
-    val code = AsmFunction(
+    _predefinedFuncs += (if suffix == 'i' then P_Readi else P_Readc)
+    AsmFunction(
       pushCode,
       lValue match {
         case pairElem: PairElem => generateRValue(pairElem, registerMap, scope)
@@ -245,8 +246,6 @@ object Generator {
       popCode,
       generateLValue(lValue, registerMap, scope)
     )
-    _predefinedFuncs += (if suffix == 'i' then P_Readi else P_Readc)
-    code
   }
 
   private def generateFunc(func: Func)(implicit
@@ -254,7 +253,6 @@ object Generator {
   ): AsmSnippet = {
 
     val funcName: String = func.ti._2.name
-    val asmLines: ListBuffer[AsmSnippet] = ListBuffer()
     symbolTable.enterFunctionScope(funcName)
 
     // extract all parameters from symbolTable, allocate register or memory
@@ -272,7 +270,7 @@ object Generator {
     val (pushCode, popCode) = pushAndPopRegisters(calleeRegisters)
     val registerMap: RegisterMap = RegisterMap(params, numOfVariables)
 
-    asmLines += AsmFunction(
+    AsmFunction(
       LabelHeader(f"wacc_$funcName"),
       Comment("push {fp, lr}")(4),
       STP(fp, lr, PreIndex(sp, ImmVal(-16))),
@@ -285,7 +283,6 @@ object Generator {
       LDP(fp, lr, PreIndex(sp, ImmVal(-16))),
       RET
     )
-    AsmFunction(asmLines.to(Seq)*)
   }
 
   /** Generate assembly code to evaluate the result of a rvalue.
@@ -298,9 +295,7 @@ object Generator {
       symbolTable: SymbolTable
   ): AsmSnippet = {
     val asmLines: ListBuffer[AsmSnippet] = ListBuffer()
-    // TODO
-    rvalue match
-
+    rvalue match {
       case Call(Ident(funcName), ArgList(argList)) => {
         val (pushCode, popCode) =
           pushAndPopRegisters(registerMap.usedCallerRegisters.map(XRegister(_)).to(ArrayBuffer))
@@ -311,35 +306,16 @@ object Generator {
         asmLines += argPushCode
         asmLines += BL(asmGlobal ~ f"wacc_$funcName")
         asmLines += MOV(XRegister(8), XRegister(0))
-
         if (offset > 0)
           asmLines += ADDS(sp, sp, ImmVal(offset))
         asmLines += popCode
       }
 
-      // TODO: need the type of expr to infer the size of array
-      // Currently assume that the size of element is 4
-      case ArrayLiter(exprs) => {
-        val (pushCode, popCode) =
-          pushAndPopRegisters(registerMap.usedCallerRegisters.map(XRegister(_)).to(ArrayBuffer))
-        val typeSize = 4
-        val arrayLen = exprs.length
-        asmLines += AsmFunction(
-          pushCode,
-          MOV(WRegister(0), ImmVal(4 + typeSize * arrayLen)),
-          BL("_malloc"),
-          MOV(ip0, XRegister(0)),
-          popCode,
-          ADDS(ip0, ip0, ImmVal(4)),
-          MOV(WRegister(8), ImmVal(arrayLen)),
-          STUR(WRegister(8), Offset(ip0, ImmVal(-4)))
-        )
-        exprs.zipWithIndex.map { (expr, ind) =>
-          asmLines += generateExpr(expr, registerMap, scope)
-          asmLines += STUR(WRegister(8), Offset(ip0, ImmVal(ind * typeSize)))
-        }
-        asmLines += MOV(XRegister(8), ip0)
-      }
+      case ArrayLiterB(exprs) => asmLines += generateArrayLiter(exprs, 1, registerMap, scope)
+      case ArrayLiterC(exprs) => asmLines += generateArrayLiter(exprs, 1, registerMap, scope)
+      case ArrayLiterI(exprs) => asmLines += generateArrayLiter(exprs, 4, registerMap, scope)
+      case ArrayLiterS(exprs) => asmLines += generateArrayLiter(exprs, 8, registerMap, scope)
+      case ArrayLiterP(exprs) => asmLines += generateArrayLiter(exprs, 8, registerMap, scope)
 
       case NewPair(expr1, expr2) => {
         val (pushCode, popCode) =
@@ -358,37 +334,68 @@ object Generator {
         )
       }
 
-      case First(lvalue) => {
-        lvalue match {
-          case pairElem: PairElem => asmLines += generateRValue(pairElem, registerMap, scope)
-          case otherwise: Expr    => asmLines += generateExpr(otherwise, registerMap, scope)
-        }
-        asmLines += AsmFunction(
-          CMP(XRegister(8), ImmVal(0)),
-          BCond("_errNull", Cond.EQ),
-          MOV(ip0, XRegister(8)),
-          LDUR(XRegister(8), Offset(ip0, ImmVal(0)))
-        )
-      }
+      case First(lValue) =>
+        asmLines += generatePairElem(lValue, 0, registerMap, scope)
 
-      case Second(lValue) => {
-        lValue match {
-          case pairElem: PairElem => asmLines += generateRValue(pairElem, registerMap, scope)
-          case otherwise: Expr    => asmLines += generateExpr(otherwise, registerMap, scope)
-        }
-        asmLines += AsmFunction(
-          CMP(XRegister(8), ImmVal(0)),
-          BCond("_errNull", Cond.EQ),
-          MOV(ip0, XRegister(8)),
-          LDUR(XRegister(8), Offset(ip0, ImmVal(1)))
-        )
-      }
+      case Second(lValue) =>
+        asmLines += generatePairElem(lValue, 1, registerMap, scope)
 
       case expr: Expr => asmLines += generateExpr(expr, registerMap, scope)
 
-      case _ =>
+      case _ => throw Exception()
+    }
 
     AsmFunction(asmLines.to(Seq)*)
+  }
+
+  private def generatePairElem(
+      lValue: LValue,
+      offset: Int,
+      registerMap: RegisterMap,
+      scope: Scope
+  )(implicit
+      symbolTable: SymbolTable
+  ): AsmSnippet = {
+    val asmLines: ListBuffer[AsmSnippet] = ListBuffer()
+    lValue match {
+      case pairElem: PairElem => asmLines += generateRValue(pairElem, registerMap, scope)
+      case otherwise: Expr    => asmLines += generateExpr(otherwise, registerMap, scope)
+    }
+    asmLines += AsmFunction(
+      CMP(XRegister(8), ImmVal(0)),
+      BCond("_errNull", Cond.EQ),
+      MOV(ip0, XRegister(8)),
+      LDUR(XRegister(8), Offset(ip0, ImmVal(offset)))
+    )
+    AsmFunction(asmLines.toList*)
+  }
+
+  private def generateArrayLiter(
+      exprs: List[Expr],
+      typeSize: Int,
+      registerMap: RegisterMap,
+      scope: Scope
+  )(implicit symbolTable: SymbolTable): AsmSnippet = {
+    val asmLines: ListBuffer[AsmSnippet] = ListBuffer()
+    val (pushCode, popCode) =
+      pushAndPopRegisters(registerMap.usedCallerRegisters.map(XRegister(_)).to(ArrayBuffer))
+    val arrayLen = exprs.length
+    asmLines += AsmFunction(
+      pushCode,
+      MOV(WRegister(0), ImmVal(4 + typeSize * arrayLen)),
+      BL("_malloc"),
+      MOV(ip0, XRegister(0)),
+      popCode,
+      ADDS(ip0, ip0, ImmVal(4)),
+      MOV(WRegister(8), ImmVal(arrayLen)),
+      STUR(WRegister(8), Offset(ip0, ImmVal(-4)))
+    )
+    exprs.zipWithIndex.map { (expr, ind) =>
+      asmLines += generateExpr(expr, registerMap, scope)
+      asmLines += STUR(WRegister(8), Offset(ip0, ImmVal(ind * typeSize)))
+    }
+    asmLines += MOV(XRegister(8), ip0)
+    AsmFunction(asmLines.toList*)
   }
 
   /** Generate assembly code to move the content of x8 to a given location
@@ -478,39 +485,23 @@ object Generator {
       symbolTable: SymbolTable
   ): AsmSnippet = {
     val asmLines: ListBuffer[AsmSnippet] = ListBuffer()
-    val w8 = WRegister(8)
-
     binaryOp match {
-      case Or(expr1, expr2) => {
-        asmLines += generateExpr(expr2, registerMap, scope)
-        asmLines += CMP(w8, ImmVal(1))
-        val orLabel = asmLocal ~ localLabelCount
-        asmLines += BCond(orLabel, Cond.EQ)
-        localLabelCount += 1
-        asmLines += generateExpr(expr2, registerMap, scope)
-        asmLines += CMP(w8, ImmVal(1))
-        asmLines += LabelHeader(orLabel)
-        asmLines += CSET(w8, Cond.EQ)
-      }
-      case And(expr1, expr2) => {
-        asmLines += generateExpr(expr2, registerMap, scope)
-        asmLines += CMP(w8, ImmVal(1))
-        val andLabel = asmLocal ~ localLabelCount
-        asmLines += BCond(andLabel, Cond.NE)
-        localLabelCount += 1
-        asmLines += generateExpr(expr2, registerMap, scope)
-        asmLines += CMP(w8, ImmVal(1))
-        asmLines += LabelHeader(andLabel)
-        asmLines += CSET(w8, Cond.EQ)
-      }
+      case Or(expr1, expr2) =>
+        asmLines += generateLogical(expr1, expr2, Cond.EQ, registerMap, scope)
+      case And(expr1, expr2) =>
+        asmLines += generateLogical(expr1, expr2, Cond.NE, registerMap, scope)
 
-      case Equal(expr1, expr2)     => generateComp(expr1, expr2, Cond.EQ, registerMap, scope)
-      case NotEqual(expr1, expr2)  => generateComp(expr1, expr2, Cond.NE, registerMap, scope)
-      case Less(expr1, expr2)      => generateComp(expr1, expr2, Cond.LT, registerMap, scope)
-      case LessEqual(expr1, expr2) => generateComp(expr1, expr2, Cond.LE, registerMap, scope)
-      case Greater(expr1, expr2)   => generateComp(expr1, expr2, Cond.GT, registerMap, scope)
+      case Equal(expr1, expr2) =>
+        asmLines += generateComp(expr1, expr2, Cond.EQ, registerMap, scope)
+      case NotEqual(expr1, expr2) =>
+        asmLines += generateComp(expr1, expr2, Cond.NE, registerMap, scope)
+      case Less(expr1, expr2) => asmLines += generateComp(expr1, expr2, Cond.LT, registerMap, scope)
+      case LessEqual(expr1, expr2) =>
+        asmLines += generateComp(expr1, expr2, Cond.LE, registerMap, scope)
+      case Greater(expr1, expr2) =>
+        asmLines += generateComp(expr1, expr2, Cond.GT, registerMap, scope)
       case GreaterEqual(expr1, expr2) =>
-        generateComp(expr1, expr2, Cond.GE, registerMap, scope)
+        asmLines += generateComp(expr1, expr2, Cond.GE, registerMap, scope)
 
       case Add(expr1, expr2) =>
         asmLines += generateArithmetic1(expr1, expr2, "ADD", registerMap, scope)
@@ -525,6 +516,31 @@ object Generator {
         asmLines += generateArithmetic2(expr1, expr2, "MOD", registerMap, scope)
 
     }
+
+    AsmFunction(asmLines.toList*)
+  }
+
+  private def generateLogical(
+      expr1: Expr,
+      expr2: Expr,
+      cond: Cond,
+      registerMap: RegisterMap,
+      scope: Scope
+  )(implicit
+      symbolTable: SymbolTable
+  ): AsmSnippet = {
+    val asmLines: ListBuffer[AsmSnippet] = ListBuffer()
+    val w8 = WRegister(8)
+    val label = asmLocal ~ localLabelCount
+    localLabelCount += 1
+
+    asmLines += generateExpr(expr1, registerMap, scope)
+    asmLines += CMP(w8, ImmVal(1))
+    asmLines += BCond(label, cond)
+    asmLines += generateExpr(expr2, registerMap, scope)
+    asmLines += CMP(w8, ImmVal(1))
+    asmLines += LabelHeader(label)
+    asmLines += CSET(w8, Cond.EQ)
 
     AsmFunction(asmLines.toList*)
   }

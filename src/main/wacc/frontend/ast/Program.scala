@@ -95,26 +95,22 @@ case class ArrayLiter(es: List[Expr])(val pos: (Int, Int)) extends RValue:
   def toI = ArrayLiterI(es)(pos)
   def toS = ArrayLiterS(es)(pos)
   def toP = ArrayLiterP(es)(pos)
-  def toA = ArrayLiterA(es)(pos)
 case class ArrayLiterB(es: List[Expr])(val pos: (Int, Int)) extends RValue
 case class ArrayLiterC(es: List[Expr])(val pos: (Int, Int)) extends RValue
 case class ArrayLiterI(es: List[Expr])(val pos: (Int, Int)) extends RValue
 case class ArrayLiterS(es: List[Expr])(val pos: (Int, Int)) extends RValue
 case class ArrayLiterP(es: List[Expr])(val pos: (Int, Int)) extends RValue
-case class ArrayLiterA(es: List[Expr])(val pos: (Int, Int)) extends RValue
 case class NewPair(e1: Expr, e2: Expr)(val pos: (Int, Int)) extends RValue:
   def toB = NewPairB(e1, e2)(pos)
   def toC = NewPairC(e1, e2)(pos)
   def toI = NewPairI(e1, e2)(pos)
   def toS = NewPairS(e1, e2)(pos)
   def toP = NewPairP(e1, e2)(pos)
-  def toA = NewPairA(e1, e2)(pos)
 case class NewPairB(e1: Expr, e2: Expr)(val pos: (Int, Int)) extends RValue
 case class NewPairC(e1: Expr, e2: Expr)(val pos: (Int, Int)) extends RValue
 case class NewPairI(e1: Expr, e2: Expr)(val pos: (Int, Int)) extends RValue
 case class NewPairS(e1: Expr, e2: Expr)(val pos: (Int, Int)) extends RValue
 case class NewPairP(e1: Expr, e2: Expr)(val pos: (Int, Int)) extends RValue
-case class NewPairA(e1: Expr, e2: Expr)(val pos: (Int, Int)) extends RValue
 // PairElem
 case class Call(i: Ident, argL: ArgList)(val pos: (Int, Int)) extends RValue
 

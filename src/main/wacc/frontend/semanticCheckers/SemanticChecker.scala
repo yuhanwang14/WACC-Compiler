@@ -153,8 +153,18 @@ object SemanticChecker {
       source: String
   ): (WaccType, RValue) = rVal match {
     case ArrayLiter(es) =>
-      val (t, newEs) = commonAncestor(es)
-      (ArrayType(t)(defaultPos), ArrayLiter(newEs)(rVal.pos))
+      commonAncestor(es) match
+        case (t @ BoolType(), newEs)   => (ArrayType(t)(defaultPos), ArrayLiterB(newEs)(rVal.pos))
+        case (t @ CharType(), newEs)   => (ArrayType(t)(defaultPos), ArrayLiterC(newEs)(rVal.pos))
+        case (t @ IntType(), newEs)    => (ArrayType(t)(defaultPos), ArrayLiterI(newEs)(rVal.pos))
+        case (t @ StringType(), newEs) => (ArrayType(t)(defaultPos), ArrayLiterS(newEs)(rVal.pos))
+        case (t @ ArrayType(_), newEs) => (ArrayType(t)(defaultPos), ArrayLiterP(newEs)(rVal.pos))
+        case (t @ NonErasedPairType(_, _), newEs) =>
+          (ArrayType(t)(defaultPos), ArrayLiterP(newEs)(rVal.pos))
+        case (t, newEs) => (ArrayType(t)(defaultPos), ArrayLiter(newEs)(rVal.pos))
+
+    // case Print(e) =>
+    //   verifyType(e, anyType) match
 
     case NewPair(e1, e2) => {
       val (t1, newE1) = getType(e1)
