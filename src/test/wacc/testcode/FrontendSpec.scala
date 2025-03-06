@@ -6,6 +6,8 @@ import java.io.File
 import scala.util.{Success, Failure}
 import scala.io.Source
 import semanticCheckers.ProgramChecker
+import TestConfig._
+import org.scalatest.Informer
 
 class FrontendSpec extends AnyFunSuite {
 
@@ -51,11 +53,12 @@ class FrontendSpec extends AnyFunSuite {
     }
   }
 
-  validFiles.foreach { fileName =>
+  if (testValid)
+    validFiles.foreach { fileName =>
     test(s"Valid Test: $fileName") { testFile(fileName, shouldPass = true) }
-  }
-
-  invalidFiles.foreach { fileName =>
+    }
+  if (testInvalid)
+    invalidFiles.foreach { fileName =>
     test(s"Invalid Test: $fileName") { testFile(fileName, shouldPass = false) }
-  }
+    } 
 }
