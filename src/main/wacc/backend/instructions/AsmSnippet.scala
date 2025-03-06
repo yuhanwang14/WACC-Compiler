@@ -40,3 +40,8 @@ case class LabelledStringConst(label: String, value: String)
     )(0)
 
 case class LabelHeader(identifier: String) extends AsmSnippet(f"$identifier:")(0)
+
+extension (builder: StringBuilder)
+  def appendAll(codes: AsmSnippet | StringBuilder | String*): StringBuilder =
+    codes.foldLeft(builder): (_, code) =>
+      builder.append(code)
