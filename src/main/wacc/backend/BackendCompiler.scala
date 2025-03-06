@@ -49,7 +49,7 @@ object BackendCompiler {
             // Check semantic correctness using your ProgramChecker
             ProgramChecker.check(prog)(source = filename.split('/').last, lines = lines) match {
               case Right((newProg, symbolTable)) =>
-                implicit val SymbolTable = symbolTable
+                implicit val symTable = symbolTable
                 // Generate assembly code and store it in outputString
                 outputString = Generator.generate(newProg).toString
 

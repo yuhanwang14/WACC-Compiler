@@ -27,9 +27,9 @@ object Generator {
       AsmFunction(
         _stringConsts
           .map((str, index) => {
-            LabelledStringConst(asmLocal ~ f"str$index", str)
+            LabelledStringConst(asmLocal ~ f".str$index", str)
           })
-          .to(Seq)*
+          .toList*
       ),
       TextHeader(),
       GlobalHeader("main"),
@@ -44,7 +44,7 @@ object Generator {
     )
     prog.fs.foreach(func => asmLines += generateFunc(func))
     _predefinedFuncs.foreach(name => asmLines += predefinedFunctions(name))
-    AsmFunction(asmLines.to(Seq)*)
+    AsmFunction(asmLines.toList*)
   }
 
   private def generateBlock(
@@ -197,7 +197,7 @@ object Generator {
     if (extraStackSpace > 0)
       asmLines += ADDS(sp, sp, ImmVal(extraStackSpace))
 
-    AsmFunction(asmLines.to(Seq)*)
+    AsmFunction(asmLines.toList*)
   }
 
   private def generatePrint(
@@ -350,7 +350,7 @@ object Generator {
       case _ => throw Exception()
     }
 
-    AsmFunction(asmLines.to(Seq)*)
+    AsmFunction(asmLines.toList*)
   }
 
   private def generatePairElemRValue(
@@ -787,7 +787,7 @@ object Generator {
       }
       paramCount += 1
     }
-    (AsmFunction(asmLines.to(Seq)*), math.floorDiv(offset + 15, 16) * 16)
+    (AsmFunction(asmLines.toList*), math.floorDiv(offset + 15, 16) * 16)
   }
 
   /** Generate code to push and pop all registers in `regs` to the stack. The generated code works
