@@ -18,6 +18,8 @@ case class LDURB(Rt: Register, address: Address) extends Instruction(f"ldurb $Rt
 
 case class STR(Rt: Register, address: Address) extends Instruction(f"str $Rt, $address")
 
+case class STRB(Rt: Register, address: Address) extends Instruction(f"strb $Rt, $address")
+
 case class STUR(Rt: Register, address: Address) extends Instruction(f"stur $Rt, $address")
 
 case class STURB(Rt: Register, address: Address) extends Instruction(f"sturb $Rt, $address")

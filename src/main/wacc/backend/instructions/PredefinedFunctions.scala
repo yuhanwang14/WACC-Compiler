@@ -67,17 +67,21 @@ sealed abstract class PredefinedPrint(
       RET
     )
 
-sealed abstract class PredefinedArrLoad(
-    override val name: String,
-    val byte: Int
+sealed abstract class PredefinedArr(
+    override val name: String
 ) extends PredefinedFunc(name):
   override val toAsmFunc: AsmFunction =
-    val setupRegister: AsmSnippet = byte match {
-      case 1 => LDRB(WRegister(7), RegisterAddress(XRegister(7), XRegister(17)))
-      case 4 =>
+    val setupRegister: AsmSnippet = name match {
+      case "arrLoad1" => LDRB(WRegister(7), RegisterAddress(XRegister(7), XRegister(17)))
+      case "arrLoad4" =>
         LDR(WRegister(7), RegisterAddress(XRegister(7), XRegister(17), Some(LSL(ImmVal(2)))))
-      case 8 =>
+      case "arrLoad8" =>
         LDR(XRegister(7), RegisterAddress(XRegister(7), XRegister(17), Some(LSL(ImmVal(3)))))
+      case "arrStore1" => STRB(WRegister(8), RegisterAddress(XRegister(7), XRegister(17)))
+      case "arrStore4" =>
+        STR(WRegister(8), RegisterAddress(XRegister(7), XRegister(17), Some(LSL(ImmVal(2)))))
+      case "arrStore8" =>
+        STR(XRegister(8), RegisterAddress(XRegister(7), XRegister(17), Some(LSL(ImmVal(3)))))
       case _ => EmptyAsmSnippet
     }
     AsmFunction(
@@ -170,11 +174,18 @@ case object P_Malloc extends PredefinedMemory("malloc") {
     RET
   )
 }
-case object P_ArrLoad1 extends PredefinedArrLoad("arrLoad1", 1)
+case object P_ArrLoad1 extends PredefinedArr("arrLoad1")
 
-case object P_ArrLoad4 extends PredefinedArrLoad("arrLoad4", 4)
+case object P_ArrLoad4 extends PredefinedArr("arrLoad4")
 
-case object P_ArrLoad8 extends PredefinedArrLoad("arrLoad8", 8)
+case object P_ArrLoad8 extends PredefinedArr("arrLoad8")
+
+case object P_ArrStore1 extends PredefinedArr("arrStore1")
+
+case object P_ArrStore4 extends PredefinedArr("arrStore4")
+
+case object P_ArrStore8 extends PredefinedArr("arrStore8")
+
 
 object PredefinedFunctions {
   private val funcList: List[PredefinedFunc] = List(
@@ -196,7 +207,10 @@ object PredefinedFunctions {
     P_Printb,
     P_ArrLoad1,
     P_ArrLoad4,
-    P_ArrLoad8
+    P_ArrLoad8, 
+    P_ArrStore1, 
+    P_ArrStore4, 
+    P_ArrStore8
   )
 
   private val asmFunclist: List[AsmFunction] = funcList.map(_.toAsmFunc)
