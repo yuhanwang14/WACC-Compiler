@@ -72,7 +72,7 @@ class ChildScope(parentScope: Scope, identifier: String = Scope.ScopeDefaultName
 
 class GlobalScope extends Scope:
   override val prefix = Scope.GlobalScopePrefix
-  val child: Scope = children.head
+  lazy val child: Scope = children.head
 
 class FunctionScope(
     identifer: String,
@@ -85,4 +85,4 @@ class FunctionScope(
     shadower(identifier) = prefixedId
     varTable(prefixedId) = varType
   )
-  val child: Scope = children.head
+  lazy val child: Scope = children.head

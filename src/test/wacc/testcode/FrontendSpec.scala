@@ -7,7 +7,6 @@ import scala.util.{Success, Failure}
 import scala.io.Source
 import semanticCheckers.ProgramChecker
 import TestConfig._
-import org.scalatest.Informer
 
 class FrontendSpec extends AnyFunSuite {
 
