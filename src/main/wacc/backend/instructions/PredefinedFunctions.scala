@@ -2,6 +2,11 @@ package backend.instructions
 
 import AsmLabeling.*
 
+private final val x0 = XRegister(0)
+private final val x1 = XRegister(1)
+private final val x2 = XRegister(2)
+private final val w0 = WRegister(0)
+private final val w1 = WRegister(1)
 
 sealed abstract class PredefinedFunc(val name: String):
   val toAsmFunc: AsmFunction
