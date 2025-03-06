@@ -504,9 +504,10 @@ object SemanticChecker {
               Seq("Return placement error: return outside of function is not allowed"),
               stmt.pos
             )
+          stmt
         case Some(returnType) =>
-          verifyType(e, returnType)
-      stmt
+          val(_, expr) = verifyType(e, returnType)
+          Return(expr)(stmt.pos)
 
     case _ => stmt
 }

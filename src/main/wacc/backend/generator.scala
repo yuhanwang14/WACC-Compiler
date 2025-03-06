@@ -78,7 +78,7 @@ object Generator {
     for (stmt <- stmts) {
       stmt match {
 
-        case If(cond, b1, b2) => {
+        case If(cond, b2, b1) => {
           val thenLabel = asmLocal ~ localLabelCount
           val afterLabel = asmLocal ~ (localLabelCount + 1)
 
@@ -201,7 +201,6 @@ object Generator {
     AsmFunction(asmLines.to(Seq)*)
   }
 
-  // TODO: need to add corresponding predefined function
   private def generatePrint(
       expr: Expr,
       registerMap: RegisterMap,
@@ -213,6 +212,15 @@ object Generator {
   ): AsmSnippet = {
     val (pushCode, popCode) =
       pushAndPopRegisters(registerMap.usedCallerRegisters.map(XRegister(_)).to(ArrayBuffer))
+    val printFunc = suffix match {
+      case 'b' => P_Printb
+      case 'c' => P_Printc
+      case 'i' => P_Printi
+      case 'p' => P_Printp
+      case 's' => P_Prints
+      case _ => P_Printp
+    }
+    _predefinedFuncs += printFunc
     AsmFunction(
       pushCode,
       generateExpr(expr, registerMap, scope),
@@ -262,9 +270,7 @@ object Generator {
         .fold(List())(x => x.ps)
         .map(x => (s"_func_${funcName}_params::" + x.i.name, TypeBridge.fromAst(x.t)))
 
-    // TODO: temporarily push all registers saved by Callee
     val numOfVariables = symbolTable.currentScope.maxConcurrentVars
-    println(numOfVariables)
     val calleeRegisters: ArrayBuffer[Register] =
       (1 to numOfVariables).map(n => XRegister(19 + n - 1)).to(ArrayBuffer)
     val (pushCode, popCode) = pushAndPopRegisters(calleeRegisters)
@@ -426,8 +432,9 @@ object Generator {
         }
       }
 
-      case ArrayElem(Ident(name), exprs) => ???
-      case First(lValue)                 => ???
+      case ArrayElem(Ident(name), exprs) => {}
+      case First(lValue)                 =>
+
       case Second(lValue)                => ???
       case _                             =>
     }
@@ -467,8 +474,47 @@ object Generator {
           case reg: Register => asmLines += MOV(x8, reg)
           case offset: Int   => asmLines += LDUR(x8, Offset(fp, ImmVal(offset)))
       }
-      case ArrayElem(ident, exprs) => ??? // TODO: Array load
-      case Paren(e)                => asmLines += generateExpr(e, registerMap, scope)
+      case ArrayElem(Ident(name), exprs) => {
+
+        // Assume that the array pointer is at x8
+        def unwrap(varType: WaccType, exprs: List[Expr]): AsmSnippet = {
+
+          val asmLines: ListBuffer[AsmSnippet] = ListBuffer()
+          // generate array index and move to ip1
+          asmLines += STP(XRegister(8), xzr, PreIndex(sp, ImmVal(-16)))
+          asmLines += generateExpr(exprs.head, registerMap, scope)
+          asmLines += MOV(ip1, XRegister(8))
+          asmLines += LDP(XRegister(8), xzr, PostIndex(sp, ImmVal(16)))
+
+          asmLines += STP(XRegister(7), xzr, PreIndex(sp, ImmVal(-16)))
+          asmLines += MOV(XRegister(7), XRegister(8))
+
+          var subIndexing: AsmSnippet = EmptyAsmSnippet
+          varType match {
+            case ArrayType(insideType) =>
+               _predefinedFuncs += P_ArrLoad8
+               asmLines += BL("_arrLoad8")
+               subIndexing = unwrap(insideType, exprs.tail)
+            case x: IntType =>
+              _predefinedFuncs += P_ArrLoad4
+              asmLines += BL("_arrLoad4")
+            case x: (BoolType | CharType) =>
+              _predefinedFuncs += P_ArrLoad1
+              asmLines += BL("_arrLoad1")
+            case _ =>
+              _predefinedFuncs += P_ArrLoad8
+              asmLines += BL("_arrLoad8")
+          }
+          asmLines += MOV(XRegister(8), XRegister(7))
+          asmLines += LDP(XRegister(7), xzr, PostIndex(sp, ImmVal(16)))
+          asmLines += subIndexing
+          AsmFunction(asmLines.toList*)
+        }
+        asmLines += generateExpr(Ident(name)((-1, -1)), registerMap, scope)
+        val arrayType = scope.lookupSymbol(name).get
+        asmLines += unwrap(arrayType, exprs)
+      }
+      case Paren(e)                => generateExpr(e, registerMap, scope)
       case e: UnaryOp => asmLines += generateUnary(e, registerMap, scope) // Unary Operations
       case e: BinaryOp =>
         asmLines += generateBinary(e, registerMap, scope) // Binary Operations
