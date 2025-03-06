@@ -27,8 +27,11 @@ object BackendCompiler {
    */
   def compile(filename: String): Int = {
     val src = new File(filename)
+    reset()
+
     if (!src.exists() || !src.canRead) {
       println(s"Can't find or read source file at $filename")
+      
       return exitStatusFailure
     }
 
@@ -36,7 +39,7 @@ object BackendCompiler {
     parse(src) match {
       case Failure(ex) =>
         println(s"Parsing failed: $ex")
-        return exitStatusFailure
+        exitStatusFailure
 
       case Success(result) =>
         result match {
@@ -49,19 +52,24 @@ object BackendCompiler {
                 implicit val SymbolTable = symbolTable
                 // Generate assembly code and store it in outputString
                 outputString = Generator.generate(newProg).toString
+
                 exitStatusSuccess
 
               case Left(errors) =>
                 println("#semantic_error#")
                 errors.foreach(error => println(error.format))
+
                 exitStatusSemanticError
             }
 
           case parsley.Failure(error) =>
             println("#syntax_error#")
             println(error.format)
+
             exitStatusSyntaxError
         }
     }
   }
+
+  private def reset() = { outputString = "" }
 }

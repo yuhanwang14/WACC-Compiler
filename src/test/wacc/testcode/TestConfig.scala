@@ -4,6 +4,10 @@ package testcode
 object TestConfig {
   // Set this flag to true when running locally, false when on the lab machines.
   val localMode: Boolean = false
+  // Set to true when testing valid files
+  val testValid: Boolean = false
+  // Set to true when testing invalid files
+  val testInvalid: Boolean = false
   
   // Define the assembler command based on environment
   val assemblerCmd: String = if (localMode) "aarch64-elf-gcc" else "aarch64-linux-gnu-gcc"

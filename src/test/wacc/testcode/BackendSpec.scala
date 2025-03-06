@@ -71,8 +71,11 @@ class BackendSpec extends AnyFunSuite {
   }
 
   // Run tests for all valid and invalid files
-  // validFiles.foreach(testFile(_, isValid = true))
+  
+  if (testValid) 
+    validFiles.foreach(testFile(_, isValid = true))
 
-  invalidFiles.foreach(testFile(_, isValid = false))
+  if (testInvalid)
+    invalidFiles.foreach(testFile(_, isValid = false))
 }
 
