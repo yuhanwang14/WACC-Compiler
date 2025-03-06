@@ -32,7 +32,7 @@ case class StringConst(value: String) extends Header(f".asciz \"$value\"")(4)
 
 case class LabelledStringConst(label: String, value: String)
     extends MultiLineAsmSnippet(
-      Comment(f"// length of ${label}")(0),
+      Comment(f"length of ${label}")(0),
       WordConst(value.length()),
       LabelHeader(label),
       StringConst(value),
