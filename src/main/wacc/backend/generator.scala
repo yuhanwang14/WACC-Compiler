@@ -32,11 +32,10 @@ object Generator:
       DataHeader(),
       join(
         stringConsts
-          .map:
-            (str, index) =>
+          .map: (str, index) =>
             LabelledStringConst(asmLocal ~ f".str$index", str)
           .toSeq*
-          ),
+      ),
       TextHeader(),
       GlobalHeader("main"),
       LabelHeader("main"),
@@ -77,7 +76,7 @@ object Generator:
       generatedCode.appendAll(
         SUBS(sp, sp, ImmVal(extraStackSpace))
       )
-    
+
     stmts.foreach:
       case If(cond, b2, b1) =>
         val thenLabel = asmLocal ~ localLabelCount
