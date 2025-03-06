@@ -67,6 +67,6 @@ case class B(label: String) extends Instruction(f"b $label")
 
 case class BL(label: String) extends Instruction(f"bl $label")
 
-case class BCond(label: String, cond: Cond) extends Instruction(f"b.$cond 2$label")
+case class BCond(label: String, cond: Cond) extends Instruction(f"b.$cond $label")
 
 case object RET extends Instruction("ret")

@@ -653,21 +653,21 @@ object Generator {
     val x9 = XRegister(9)
 
     asmLines += generateExpr(expr1, registerMap, scope)
-    asmLines += STP(w8, xzr, PreIndex(sp, ImmVal(-16)))
+    asmLines += STP(x8, xzr, PreIndex(sp, ImmVal(-16)))
     asmLines += generateExpr(expr2, registerMap, scope)
     asmLines += LDP(x9, xzr, PostIndex(sp, ImmVal(16)))
 
     operation match {
       case "ADD" =>
         asmLines += ADDS(w8, w9, w8)
-        asmLines += BCond(asmGlobal ~ P_ErrOverflow, Cond.VS)
+        asmLines += BCond(asmGlobal ~ "_errOverflow", Cond.VS)
       case "SUB" =>
         asmLines += SUBS(w8, w9, w8)
-        asmLines += BCond(asmGlobal ~ P_ErrOverflow, Cond.VS)
+        asmLines += BCond(asmGlobal ~ "_errOverflow", Cond.VS)
       case "MUL" =>
         asmLines += SMULL(x8, w9, w8)
         asmLines += CMP(x8, w8, Some(SXTW()))
-        asmLines += BCond(asmGlobal ~ P_ErrOverflow, Cond.NE)
+        asmLines += BCond(asmGlobal ~ "_errOverflow", Cond.NE)
     }
 
     _predefinedFuncs += P_ErrOverflow
@@ -691,7 +691,7 @@ object Generator {
 
     asmLines += generateExpr(expr2, registerMap, scope)
     asmLines += CMP(w8, ImmVal(0))
-    asmLines += BCond(asmGlobal ~ P_ErrDivZero, Cond.EQ)
+    asmLines += BCond(asmGlobal ~ "_errDivZero", Cond.EQ)
     _predefinedFuncs += P_ErrDivZero
     _predefinedFuncs += P_Prints
     asmLines += MOV(w9, w8)
@@ -733,7 +733,7 @@ object Generator {
         asmLines += generateExpr(e, registerMap, scope)
         asmLines += MOV(w9, w8)
         asmLines += NEGS(w8, w9);
-        asmLines += BCond(asmGlobal ~ P_ErrOverflow, Cond.VS)
+        asmLines += BCond(asmGlobal ~ "_errOverflow", Cond.VS)
         _predefinedFuncs += P_ErrOverflow
         _predefinedFuncs += P_Prints
       }
@@ -749,7 +749,7 @@ object Generator {
         asmLines += generateExpr(e, registerMap, scope)
         asmLines += TST(w8, ImmVal(0xffffff80))
         asmLines += CSEL(x1, x8, x1, Cond.NE)
-        asmLines += BCond(asmGlobal ~ P_ErrBadChar, Cond.NE)
+        asmLines += BCond(asmGlobal ~ "_errBadChar", Cond.NE)
         _predefinedFuncs += P_ErrBadChar
         _predefinedFuncs += P_Prints
       }
