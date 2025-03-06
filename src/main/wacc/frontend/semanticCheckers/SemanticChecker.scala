@@ -132,11 +132,8 @@ object SemanticChecker {
               )
             (anyType, exprs)
       val (t, newId) = getType(id: Expr)
-      val (_, newEs) = getArrayElemType(t, es)
-      (t match
-        case ArrayType(elemT) => elemT
-        case _                => anyType
-      )
+      val (arrayElemType, newEs) = getArrayElemType(t, es)
+      arrayElemType
         -> ArrayElem(
           (newId match
             case i: Ident => i
