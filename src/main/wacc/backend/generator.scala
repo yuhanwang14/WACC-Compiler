@@ -8,6 +8,9 @@ import scala.collection.mutable.Map as MutableMap
 import scala.collection.mutable.Set as MutableSet
 import instructions.PredefinedFunctions.*
 import instructions.*
+import scala.concurrent.{Future, Await}
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.Duration
 
 object Generator:
   private var localLabelCount: Int = 0
@@ -15,11 +18,16 @@ object Generator:
   private val predefFuncs: MutableSet[PredefinedFunc] = MutableSet()
 
   def generate(prog: Program)(implicit symbolTable: FrozenSymbolTable): String =
+    val mainFuture = Future(generateMain(prog.s))
+    val funcsFuture = 
+      prog.fs.map:
+        case f @ Func((_, Ident(name)), _, _) =>
+          Future(generateFunc(f, symbolTable.getFuncScope(name)))
+      .toSeq
+
     join(
-      generateMain(prog.s),
-      join(prog.fs.map:
-        case f @ Func((_, Ident(name)), _, _) => generateFunc(f, symbolTable.getFuncScope(name))
-      *),
+      Await.result(mainFuture, Duration.Inf),
+      join(funcsFuture.map(f => Await.result(f, Duration.Inf))*),
       join(
         predefFuncs.map(f => predefinedFunctions(f)).toSeq*
       )
