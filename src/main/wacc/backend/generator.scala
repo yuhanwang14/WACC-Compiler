@@ -364,7 +364,7 @@ object Generator:
         generatedCode ++= generatePairElemRValue(lValue, 0, registerMap, scope)
 
       case Second(lValue) =>
-        generatedCode ++= generatePairElemRValue(lValue, 1, registerMap, scope)
+        generatedCode ++= generatePairElemRValue(lValue, 8, registerMap, scope)
 
       case expr: Expr => generatedCode ++= generateExpr(expr, registerMap, scope)
 
