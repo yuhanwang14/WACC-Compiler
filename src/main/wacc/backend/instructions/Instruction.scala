@@ -39,6 +39,8 @@ case class ADD(Rd: Register, Rn: Register, opr: Operand) extends Instruction(f"a
 case class ADDS(Rd: Register, Rn: Register, opr: Operand)
     extends Instruction(f"adds $Rd, $Rn, $opr")
 
+case class SUB(Rd: Register, Rn: Register, opr: Operand) extends Instruction(f"sub $Rd, $Rn, $opr")
+
 case class SUBS(Rd: Register, Rn: Register, opr: Operand)
     extends Instruction(f"subs $Rd, $Rn, $opr")
 

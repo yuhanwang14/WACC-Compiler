@@ -88,7 +88,7 @@ object Generator:
 
     if (extraStackSpace > 0)
       generatedCode.appendAll(
-        SUBS(sp, sp, ImmVal(extraStackSpace))
+        SUB(sp, sp, ImmVal(extraStackSpace))
       )
 
     stmts.foreach:
@@ -103,7 +103,6 @@ object Generator:
           // generate `else` block
           generateBlock(b2, registerMap, subScopes(0)),
           B(finallyLabel),
-
           // generate `then` block
           LabelHeader(thenLabel),
           generateBlock(b1, registerMap, subScopes(1)),
@@ -205,7 +204,7 @@ object Generator:
 
     if (extraStackSpace > 0)
       generatedCode.appendAll(
-        ADDS(sp, sp, ImmVal(extraStackSpace))
+        ADD(sp, sp, ImmVal(extraStackSpace))
       )
 
     generatedCode
@@ -314,11 +313,11 @@ object Generator:
         val (argPushCode, offset) = pushArgs(funcName, argList, registerMap, scope)
         generatedCode.appendAll(
           pushCode,
-          if (offset > 0) then SUBS(sp, sp, ImmVal(offset)) else EmptyAsmSnippet,
+          if (offset > 0) then SUB(sp, sp, ImmVal(offset)) else EmptyAsmSnippet,
           argPushCode,
           BL(asmGlobal ~ f"wacc_$funcName"),
           MOV(XRegister(8), XRegister(0)),
-          if (offset > 0) then ADDS(sp, sp, ImmVal(offset)) else EmptyAsmSnippet,
+          if (offset > 0) then ADD(sp, sp, ImmVal(offset)) else EmptyAsmSnippet,
           popCode
         )
 
