@@ -8,20 +8,14 @@ import scala.collection.mutable.Map as MutableMap
 import scala.collection.mutable.Set as MutableSet
 import instructions.PredefinedFunctions.*
 import instructions.*
-object Generator:
+class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
   private var localLabelCount: Int = 0
-  private var stringConsts: MutableMap[String, Int] = MutableMap()
-  private var predefFuncs: MutableSet[PredefinedFunc] = MutableSet()
+  private val stringConsts: MutableMap[String, Int] = MutableMap()
+  private val predefFuncs: MutableSet[PredefinedFunc] = MutableSet()
 
   private def addPredefFunc(f: PredefinedFunc) = predefFuncs.add(f)
 
-  private def reset() =
-    localLabelCount = 0
-    stringConsts = MutableMap()
-    predefFuncs = MutableSet()
-
-  def generate(prog: Program)(implicit symbolTable: FrozenSymbolTable): String =
-    reset()
+  def generate: String =
     val main = generateMain(prog.s)
     val funcs =
       prog.fs

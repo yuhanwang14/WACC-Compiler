@@ -45,7 +45,7 @@ object BackendCompiler {
             ProgramChecker.check(prog)(source = filename.split('/').last, lines = lines) match {
               case Right((newProg, symbolTable)) =>
                 // Generate assembly code and return it
-                val asmString = Generator.generate(newProg)(symbolTable.toFrozen).toString
+                val asmString = Generator(newProg)(symbolTable.toFrozen).generate
                 Right(asmString)
 
 
