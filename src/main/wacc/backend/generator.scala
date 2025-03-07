@@ -189,6 +189,9 @@ object Generator:
       case FreeP(expr) =>
         val (pushCode, popCode) =
           pushAndPopRegisters(registerMap.usedCallerRegisters.map(XRegister(_)))
+        addPredefFunc(P_Freepair)
+        addPredefFunc(P_ErrNull)
+        addPredefFunc(P_Prints)
         generatedCode.appendAll(
           pushCode,
           generateExpr(expr, registerMap, scope),
@@ -196,7 +199,6 @@ object Generator:
           BL("_freePair"),
           popCode
         )
-        addPredefFunc(P_Freepair)
 
       case FreeA(expr) =>
         val (pushCode, popCode) =
