@@ -18,16 +18,17 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
 
   def generate: String =
     val bodyCode: StringBuilder = StringBuilder()
+    val funcCode: StringBuilder = StringBuilder()
     val fullCode: StringBuilder = StringBuilder()
-    put(
-      generateMain(prog.s)(bodyCode)
-    )(bodyCode)
     put(
       prog.fs
         .map:
           case f @ Func((_, Ident(name)), _, _) =>
-            generateFunc(f, symbolTable.getFuncScope(name))(bodyCode)
+            generateFunc(f, symbolTable.getFuncScope(name))(funcCode)
       *
+    )(funcCode)
+    put(
+      generateMain(prog.s)(bodyCode)
     )(bodyCode)
     put(
       DataHeader(),
@@ -39,6 +40,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       )(fullCode)
     )(fullCode)
     fullCode.append(bodyCode)
+    fullCode.append(funcCode)
     put(
       predefFuncs.map(f => predefinedFunctions(f)).toSeq*
     )(fullCode)
@@ -94,8 +96,8 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
         val finallyLabel = asmLocal ~ (localLabelCount + 1)
         localLabelCount += 2
 
-        val thenScope = subScopes(0)
-        val elseScope = subScopes(1)
+        val thenScope = subScopes(1)
+        val elseScope = subScopes(0)
         subScopes = subScopes.drop(2)
 
         put(
