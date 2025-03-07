@@ -183,7 +183,7 @@ object Generator:
         generatedCode.appendAll(
           pushCode,
           generateExpr(expr, registerMap, scope),
-          SUBS(XRegister(0), XRegister(8), ImmVal(4)),
+          SUB(XRegister(0), XRegister(8), ImmVal(4)),
           BL("_freePair"),
           popCode
         )
@@ -403,7 +403,7 @@ object Generator:
       BL("_malloc"),
       MOV(ip0, XRegister(0)),
       popCode,
-      ADDS(ip0, ip0, ImmVal(4)),
+      ADD(ip0, ip0, ImmVal(4)),
       MOV(WRegister(8), ImmVal(arrayLen)),
       STUR(WRegister(8), Offset(ip0, ImmVal(-4)))
     )
