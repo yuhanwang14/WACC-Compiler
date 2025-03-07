@@ -249,7 +249,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
     put(
       pushCode,
       generateExpr(expr, registerMap, scope),
-      // MOV(XRegister(0), XRegister(8)),
+      MOV(XRegister(0), XRegister(8)),
       BL(f"_print${suffix}"),
       if newline then BL("_println") else EmptyAsmSnippet,
       popCode
