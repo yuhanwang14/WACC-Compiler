@@ -26,6 +26,9 @@ case class STURB(Rt: Register, address: Address) extends Instruction(f"sturb $Rt
 
 case class MOV(Rd: Register, opr: Operand) extends Instruction(f"mov $Rd, $opr")
 
+case class MOVK(Rd: Register, opr: Operand, extend: Option[Extend])
+    extends Instruction(f"movk $Rd, $opr" + extend.map(e => s", $e").getOrElse(""))
+
 case class CMP(Rd: Register, opr: Operand, extend: Option[Extend] = None)
     extends Instruction(f"cmp $Rd, $opr" + extend.map(e => s", $e").getOrElse(""))
 

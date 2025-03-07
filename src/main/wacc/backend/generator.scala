@@ -496,7 +496,13 @@ object Generator:
     val w8 = WRegister(8)
     join(
       expr match
-        case IntLiter(x)  => MOV(w8, ImmVal(x))
+        case IntLiter(x)  => 
+          if ((x & 0xFFFF) == x) then MOV(w8, ImmVal(x))
+          else {
+            val low16 = x & 0xFFFF       
+            val high16 = (x >> 16) & 0xFFFF 
+            join(MOV(w8, ImmVal(low16)), MOVK(w8, ImmVal(high16), Some(LSL(ImmVal(16)))))
+          }
         case BoolLiter(x) => MOV(w8, ImmVal(if (x) then 1 else 0))
         case CharLiter(c) => MOV(w8, ImmVal(c))
         case StrLiter(s) =>
