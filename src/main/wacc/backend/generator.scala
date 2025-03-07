@@ -66,7 +66,7 @@ object Generator:
   private def generateBlock(
       block: Stmt,
       inheritedRegisterMap: RegisterMap,
-      scope: Scope, 
+      scope: Scope,
       popCode: StringBuilder = StringBuilder()
   )(implicit
       symbolTable: FrozenSymbolTable
@@ -172,7 +172,7 @@ object Generator:
       case Return(expr) =>
         generatedCode.appendAll(
           generateExpr(expr, registerMap, scope),
-          MOV(XRegister(0), XRegister(8)), 
+          MOV(XRegister(0), XRegister(8)),
           MOV(sp, fp),
           popCode,
           Comment("pop {fp, lr}")(4),
@@ -511,7 +511,7 @@ object Generator:
         case CharLiter(c) => MOV(w8, ImmVal(c))
         case StrLiter(s) =>
           var index = stringConsts.size
-          val escapedString = s.replace("\"", "\\\"")
+          val escapedString = s.replace("\"", "\\\"").replace("\'", "\\\'").replace("\\", "\\\\")
           if (stringConsts.contains(escapedString)) then index = stringConsts(escapedString)
           else stringConsts(escapedString) = index
           join(

@@ -65,9 +65,8 @@ object lexer {
     ),
     textDesc = TextDesc.plain.copy(
       escapeSequences = EscapeDesc.plain.copy(
-        literals = Set[Char](
-          '0', 'b', 't', 'n', 'f', 'r', '\"', '\'', '\\'
-        )
+        literals = Set('\'', '\"', '\\'),
+        mapping = Map("n" -> 10, "0" -> 0, "b" -> 8, "t" -> 9, "f" -> 12, "r" -> 13),
       ),
       graphicCharacter =
         Unicode(x => x >= ' '.toInt & x != '\"'.toInt & x != '\''.toInt & x != '\\'.toInt)
