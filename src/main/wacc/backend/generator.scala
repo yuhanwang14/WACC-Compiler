@@ -122,8 +122,7 @@ object Generator:
           LabelHeader(finallyLabel),
           generateExpr(cond, registerMap, scope),
           CMP(w8, ImmVal(1)),
-          BCond(loopLabel, Cond.EQ)
-          // CBNZ(w8, loopLabel)
+          CBNZ(w8, loopLabel)
         )
 
         subScopes = subScopes.tail
@@ -568,6 +567,7 @@ object Generator:
         case ArrayType(insideType) => unwrap(insideType, exprs)
         case _                     => throw Exception()
       },
+      MOV(XRegister(8), XRegister(7)),
       LDP(XRegister(7), xzr, PostIndex(sp, ImmVal(16)))
     )
 
