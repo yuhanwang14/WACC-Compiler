@@ -46,7 +46,7 @@ case class SMULL(Rd: Register, Rn: Register, opr: Operand)
     extends Instruction(f"smull $Rd, $Rn, $opr")
 
 case class SDIV(Rd: Register, Rn: Register, opr: Operand)
-    extends Instruction(f"smull $Rd, $Rn, $opr")
+    extends Instruction(f"sdiv $Rd, $Rn, $opr")
 
 case class MSUB(Rd: Register, Rn: Register, Rm: Register, Ra: Register)
     extends Instruction(f"msub $Rd, $Rn, $Rm, $Ra")

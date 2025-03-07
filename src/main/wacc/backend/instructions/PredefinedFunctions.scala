@@ -135,7 +135,7 @@ case object P_Printb extends PredefinedPrint("printb", "") {
     AsmFunction(
       LabelledStringConst(falseStr, "false"),
       LabelledStringConst(trueStr, "true"),
-      LabelledStringConst(fmtStr, "%.*f"),
+      LabelledStringConst(fmtStr, "%.*s"),
       LabelHeader(asmGlobal ~ "_printb"),
       STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
       CMP(w0, ImmVal(0)),

@@ -57,8 +57,9 @@ object Generator:
       STP(fp, lr, PreIndex(sp, ImmVal(-16))),
       MOV(fp, sp),
       generateBlock(mainBlock, RegisterMap(Nil, 10), symbolTable.mainScope),
+      MOV(XRegister(0), ImmVal(0)),
       Comment("pop {fp, lr}")(4),
-      LDP(fp, lr, PreIndex(sp, ImmVal(-16))),
+      LDP(fp, lr, PostIndex(sp, ImmVal(16))),
       RET
     )
 
@@ -220,6 +221,8 @@ object Generator:
   ): StringBuilder =
     val (pushCode, popCode) =
       pushAndPopRegisters(registerMap.usedCallerRegisters.map(XRegister(_)))
+    if newline then
+      predefFuncs += P_Println
     val printFunc = suffix match
       case 'b' => P_Printb
       case 'c' => P_Printc
@@ -634,7 +637,7 @@ object Generator:
       generateExpr(expr1, registerMap, scope),
       MOV(w9, w8),
       generateExpr(expr2, registerMap, scope),
-      CMP(w8, w9),
+      CMP(w9, w8),
       CSET(w8, cond)
     )
 
@@ -656,7 +659,7 @@ object Generator:
 
     join(
       generateExpr(expr1, registerMap, scope),
-      STP(w8, xzr, PreIndex(sp, ImmVal(-16))),
+      STP(x8, xzr, PreIndex(sp, ImmVal(-16))),
       generateExpr(expr2, registerMap, scope),
       LDP(x9, xzr, PostIndex(sp, ImmVal(16))),
       operation match
