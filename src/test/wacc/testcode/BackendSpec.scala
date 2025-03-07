@@ -9,7 +9,6 @@ import wacc.backend.BackendCompiler
 import common.FileUtil
 import TestConfig._
 
-
 class BackendSpec extends AnyFunSuite {
 
   // Update test lists before running
@@ -23,59 +22,72 @@ class BackendSpec extends AnyFunSuite {
     val exeFile = "program"
     val expectedOutputFile = fileName.stripSuffix(".wacc") + ".expected"
 
-    // Use the internal compiler function to compile the file.
-    val compileExitCode = BackendCompiler.compile(fileName)
+    // Compile the file and capture the result
+    val compileResult = BackendCompiler.compile(fileName)
 
     if (isValid) {
-      try {
-        // For valid files, expect successful compilation
-        assert(compileExitCode == 0, s"Compilation failed for $fileName with exit code $compileExitCode")
-        
-        // Write the assembly file using our utility
-        FileUtil.writeFile(asmFile, BackendCompiler.outputString) match {
-          case scala.util.Success(_)  => // File written successfully.
-          case scala.util.Failure(ex) =>
-            fail(s"Failed to write assembly file: ${ex.getMessage}")
-        }
+      compileResult match {
+        case Right(asmString) =>
+          // Write the assembly file using our utility
+          FileUtil.writeFile(asmFile, asmString) match {
+            case scala.util.Success(_) =>
+            case scala.util.Failure(ex) =>
+              fail(s"Failed to write assembly file: ${ex.getMessage}")
+          }
 
-        // The assembly file should be generated
-        assert(new File(asmFile).exists(), s"Missing assembly file: $asmFile")
+          // The assembly file should be generated
+          assert(new File(asmFile).exists(), s"Missing assembly file: $asmFile")
 
-        // Assemble the generated assembly file using the selected assembler command
-        val assembleCmd = s"$assemblerCmd -o $exeFile -z noexecstack -march=armv8-a $asmFile"
-        assert(assembleCmd.! == 0, s"Assembly failed for $asmFile")
+          // Assemble the generated assembly file using the selected assembler command
+          val assembleCmd = s"clang -target aarch64-linux-gnu -o $exeFile $asmFile"
+          
+          // if (localMode)
+          //   assembleCmd = s"clang -target aarch64-linux-gnu -o $exeFile $asmFile"
+          // else
+          //   assembleCmd = s"$assemblerCmd -o $exeFile -z noexecstack -march=armv8-a $asmFile"
 
-        // Run the executable in the selected emulator and capture its output
-        val actualOutput = s"$emulatorCmd -L $emulatorLibPath $exeFile".!!
-        val expectedOutput = Using(Source.fromFile(expectedOutputFile)) { source =>
-          source.getLines().mkString("\n")
-        }.getOrElse("")
+          if (assembleCmd.! != 0) {
+            if (!localMode)
+              FileUtil.deleteFile(asmFile)
+              FileUtil.deleteFile(exeFile)
+            assert(false, s"Assembly failed for $asmFile")
+          }
+          
 
-        assert(actualOutput.trim == expectedOutput.trim, s"Output mismatch for $fileName")
-      } finally {
-        // Clean up: delete the assembly file and executable
-        if (!localMode) {
-          FileUtil.deleteFile(asmFile)
-          FileUtil.deleteFile(exeFile)
-        }
+          // Run the executable in the selected emulator and capture its output
+          val actualOutput = s"$emulatorCmd -L $emulatorLibPath $exeFile".!!
+          val expectedOutput = Using(Source.fromFile(expectedOutputFile)) { source =>
+            source.getLines().mkString("\n")
+          }.getOrElse("")
+
+          assert(actualOutput.trim == expectedOutput.trim, s"Output mismatch for $fileName")
+
+        case Left(exitCode) =>
+          fail(s"Expected valid compilation, but got exit code $exitCode for $fileName")
+      }
+
+      // Clean up generated files only in lab mode
+      if (!localMode) {
+        FileUtil.deleteFile(asmFile)
+        FileUtil.deleteFile(exeFile)
       }
     
     } else {
-      // For invalid files, expect exit code 100 or 200 and no assembly file generated.
-      assert(
-        compileExitCode == 100 || compileExitCode == 200,
-        s"Unexpected exit code $compileExitCode for $fileName (Expected 100 or 200)"
-      )
-      assert(!new File(asmFile).exists(), s"Assembly file $asmFile should NOT be generated for invalid program")
+      // For invalid files, we expect a failure exit code.
+      compileResult match {
+        case Left(exitCode) =>
+          assert(exitCode == 100 || exitCode == 200,
+            s"Unexpected exit code $exitCode for $fileName (Expected 100 or 200)")
+          assert(!new File(asmFile).exists(), s"Assembly file $asmFile should NOT be generated for invalid program")
+        case Right(_) =>
+          fail(s"Expected invalid compilation for $fileName, but compilation succeeded.")
+      }
     }
   }
 
   // Run tests for all valid and invalid files
-  
   if (testValid) 
     validFiles.foreach(testFile(_, isValid = true))
-
   if (testInvalid)
     invalidFiles.foreach(testFile(_, isValid = false))
 }
-

@@ -1,0 +1,10 @@
+./src/test/wacc/valid/if/if1.wacc
+./src/test/wacc/valid/if/whitespace.wacc
+./src/test/wacc/valid/if/ifFalse.wacc
+./src/test/wacc/valid/if/ifBasic.wacc
+./src/test/wacc/valid/if/if6.wacc
+./src/test/wacc/valid/if/ifTrue.wacc
+./src/test/wacc/valid/if/if5.wacc
+./src/test/wacc/valid/if/if4.wacc
+./src/test/wacc/valid/if/if3.wacc
+./src/test/wacc/valid/if/if2.wacc

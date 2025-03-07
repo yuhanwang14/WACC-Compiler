@@ -1,0 +1,15 @@
+./src/test/wacc/valid/variables/capCharDeclaration.wacc
+./src/test/wacc/valid/variables/negIntDeclaration.wacc
+./src/test/wacc/valid/variables/charDeclaration.wacc
+./src/test/wacc/valid/variables/emptyStringDeclaration.wacc
+./src/test/wacc/valid/variables/stringDeclaration.wacc
+./src/test/wacc/valid/variables/longVarNames.wacc
+./src/test/wacc/valid/variables/boolDeclaration.wacc
+./src/test/wacc/valid/variables/_VarNames.wacc
+./src/test/wacc/valid/variables/charDeclaration2.wacc
+./src/test/wacc/valid/variables/manyVariables.wacc
+./src/test/wacc/valid/variables/intDeclaration.wacc
+./src/test/wacc/valid/variables/boolDeclaration2.wacc
+./src/test/wacc/valid/variables/zeroIntDeclaration.wacc
+./src/test/wacc/valid/variables/puncCharDeclaration.wacc
+./src/test/wacc/valid/variables/stringCarriageReturn.wacc
