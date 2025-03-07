@@ -28,6 +28,7 @@ object FileUtil {
         scala.util.Failure(new Exception(s"Failed to delete file: $fileName"))
       }
     } else {
+      println("File not found")
       scala.util.Success(())
     }
   }

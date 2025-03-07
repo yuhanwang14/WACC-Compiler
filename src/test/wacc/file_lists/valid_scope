@@ -1,0 +1,14 @@
+./src/test/wacc/valid/scope/printAllTypes.wacc
+./src/test/wacc/valid/scope/splitScope.wacc
+./src/test/wacc/valid/scope/scopeSimpleRedefine.wacc
+./src/test/wacc/valid/scope/scopeWhileRedefine.wacc
+./src/test/wacc/valid/scope/scopeRedefine.wacc
+./src/test/wacc/valid/scope/indentationNotImportant.wacc
+./src/test/wacc/valid/scope/scopeIfRedefine.wacc
+./src/test/wacc/valid/scope/scope.wacc
+./src/test/wacc/valid/scope/scopeBasic.wacc
+./src/test/wacc/valid/scope/ifNested2.wacc
+./src/test/wacc/valid/scope/ifNested1.wacc
+./src/test/wacc/valid/scope/scopeVars.wacc
+./src/test/wacc/valid/scope/intsAndKeywords.wacc
+./src/test/wacc/valid/scope/scopeWhileNested.wacc

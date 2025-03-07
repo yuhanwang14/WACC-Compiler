@@ -1,0 +1,12 @@
+./src/test/wacc/valid/while/whileBasic.wacc
+./src/test/wacc/valid/while/loopIntCondition.wacc
+./src/test/wacc/valid/while/rmStyleAddIO.wacc
+./src/test/wacc/valid/while/whileFalse.wacc
+./src/test/wacc/valid/while/fibonacciFullIt.wacc
+./src/test/wacc/valid/while/whileCount.wacc
+./src/test/wacc/valid/while/min.wacc
+./src/test/wacc/valid/while/max.wacc
+./src/test/wacc/valid/while/whileBoolFlip.wacc
+./src/test/wacc/valid/while/fibonacciIterative.wacc
+./src/test/wacc/valid/while/loopCharCondition.wacc
+./src/test/wacc/valid/while/rmStyleAdd.wacc

@@ -1,0 +1,8 @@
+./src/test/wacc/valid/sequence/stringAssignment.wacc
+./src/test/wacc/valid/sequence/charAssignment.wacc
+./src/test/wacc/valid/sequence/intLeadingZeros.wacc
+./src/test/wacc/valid/sequence/boolAssignment.wacc
+./src/test/wacc/valid/sequence/intAssignment.wacc
+./src/test/wacc/valid/sequence/basicSeq.wacc
+./src/test/wacc/valid/sequence/basicSeq2.wacc
+./src/test/wacc/valid/sequence/exitSimple.wacc

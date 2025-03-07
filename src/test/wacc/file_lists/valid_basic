@@ -1,0 +1,8 @@
+./src/test/wacc/valid/basic/skip/skip.wacc
+./src/test/wacc/valid/basic/skip/commentEoF.wacc
+./src/test/wacc/valid/basic/skip/comment.wacc
+./src/test/wacc/valid/basic/skip/commentInLine.wacc
+./src/test/wacc/valid/basic/exit/exit-1.wacc
+./src/test/wacc/valid/basic/exit/exitBasic.wacc
+./src/test/wacc/valid/basic/exit/exitBasic2.wacc
+./src/test/wacc/valid/basic/exit/exitWrap.wacc

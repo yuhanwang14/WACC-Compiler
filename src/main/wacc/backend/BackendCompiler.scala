@@ -10,36 +10,31 @@ import common.SymbolTable
 
 object BackendCompiler {
   
-  // Global variable to store the generated assembly code
-  var outputString: String = ""
-
   // Exit status codes as defined by your specification
-  val exitStatusSuccess = 0
+  val exitStatusSuccess     = 0
   val exitStatusSyntaxError = 100
   val exitStatusSemanticError = 200
-  val exitStatusFailure = -1
+  val exitStatusFailure     = -1
+
 
   /**
    * Compiles the given WACC source file.
    * @param filename the path to the WACC file.
-   * @return exit code: 0 on success, 100 for syntax errors,
-   *         200 for semantic errors, and -1 for file-related failures.
+   * @return Either the exit code (Left) or the generated assembly code as a String (Right).
    */
-  def compile(filename: String): Int = {
+  def compile(filename: String): Either[Int, String] = {
     val src = new File(filename)
-    reset()
 
     if (!src.exists() || !src.canRead) {
       println(s"Can't find or read source file at $filename")
-      
-      return exitStatusFailure
+      return Left(exitStatusFailure)
     }
 
     // Parse the source file
     parse(src) match {
       case Failure(ex) =>
         println(s"Parsing failed: $ex")
-        exitStatusFailure
+        Left(exitStatusFailure)
 
       case Success(result) =>
         result match {
@@ -49,27 +44,22 @@ object BackendCompiler {
             // Check semantic correctness using your ProgramChecker
             ProgramChecker.check(prog)(source = filename.split('/').last, lines = lines) match {
               case Right((newProg, symbolTable)) =>
-                implicit val symTable = symbolTable
-                // Generate assembly code and store it in outputString
-                outputString = Generator.generate(newProg).toString
-
-                exitStatusSuccess
+                implicit val SymbolTable: SymbolTable = symbolTable
+                // Generate assembly code and return it
+                val asmString = Generator.generate(newProg).toString
+                Right(asmString)
 
               case Left(errors) =>
                 println("#semantic_error#")
                 errors.foreach(error => println(error.format))
-
-                exitStatusSemanticError
+                Left(exitStatusSemanticError)
             }
 
           case parsley.Failure(error) =>
             println("#syntax_error#")
             println(error.format)
-
-            exitStatusSyntaxError
+            Left(exitStatusSyntaxError)
         }
     }
   }
-
-  private def reset() = { outputString = "" }
 }
