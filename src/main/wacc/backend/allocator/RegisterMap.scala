@@ -38,14 +38,12 @@ class RegisterMap private (
 
   export locationIterator.usedCallerRegisters
   export locationIterator.stackOffset
-
 object RegisterMap:
   private def mapParams(
       params: Iterable[(String, WaccType)],
       start: Int
   ): Iterable[(String, (Location, Int))] =
-    val regParams = params.take(8)
-    val stackParams = params.drop(8).toSeq.reverseIterator
+    val (regParams, stackParams) = params.splitAt(8)
     regParams
       .zipWithIndex
       .map:
@@ -54,11 +52,11 @@ object RegisterMap:
       ++
         (if !stackParams.isEmpty then
            stackParams
-             .drop(1)
-             .foldLeft(
-               stackParams.next() match
+             .tail
+             .foldRight(
+               stackParams.head match
                  case (id, t) => List((id, (start: Location) -> t.byteSize)) -> t.byteSize
-             ) { case ((unpacked, offset), (id, t)) =>
+             ) { case ((id, t), (unpacked, offset)) =>
                (unpacked :+ (id, offset -> t.byteSize)) -> (offset + t.byteSize)
              }
              ._1
