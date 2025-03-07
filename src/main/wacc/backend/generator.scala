@@ -509,7 +509,7 @@ object Generator:
     // Assume that the array pointer is at x7
     def unwrap(varType: WaccType, exprs: List[Expr]): StringBuilder =
       val generatedCode: StringBuilder = StringBuilder()
-
+      predefFuncs += P_ErrOutOfBounds
       generatedCode.appendAll(
         STP(XRegister(8), xzr, PreIndex(sp, ImmVal(-16))),
         generateExpr(exprs.head, registerMap, scope),
