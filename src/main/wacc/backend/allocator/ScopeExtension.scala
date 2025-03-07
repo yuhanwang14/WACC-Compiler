@@ -7,5 +7,4 @@ extension (s: Scope)
     val paramCount = s match
         case fs: FunctionScope => fs.params.size
         case _                 => 0
-    s.children.map(_.maxConcurrentVars).maxOption.getOrElse(s.varTable.size) - paramCount
-      
+    (s.children.map(_.maxConcurrentVars) :+ (s.varTable.size)).max - paramCount
