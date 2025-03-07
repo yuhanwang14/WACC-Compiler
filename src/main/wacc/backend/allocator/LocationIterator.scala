@@ -12,9 +12,8 @@ class LocationIterator(paramCount: Int):
 
   def next(size: Int): Location =
     if at == calleeRegs.size + callerRegs.size then
-      val retVal = stackOffset
-      stackOffset += size
-      retVal
+      stackOffset -= size
+      stackOffset
     else
       val retVal = if size <= 4 then WRegister(regs(at)) else XRegister(regs(at))
       at += 1
