@@ -21,7 +21,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       prog.fs
         .map:
           case f @ Func((_, Ident(name)), _, _) =>
-            generateFunc(f, symbolTable.getFuncScope(name))
+            generateFunc(f, symbolTable.getFuncScope(name).child)
         .toSeq
     val generatedCode: StringBuilder = StringBuilder()
     generatedCode.appendAll(
@@ -74,9 +74,9 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
 
     // calculate the extra stack space needed for local variables within current scope
     // allocate register or stack space for locak variables within currentScope
-    val offsetBefore: Int = ((inheritedRegisterMap.stackOffset + 15) / 16) * 16
+    val offsetBefore: Int = (15 - inheritedRegisterMap.stackOffset) / 16 * 16
     val registerMap: RegisterMap = inheritedRegisterMap :+ scope.localVars
-    val offsetAfter: Int = ((registerMap.stackOffset + 15) / 16) * 16
+    val offsetAfter: Int = (15 - registerMap.stackOffset) / 16 * 16
     val extraStackSpace: Int = offsetAfter - offsetBefore
 
     val generatedCode: StringBuilder = StringBuilder()
