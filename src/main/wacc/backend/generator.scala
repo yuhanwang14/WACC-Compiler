@@ -104,11 +104,11 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
           generateExpr(cond, registerMap, scope),
           CBNZ(w8, thenLabel),
           // generate `else` block
-          generateBlock(b2, registerMap, elseScope),
+          generateBlock(b2, registerMap, elseScope, popCode),
           B(finallyLabel),
           // generate `then` block
           LabelHeader(thenLabel),
-          generateBlock(b1, registerMap, thenScope),
+          generateBlock(b1, registerMap, thenScope, popCode),
           LabelHeader(finallyLabel)
         )
 
@@ -120,7 +120,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
         put(
           B(finallyLabel),
           LabelHeader(loopLabel),
-          generateBlock(block, registerMap, subScopes.head),
+          generateBlock(block, registerMap, subScopes.head, popCode),
           LabelHeader(finallyLabel),
           generateExpr(cond, registerMap, scope),
           CMP(w8, ImmVal(1)),
@@ -133,7 +133,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
         val blockScope = subScopes(0)
         subScopes = subScopes.tail
         put(
-          generateBlock(block, registerMap, blockScope)
+          generateBlock(block, registerMap, blockScope, popCode)
         )
 
       case Exit(expr) =>
