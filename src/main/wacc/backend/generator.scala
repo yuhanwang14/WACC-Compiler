@@ -12,7 +12,6 @@ object Generator:
   private var localLabelCount: Int = 0
   private var stringConsts: MutableMap[String, Int] = MutableMap()
   private var predefFuncs: MutableSet[PredefinedFunc] = MutableSet()
-  private var returnLabel = 0
 
   private def addPredefFunc(f: PredefinedFunc) = predefFuncs.add(f)
 
@@ -67,7 +66,8 @@ object Generator:
   private def generateBlock(
       block: Stmt,
       inheritedRegisterMap: RegisterMap,
-      scope: Scope
+      scope: Scope, 
+      popCode: StringBuilder = StringBuilder()
   )(implicit
       symbolTable: FrozenSymbolTable
   ): StringBuilder =
@@ -170,13 +170,15 @@ object Generator:
         )
 
       case Return(expr) =>
-        if (returnLabel == 0) {
-          generatedCode.appendAll(
-            generateExpr(expr, registerMap, scope),
-            MOV(XRegister(0), XRegister(8))
-          )
-          returnLabel = 1
-        }
+        generatedCode.appendAll(
+          generateExpr(expr, registerMap, scope),
+          MOV(XRegister(0), XRegister(8)), 
+          MOV(sp, fp),
+          popCode,
+          Comment("pop {fp, lr}")(4),
+          LDP(fp, lr, PostIndex(sp, ImmVal(16))),
+          RET
+        )
 
       case PrintB(expr) => generatedCode ++= generatePrint(expr, registerMap, scope, 'b')
       case PrintC(expr) => generatedCode ++= generatePrint(expr, registerMap, scope, 'c')
@@ -282,8 +284,7 @@ object Generator:
   private def generateFunc(func: Func, funcScope: Scope)(implicit
       symbolTable: FrozenSymbolTable
   ): StringBuilder =
-    returnLabel = 0
-    
+
     val funcName: String = func.ti._2.name
 
     // extract all parameters from symbolTable, allocate register or memory
@@ -306,11 +307,7 @@ object Generator:
       pushCode,
       MOV(fp, sp),
       // the current scope is for parameters
-      generateBlock(func.s, registerMap, funcScope.children.head),
-      popCode,
-      Comment("pop {fp, lr}")(4),
-      LDP(fp, lr, PostIndex(sp, ImmVal(16))),
-      RET
+      generateBlock(func.s, registerMap, funcScope.children.head, popCode)
     )
 
   /** Generate assembly code to evaluate the result of a rvalue.
@@ -503,11 +500,11 @@ object Generator:
     val w8 = WRegister(8)
     join(
       expr match
-        case IntLiter(x)  => 
-          if ((x & 0xFFFF) == x) then MOV(w8, ImmVal(x))
+        case IntLiter(x) =>
+          if ((x & 0xffff) == x) then MOV(w8, ImmVal(x))
           else {
-            val low16 = x & 0xFFFF       
-            val high16 = (x >> 16) & 0xFFFF 
+            val low16 = x & 0xffff
+            val high16 = (x >> 16) & 0xffff
             join(MOV(w8, ImmVal(low16)), MOVK(w8, ImmVal(high16), Some(LSL(ImmVal(16)))))
           }
         case BoolLiter(x) => MOV(w8, ImmVal(if (x) then 1 else 0))
@@ -823,7 +820,6 @@ object Generator:
               generateExpr(expr, registerMap, scope),
               MOV(XRegister(paramCount - 1), XRegister(8))
             )
-            
           else
             offset += paramSize
             join(
