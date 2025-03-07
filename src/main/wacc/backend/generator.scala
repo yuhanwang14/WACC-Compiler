@@ -508,9 +508,11 @@ object Generator:
         case BoolLiter(x) => MOV(w8, ImmVal(if (x) then 1 else 0))
         case CharLiter(c) => MOV(w8, ImmVal(c))
         case StrLiter(s) =>
+          println(s)
           var index = stringConsts.size
-          if (stringConsts.contains(s)) then index = stringConsts(s)
-          else stringConsts(s) = index
+          val escapedString = s.replace("\"", "\\\"")
+          if (stringConsts.contains(escapedString)) then index = stringConsts(escapedString)
+          else stringConsts(escapedString) = index
           join(
             ADRP(x8, asmLocal ~ f".str$index"),
             ADD(x8, x8, Lo12(asmLocal ~ f".str$index"))
