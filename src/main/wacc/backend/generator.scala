@@ -121,7 +121,7 @@ object Generator:
           generateBlock(block, registerMap, subScopes.head),
           LabelHeader(finallyLabel),
           generateExpr(cond, registerMap, scope),
-          CMP(w8, ImmVal(0)),
+          CMP(w8, ImmVal(1)),
           BCond(loopLabel, Cond.EQ)
           // CBNZ(w8, loopLabel)
         )
@@ -356,7 +356,7 @@ object Generator:
 
       case expr: Expr => generatedCode ++= generateExpr(expr, registerMap, scope)
 
-      case _ => throw Exception()
+      case _ => 
     }
 
     generatedCode
@@ -730,7 +730,7 @@ object Generator:
     val x1 = XRegister(1)
     val w8 = WRegister(8)
     val x8 = XRegister(8)
-    val x9 = WRegister(9)
+    val x9 = XRegister(9)
     val w9 = WRegister(9)
 
     join(unaryOp match
