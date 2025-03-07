@@ -45,3 +45,4 @@ extension (builder: StringBuilder)
   def appendAll(codes: AsmSnippet | StringBuilder | String*): StringBuilder =
     codes.foldLeft(builder): (_, code) =>
       builder.append(code)
+      builder.append("\n")
