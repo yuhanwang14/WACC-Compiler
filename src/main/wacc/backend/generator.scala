@@ -666,18 +666,18 @@ object Generator:
         case "ADD" =>
           join(
             ADDS(w8, w9, w8),
-            BCond(asmGlobal ~ "_errOverFlow", Cond.VS)
+            BCond(asmGlobal ~ "_errOverflow", Cond.VS)
           )
         case "SUB" =>
           join(
             SUBS(w8, w9, w8),
-            BCond(asmGlobal ~ "_errOverFlow", Cond.VS)
+            BCond(asmGlobal ~ "_errOverflow", Cond.VS)
           )
         case "MUL" =>
           join(
             SMULL(x8, w9, w8),
             CMP(x8, w8, Some(SXTW())),
-            BCond(asmGlobal ~ "_errOverFlow", Cond.NE)
+            BCond(asmGlobal ~ "_errOverflow", Cond.NE)
           )
     )
 
