@@ -29,10 +29,7 @@ class RegisterMap private (
   def this(params: Iterable[(String, WaccType)], calleeRegisterCount: Int) =
     this(
       Nil,
-      if params.isEmpty then
-        Nil
-      else
-        RegisterMap.mapParams(params, (calleeRegisterCount + 1) / 2 * 16)
+      RegisterMap.mapParams(params, (calleeRegisterCount + 1) / 2 * 16)
     )(LocationIterator(params.size))
 
   def :+(vars: Iterable[(String, WaccType)]): RegisterMap = RegisterMap(vars, varMap)
@@ -43,12 +40,25 @@ class RegisterMap private (
   export locationIterator.stackOffset
 
 object RegisterMap:
-  private def mapParams(params: Iterable[(String, WaccType)], start: Int): Iterable[(String, (Location, Int))] =
-    params.tail
-      .foldRight(
-        params.head match
-            case (id, t) => List((id, (start: Location) -> t.byteSize)) -> t.byteSize
-      ) { case ((id, t), (unpacked, offset)) =>
-        (unpacked :+ (id, offset -> t.byteSize)) -> (offset + t.byteSize)
-      }
-      ._1
+  private def mapParams(
+      params: Iterable[(String, WaccType)],
+      start: Int
+  ): Iterable[(String, (Location, Int))] =
+    val (regParams, stackParams) = params.splitAt(8)
+    regParams
+      .zip(0 to 8)
+      .map:
+        case ((id, t), i) =>
+          (id, (if t.byteSize > 4 then XRegister(i) else WRegister(i), t.byteSize))
+      ++
+        (if !stackParams.isEmpty then
+           stackParams
+             .tail
+             .foldRight(
+               stackParams.head match
+                 case (id, t) => List((id, (start: Location) -> t.byteSize)) -> t.byteSize
+             ) { case ((id, t), (unpacked, offset)) =>
+               (unpacked :+ (id, offset -> t.byteSize)) -> (offset + t.byteSize)
+             }
+             ._1
+         else Nil)
