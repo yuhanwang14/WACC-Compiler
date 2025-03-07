@@ -337,12 +337,12 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
           popCode
         )
 
-      case ArrayLiter(exprs)  => generateArrayLiter(exprs, 0, registerMap, scope)
-      case ArrayLiterB(exprs) => generateArrayLiter(exprs, 1, registerMap, scope)
-      case ArrayLiterC(exprs) => generateArrayLiter(exprs, 1, registerMap, scope)
-      case ArrayLiterI(exprs) => generateArrayLiter(exprs, 4, registerMap, scope)
-      case ArrayLiterS(exprs) => generateArrayLiter(exprs, 8, registerMap, scope)
-      case ArrayLiterP(exprs) => generateArrayLiter(exprs, 8, registerMap, scope)
+      case ArrayLiter(exprs)  => put(generateArrayLiter(exprs, 0, registerMap, scope))
+      case ArrayLiterB(exprs) => put(generateArrayLiter(exprs, 1, registerMap, scope))
+      case ArrayLiterC(exprs) => put(generateArrayLiter(exprs, 1, registerMap, scope))
+      case ArrayLiterI(exprs) => put(generateArrayLiter(exprs, 4, registerMap, scope))
+      case ArrayLiterS(exprs) => put(generateArrayLiter(exprs, 8, registerMap, scope))
+      case ArrayLiterP(exprs) => put(generateArrayLiter(exprs, 8, registerMap, scope))
 
       case NewPair(expr1, expr2) =>
         val (pushCode, popCode) = pushAndPopRegisters(
