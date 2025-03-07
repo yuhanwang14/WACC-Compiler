@@ -729,15 +729,18 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
   ): () => Unit = () =>
     addPredefFunc(P_ErrDivZero)
     addPredefFunc(P_Prints)
+    val x8 = XRegister(8)
     val w8 = WRegister(8)
+    val x9 = XRegister(9)
     val w9 = WRegister(9)
 
     put(
       generateExpr(expr2, registerMap, scope),
       CMP(w8, ImmVal(0)),
       BCond(asmGlobal ~ "_errDivZero", Cond.EQ),
-      MOV(w9, w8),
+      STP(x8, xzr, PreIndex(sp, ImmVal(-16))),
       generateExpr(expr1, registerMap, scope),
+      LDP(x9, xzr, PostIndex(sp, ImmVal(16))),
       operation match
         case "DIV" =>
           SDIV(w8, w8, w9)
