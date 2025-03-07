@@ -115,7 +115,7 @@ case object P_ErrOutOfBounds
 case object P_ErrBadChar
     extends PredefinedErrMsg("errBadChar", "pint %d is not ascii character 0-127")
 
-case object P_Readc extends PredefinedRead("readc", "%c")
+case object P_Readc extends PredefinedRead("readc", " %c")
 case object P_Readi extends PredefinedRead("readi", "%d")
 
 case object P_Printp extends PredefinedPrint("printp", "%p", Seq(MOV(x1, x0)))

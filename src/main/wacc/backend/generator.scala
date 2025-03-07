@@ -510,7 +510,6 @@ object Generator:
         case BoolLiter(x) => MOV(w8, ImmVal(if (x) then 1 else 0))
         case CharLiter(c) => MOV(w8, ImmVal(c))
         case StrLiter(s) =>
-          println(s)
           var index = stringConsts.size
           val escapedString = s.replace("\"", "\\\"")
           if (stringConsts.contains(escapedString)) then index = stringConsts(escapedString)
