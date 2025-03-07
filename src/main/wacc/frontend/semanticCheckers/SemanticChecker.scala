@@ -247,7 +247,6 @@ object SemanticChecker {
   }
 
   private def verifyTypeHelper(t: WaccType, expT: Iterable[WaccType])(pos: (Int, Int))(implicit
-      st: SymbolTable,
       errors: ListBuffer[Error],
       lines: Seq[String],
       source: String

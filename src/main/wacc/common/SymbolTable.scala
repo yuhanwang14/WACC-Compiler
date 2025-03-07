@@ -11,7 +11,7 @@ import frontend.ast
 class SymbolTable:
   val funcTable: Map[String, (FunctionSignature, FunctionScope)] = Map()
   val funcScopes: ArrayBuffer[FunctionScope] = ArrayBuffer()
-  val globalScope: Scope = GlobalScope()
+  val globalScope: GlobalScope = GlobalScope()
   var currentScope: Scope = globalScope
 
   def returnType = currentScope.returnType
@@ -77,3 +77,5 @@ class SymbolTable:
     */
   def enterFunctionScope(identifier: String): Unit =
     currentScope = funcTable.getOrElse(identifier, throw IllegalArgumentException())(1)
+
+  def toFrozen: FrozenSymbolTable = FrozenSymbolTable(funcTable, globalScope)
