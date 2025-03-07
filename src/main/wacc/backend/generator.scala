@@ -184,7 +184,7 @@ object Generator:
           pushCode,
           generateExpr(expr, registerMap, scope),
           SUBS(XRegister(0), XRegister(8), ImmVal(4)),
-          BL("free"),
+          BL("_freePair"),
           popCode
         )
         addPredefFunc(P_Freepair)
@@ -195,7 +195,8 @@ object Generator:
         generatedCode.appendAll(
           pushCode,
           generateExpr(expr, registerMap, scope),
-          BL("_freepair")
+          BL("free"), 
+          popCode
         )
 
       case ReadC(lValue) => generatedCode ++= generateRead(lValue, registerMap, scope, 'c')
