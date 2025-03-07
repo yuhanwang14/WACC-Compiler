@@ -755,7 +755,7 @@ object Generator:
       case Len(e) =>
         join(
           generateExpr(e, registerMap, scope),
-          MOV(w9, w8),
+          MOV(x9, x8),
           LDUR(w8, Offset(x9, ImmVal(-4)))
         )
       case Ord(e) => generateExpr(e, registerMap, scope)
