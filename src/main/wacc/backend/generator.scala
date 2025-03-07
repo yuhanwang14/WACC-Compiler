@@ -12,6 +12,7 @@ object Generator:
   private var localLabelCount: Int = 0
   private var stringConsts: MutableMap[String, Int] = MutableMap()
   private var predefFuncs: MutableSet[PredefinedFunc] = MutableSet()
+  private var returnLabel = 0
 
   private def addPredefFunc(f: PredefinedFunc) = predefFuncs.add(f)
 
@@ -169,10 +170,13 @@ object Generator:
         )
 
       case Return(expr) =>
-        generatedCode.appendAll(
-          generateExpr(expr, registerMap, scope),
-          MOV(XRegister(0), XRegister(8))
-        )
+        if (returnLabel == 0) {
+          generatedCode.appendAll(
+            generateExpr(expr, registerMap, scope),
+            MOV(XRegister(0), XRegister(8))
+          )
+          returnLabel = 1
+        }
 
       case PrintB(expr) => generatedCode ++= generatePrint(expr, registerMap, scope, 'b')
       case PrintC(expr) => generatedCode ++= generatePrint(expr, registerMap, scope, 'c')
@@ -278,7 +282,8 @@ object Generator:
   private def generateFunc(func: Func, funcScope: Scope)(implicit
       symbolTable: FrozenSymbolTable
   ): StringBuilder =
-
+    returnLabel = 0
+    
     val funcName: String = func.ti._2.name
 
     // extract all parameters from symbolTable, allocate register or memory
