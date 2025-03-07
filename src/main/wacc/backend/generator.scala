@@ -14,8 +14,8 @@ object Generator:
   private var predefFuncs: MutableSet[PredefinedFunc] = MutableSet()
 
   private def addPredefFunc(f: PredefinedFunc) = predefFuncs.add(f)
-  
-  private def reset() = 
+
+  private def reset() =
     localLabelCount = 0
     stringConsts = MutableMap()
     predefFuncs = MutableSet()
@@ -33,12 +33,12 @@ object Generator:
     generatedCode.appendAll(
       DataHeader(),
       join(
-          stringConsts
-            .map: (str, index) =>
-              LabelledStringConst(asmLocal ~ f".str$index", str)
-            .toSeq*
+        stringConsts
+          .map: (str, index) =>
+            LabelledStringConst(asmLocal ~ f".str$index", str)
+          .toSeq*
       ),
-      main, 
+      main,
       join(funcs*),
       join(
         predefFuncs.map(f => predefinedFunctions(f)).toSeq*
@@ -220,8 +220,7 @@ object Generator:
   ): StringBuilder =
     val (pushCode, popCode) =
       pushAndPopRegisters(registerMap.usedCallerRegisters.map(XRegister(_)))
-    if newline then
-      predefFuncs += P_Println
+    if newline then predefFuncs += P_Println
     val printFunc = suffix match
       case 'b' => P_Printb
       case 'c' => P_Printc
@@ -331,8 +330,9 @@ object Generator:
         val (pushCode, popCode) = pushAndPopRegisters(
           registerMap.usedCallerRegisters.map(XRegister(_))
         )
-        predefFuncs += P_Malloc
-        predefFuncs += P_ErrOutOfMemory
+        addPredefFunc(P_Malloc)
+        addPredefFunc(P_ErrOutOfMemory)
+        addPredefFunc(P_Prints)
         generatedCode.appendAll(
           pushCode,
           MOV(WRegister(0), ImmVal(16)),
@@ -367,6 +367,8 @@ object Generator:
   )(implicit
       symbolTable: FrozenSymbolTable
   ): StringBuilder =
+    addPredefFunc(P_ErrNull)
+    addPredefFunc(P_Prints)
     join(
       lValue match
         case pairElem: PairElem => generateRValue(pairElem, registerMap, scope)
@@ -388,8 +390,10 @@ object Generator:
     val (pushCode, popCode) =
       pushAndPopRegisters(registerMap.usedCallerRegisters.map(XRegister(_)))
     val arrayLen = exprs.length
-    predefFuncs += P_Malloc
-    predefFuncs += P_ErrOutOfMemory
+    addPredefFunc(P_Malloc)
+    addPredefFunc(P_ErrOutOfMemory)
+    addPredefFunc(P_Prints)
+
     generatedCode.appendAll(
       pushCode,
       MOV(WRegister(0), ImmVal(4 + typeSize * arrayLen)),
@@ -430,8 +434,8 @@ object Generator:
                 STURB(WRegister(8), Offset(fp, ImmVal(offset)))
               case _ => STUR(XRegister(8), Offset(fp, ImmVal(offset)))
         )
-        
-      case ArrayElem(Ident(name), exprs) => 
+
+      case ArrayElem(Ident(name), exprs) =>
         generateArrayElem(registerMap, scope, name, exprs, "Store")
 
       case First(lValue)  => generatePairElemLValue(lValue, 0, registerMap, scope)
@@ -449,6 +453,8 @@ object Generator:
   ): StringBuilder =
     val x8 = XRegister(8)
     val x9 = XRegister(9)
+    addPredefFunc(P_ErrNull)
+    addPredefFunc(P_Prints)
     join(
       STP(XRegister(8), xzr, PreIndex(sp, ImmVal(-16))),
       lValue match
@@ -501,11 +507,11 @@ object Generator:
     )
 
   private def generateArrayElem(
-    registerMap: RegisterMap,
-    scope: Scope,
-    name: String,
-    exprs: List[Expr],
-    mode: String
+      registerMap: RegisterMap,
+      scope: Scope,
+      name: String,
+      exprs: List[Expr],
+      mode: String
   )(implicit
       symbolTable: FrozenSymbolTable
   ): StringBuilder =
@@ -513,16 +519,17 @@ object Generator:
     // Assume that the array pointer is at x7
     def unwrap(varType: WaccType, exprs: List[Expr]): StringBuilder =
       val generatedCode: StringBuilder = StringBuilder()
-      predefFuncs += P_ErrOutOfBounds
+      addPredefFunc(P_ErrOutOfBounds)
+      addPredefFunc(P_Prints)
+
       generatedCode.appendAll(
         STP(XRegister(8), xzr, PreIndex(sp, ImmVal(-16))),
         generateExpr(exprs.head, registerMap, scope),
         MOV(ip1, XRegister(8)),
         LDP(XRegister(8), xzr, PostIndex(sp, ImmVal(16))),
-
         if exprs.tail.isEmpty then
           TypeBridge.fromAst(varType).byteSize match
-            case 8 => 
+            case 8 =>
               predefFuncs += (if mode == "Load" then P_ArrLoad8 else P_ArrStore8)
               BL(f"_arr${mode}8")
             case 4 =>
@@ -548,7 +555,7 @@ object Generator:
             case _ =>
               predefFuncs += P_ArrLoad8
               BL("_arrLoad8")
-        )
+      )
     join(
       STP(XRegister(7), xzr, PreIndex(sp, ImmVal(-16))),
       STP(XRegister(8), xzr, PreIndex(sp, ImmVal(-16))),
@@ -557,7 +564,7 @@ object Generator:
       LDP(XRegister(8), xzr, PostIndex(sp, ImmVal(16))),
       scope.varTable(name) match {
         case ArrayType(insideType) => unwrap(insideType, exprs)
-        case _ => throw Exception()
+        case _                     => throw Exception()
       },
       LDP(XRegister(7), xzr, PostIndex(sp, ImmVal(16)))
     )
