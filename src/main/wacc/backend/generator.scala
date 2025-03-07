@@ -410,7 +410,9 @@ object Generator:
     exprs.zipWithIndex.map: (expr, ind) =>
       generatedCode.appendAll(
         generateExpr(expr, registerMap, scope),
-        STUR(WRegister(8), Offset(ip0, ImmVal(ind * typeSize)))
+        typeSize match
+          case 8 => STUR(XRegister(8), Offset(ip0, ImmVal(ind * typeSize)))
+          case _ => STUR(WRegister(8), Offset(ip0, ImmVal(ind * typeSize)))
       )
     generatedCode.appendAll(MOV(XRegister(8), ip0))
 
