@@ -476,7 +476,7 @@ object SemanticChecker {
                 stmt.pos
               )
           Assign(newE1, newE2)(stmt.pos)
-    case Begin(stmt) => verifyStmt(stmt)
+    case Begin(stmt) => Begin(verifyStmt(stmt))(stmt.pos)
     case Block(sts) =>
       st.enterScope
       val newSts = sts.map(verifyStmt)
