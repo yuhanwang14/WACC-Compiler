@@ -12,3 +12,4 @@ wacc-compiler
 wacc.Main
 .idea/kotlinc.xml
 .idea/libraries/KotlinJavaRuntime.xml
+*.s
