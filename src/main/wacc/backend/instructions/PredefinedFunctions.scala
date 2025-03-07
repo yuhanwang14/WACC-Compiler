@@ -20,7 +20,7 @@ sealed abstract class PredefinedErrMsg(override val name: String, val errMsg: St
       asmLocal ~ f"._${name}_str0",
       f"fatal error: $errMsg\n"
     ),
-    LabelHeader(name),
+    LabelHeader(asmGlobal ~ f"_$name"),
     ADR(x0, asmLocal ~ s"._${name}_str0"),
     BL(asmGlobal ~ "_prints"),
     MOV(w0, ImmVal(-1)),
