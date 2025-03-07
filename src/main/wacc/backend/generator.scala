@@ -321,6 +321,7 @@ object Generator:
           popCode
         )
 
+      case ArrayLiter(exprs)  => generatedCode ++= generateArrayLiter(exprs, 0, registerMap, scope)
       case ArrayLiterB(exprs) => generatedCode ++= generateArrayLiter(exprs, 1, registerMap, scope)
       case ArrayLiterC(exprs) => generatedCode ++= generateArrayLiter(exprs, 1, registerMap, scope)
       case ArrayLiterI(exprs) => generatedCode ++= generateArrayLiter(exprs, 4, registerMap, scope)
@@ -355,7 +356,7 @@ object Generator:
 
       case expr: Expr => generatedCode ++= generateExpr(expr, registerMap, scope)
 
-      case _ => 
+      case _ =>
     }
 
     generatedCode
