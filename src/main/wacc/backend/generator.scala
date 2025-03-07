@@ -77,9 +77,8 @@ object Generator:
 
     // calculate the extra stack space needed for local variables within current scope
     // allocate register or stack space for locak variables within currentScope
-
+    val offsetBefore: Int = ((inheritedRegisterMap.stackOffset + 15) / 16) * 16
     val registerMap: RegisterMap = inheritedRegisterMap :+ scope.localVars
-    val offsetBefore: Int = ((registerMap.stackOffset + 15) / 16) * 16
     val offsetAfter: Int = ((registerMap.stackOffset + 15) / 16) * 16
     val extraStackSpace: Int = offsetAfter - offsetBefore
 
@@ -424,8 +423,9 @@ object Generator:
                 STURB(WRegister(8), Offset(fp, ImmVal(offset)))
               case _ => STUR(XRegister(8), Offset(fp, ImmVal(offset)))
         )
-      // TODO: Array
-      case ArrayElem(Ident(name), exprs) => ???
+        
+      case ArrayElem(Ident(name), exprs) => 
+        generateArrayElem(registerMap, scope, name, exprs, "Store")
 
       case First(lValue)  => generatePairElemLValue(lValue, 0, registerMap, scope)
       case Second(lValue) => generatePairElemLValue(lValue, 8, registerMap, scope)
@@ -489,44 +489,72 @@ object Generator:
             case (reg: WRegister, _) => MOV(w8, reg)
             case (offset: Int, _)    => LDUR(x8, Offset(fp, ImmVal(offset)))
         case ArrayElem(Ident(name), exprs) =>
-          // Assume that the array pointer is at x8
-          def unwrap(varType: WaccType, exprs: List[Expr]): StringBuilder =
-            var subIndexing: StringBuilder = StringBuilder()
-            val generatedCode: StringBuilder = StringBuilder()
-            // generate array index and move to ip1
-            generatedCode.appendAll(
-              STP(XRegister(8), xzr, PreIndex(sp, ImmVal(-16))),
-              generateExpr(exprs.head, registerMap, scope),
-              MOV(ip1, XRegister(8)),
-              LDP(XRegister(8), xzr, PostIndex(sp, ImmVal(16))),
-              STP(XRegister(7), xzr, PreIndex(sp, ImmVal(-16))),
-              MOV(XRegister(7), XRegister(8)),
-              varType match
-                case ArrayType(insideType) =>
-                  subIndexing = unwrap(insideType, exprs.tail)
-                  addPredefFunc(P_ArrLoad8)
-                  BL("_arrLoad8")
-                case x: IntType =>
-                  addPredefFunc(P_ArrLoad4)
-                  BL("_arrLoad4")
-                case x: (BoolType | CharType) =>
-                  addPredefFunc(P_ArrLoad1)
-                  BL("_arrLoad1")
-                case _ =>
-                  addPredefFunc(P_ArrLoad8)
-                  BL("_arrLoad8")
-              ,
-              MOV(XRegister(8), XRegister(7)),
-              LDP(XRegister(7), xzr, PostIndex(sp, ImmVal(16))),
-              subIndexing
-            )
-          join(
-            generateExpr(Ident(name)(defaultPos), registerMap, scope),
-            unwrap(scope.lookupSymbol(name).get, exprs)
-          )
+          generateArrayElem(registerMap, scope, name, exprs, "Load")
         case Paren(e)    => generateExpr(e, registerMap, scope)
         case e: UnaryOp  => generateUnary(e, registerMap, scope)
         case e: BinaryOp => generateBinary(e, registerMap, scope)
+    )
+
+  private def generateArrayElem(
+    registerMap: RegisterMap,
+    scope: Scope,
+    name: String,
+    exprs: List[Expr],
+    mode: String
+  )(implicit
+      symbolTable: FrozenSymbolTable
+  ): StringBuilder =
+
+    // Assume that the array pointer is at x7
+    def unwrap(varType: WaccType, exprs: List[Expr]): StringBuilder =
+      val generatedCode: StringBuilder = StringBuilder()
+
+      generatedCode.appendAll(
+        STP(XRegister(8), xzr, PreIndex(sp, ImmVal(-16))),
+        generateExpr(exprs.head, registerMap, scope),
+        MOV(ip1, XRegister(8)),
+        LDP(XRegister(8), xzr, PostIndex(sp, ImmVal(16))),
+
+        if exprs.tail.isEmpty then
+          TypeBridge.fromAst(varType).byteSize match
+            case 8 => 
+              predefFuncs += (if mode == "Load" then P_ArrLoad8 else P_ArrStore8)
+              BL(f"_arr${mode}8")
+            case 4 =>
+              predefFuncs += (if mode == "Load" then P_ArrLoad4 else P_ArrStore4)
+              BL(f"_arr${mode}4")
+            case _ =>
+              predefFuncs += (if mode == "Load" then P_ArrLoad1 else P_ArrStore1)
+              BL(f"_arr${mode}1")
+        else
+          varType match
+            case ArrayType(insideType) =>
+              predefFuncs += P_ArrLoad8
+              join(
+                BL("_arrLoad8"),
+                unwrap(insideType, exprs.tail)
+              )
+            case x: IntType =>
+              predefFuncs += P_ArrLoad4
+              BL("_arrLoad4")
+            case x: (BoolType | CharType) =>
+              predefFuncs += P_ArrLoad1
+              BL("_arrLoad1")
+            case _ =>
+              predefFuncs += P_ArrLoad8
+              BL("_arrLoad8")
+        )
+    join(
+      STP(XRegister(7), xzr, PreIndex(sp, ImmVal(-16))),
+      STP(XRegister(8), xzr, PreIndex(sp, ImmVal(-16))),
+      generateExpr(Ident(name)(defaultPos), registerMap, scope),
+      MOV(XRegister(7), XRegister(8)),
+      LDP(XRegister(8), xzr, PostIndex(sp, ImmVal(16))),
+      scope.varTable(name) match {
+        case ArrayType(insideType) => unwrap(insideType, exprs)
+        case _ => throw Exception()
+      },
+      LDP(XRegister(7), xzr, PostIndex(sp, ImmVal(16)))
     )
 
   private def generateBinary(
