@@ -1,7 +1,7 @@
 package backend.instructions
 
 class AsmSnippet(code: String)(implicit indent: Int):
-  override def toString: String = " " * indent + code.replace("\n", "\n" + " " * indent)
+  override def toString: String = " " * indent + code
 
 case object EmptyAsmSnippet extends AsmSnippet("")(0)
 
