@@ -116,12 +116,14 @@ object Generator:
         localLabelCount += 2
 
         generatedCode.appendAll(
-          B(loopLabel),
+          B(finallyLabel),
           LabelHeader(loopLabel),
           generateBlock(block, registerMap, subScopes.head),
           LabelHeader(finallyLabel),
           generateExpr(cond, registerMap, scope),
-          CBNZ(w8, loopLabel)
+          CMP(w8, ImmVal(0)),
+          BCond(loopLabel, Cond.EQ)
+          // CBNZ(w8, loopLabel)
         )
 
         subScopes = subScopes.tail
