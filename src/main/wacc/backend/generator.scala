@@ -511,7 +511,8 @@ object Generator:
         case CharLiter(c) => MOV(w8, ImmVal(c))
         case StrLiter(s) =>
           var index = stringConsts.size
-          val escapedString = s.replace("\"", "\\\"").replace("\'", "\\\'").replace("\\", "\\\\")
+          val escapedString = s.replace("\"", "\\\"")
+          println(escapedString)
           if (stringConsts.contains(escapedString)) then index = stringConsts(escapedString)
           else stringConsts(escapedString) = index
           join(
