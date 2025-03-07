@@ -870,3 +870,8 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
 
   private def join(codes: AsmSnippet | StringBuilder | String*): StringBuilder =
     StringBuilder().appendAll(codes*)
+
+extension (builder: StringBuilder)
+  def appendAll(codes: AsmSnippet | StringBuilder | String*): StringBuilder =
+    codes.foldLeft(builder): (_, code) =>
+      builder.append(code)
