@@ -195,7 +195,7 @@ object Generator:
         generatedCode.appendAll(
           pushCode,
           generateExpr(expr, registerMap, scope),
-          SUB(XRegister(0), XRegister(8), ImmVal(4)),
+          MOV(XRegister(0), XRegister(8)),
           BL("_freePair"),
           popCode
         )
