@@ -196,7 +196,7 @@ object Generator:
           pushCode,
           generateExpr(expr, registerMap, scope),
           MOV(XRegister(0), XRegister(8)),
-          BL("_freePair"),
+          BL("_freepair"),
           popCode
         )
 
