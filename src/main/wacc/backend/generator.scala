@@ -8,47 +8,48 @@ import scala.collection.mutable.Map as MutableMap
 import scala.collection.mutable.Set as MutableSet
 import instructions.PredefinedFunctions.*
 import instructions.*
-import scala.concurrent.{Future, Await}
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration.Duration
-
 object Generator:
   private var localLabelCount: Int = 0
-  private val stringConsts: MutableMap[String, Int] = MutableMap()
-  private val predefFuncs: MutableSet[PredefinedFunc] = MutableSet()
+  private var stringConsts: MutableMap[String, Int] = MutableMap()
+  private var predefFuncs: MutableSet[PredefinedFunc] = MutableSet()
 
-  private def addPredefFunc(f: PredefinedFunc) = synchronized(predefFuncs.add(f))
+  private def addPredefFunc(f: PredefinedFunc) = predefFuncs.add(f)
+  
+  private def reset() = 
+    localLabelCount = 0
+    stringConsts = MutableMap()
+    predefFuncs = MutableSet()
 
   def generate(prog: Program)(implicit symbolTable: FrozenSymbolTable): String =
-    val mainFuture = Future(generateMain(prog.s))
-    val funcsFuture =
+    reset()
+    val main = generateMain(prog.s)
+    val funcs =
       prog.fs
         .map:
           case f @ Func((_, Ident(name)), _, _) =>
-            Future(generateFunc(f, symbolTable.getFuncScope(name)))
+            generateFunc(f, symbolTable.getFuncScope(name))
         .toSeq
-
-    join(
-      Await.result(mainFuture, Duration.Inf),
-      join(funcsFuture.map(f => Await.result(f, Duration.Inf))*),
+    val generatedCode: StringBuilder = StringBuilder()
+    generatedCode.appendAll(
+      DataHeader(),
+      join(
+          stringConsts
+            .map: (str, index) =>
+              LabelledStringConst(asmLocal ~ f".str$index", str)
+            .toSeq*
+      ),
+      main, 
+      join(funcs*),
       join(
         predefFuncs.map(f => predefinedFunctions(f)).toSeq*
       )
-    ).toString
+    )
+    generatedCode.toString
 
   private def generateMain(mainBlock: Stmt)(implicit
       symbolTable: FrozenSymbolTable
   ): StringBuilder =
     join(
-      DataHeader(),
-      join(
-        stringConsts.synchronized(
-          stringConsts
-            .map: (str, index) =>
-              LabelledStringConst(asmLocal ~ f".str$index", str)
-            .toSeq
-        )*
-      ),
       TextHeader(),
       GlobalHeader("main"),
       LabelHeader("main"),
@@ -473,11 +474,9 @@ object Generator:
         case BoolLiter(x) => MOV(w8, ImmVal(if (x) then 1 else 0))
         case CharLiter(c) => MOV(w8, ImmVal(c))
         case StrLiter(s) =>
-          val index = stringConsts.synchronized:
-            if stringConsts.contains(s) then stringConsts(s)
-            else
-              stringConsts(s) = stringConsts.size
-              stringConsts.size
+          var index = stringConsts.size
+          if (stringConsts.contains(s)) then index = stringConsts(s)
+          else stringConsts(s) = index
           join(
             ADRP(x8, asmLocal ~ f".str$index"),
             ADD(x8, x8, Lo12(asmLocal ~ f".str$index"))
