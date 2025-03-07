@@ -666,18 +666,18 @@ object Generator:
         case "ADD" =>
           join(
             ADDS(w8, w9, w8),
-            BCond(asmGlobal ~ P_ErrOverflow.name, Cond.VS)
+            BCond(asmGlobal ~ "_errOverFlow", Cond.VS)
           )
         case "SUB" =>
           join(
             SUBS(w8, w9, w8),
-            BCond(asmGlobal ~ P_ErrOverflow.name, Cond.VS)
+            BCond(asmGlobal ~ "_errOverFlow", Cond.VS)
           )
         case "MUL" =>
           join(
             SMULL(x8, w9, w8),
             CMP(x8, w8, Some(SXTW())),
-            BCond(asmGlobal ~ P_ErrOverflow.name, Cond.NE)
+            BCond(asmGlobal ~ "_errOverFlow", Cond.NE)
           )
     )
 
@@ -698,7 +698,7 @@ object Generator:
     join(
       generateExpr(expr2, registerMap, scope),
       CMP(w8, ImmVal(0)),
-      BCond(asmGlobal ~ P_ErrDivZero.name, Cond.EQ),
+      BCond(asmGlobal ~ "_errDivZero", Cond.EQ),
       MOV(w9, w8),
       generateExpr(expr1, registerMap, scope),
       operation match
@@ -736,7 +736,7 @@ object Generator:
           generateExpr(e, registerMap, scope),
           MOV(w9, w8),
           NEGS(w8, w9),
-          BCond(asmGlobal ~ P_ErrOverflow.name, Cond.VS)
+          BCond(asmGlobal ~ "_errOverflow", Cond.VS)
         )
       case Len(e) =>
         join(
@@ -752,7 +752,7 @@ object Generator:
           generateExpr(e, registerMap, scope),
           TST(w8, ImmVal(0xffffff80)),
           CSEL(x1, x8, x1, Cond.NE),
-          BCond(asmGlobal ~ P_ErrBadChar.name, Cond.NE)
+          BCond(asmGlobal ~ "_errBadChar", Cond.NE)
         )
     )
 
