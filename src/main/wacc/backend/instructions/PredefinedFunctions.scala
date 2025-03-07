@@ -41,7 +41,7 @@ sealed abstract class PredefinedRead(override val name: String, val fmt: String)
       "aarch64 mandates 16-byte SP alignment at all times, " +
         "might as well merge the stores"
     )(4),
-    STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
+    STP(x0, lr, PreIndex(sp, ImmVal(-16))),
     MOV(x1, sp),
     ADR(x0, asmLocal ~ s"._${name}_str0"),
     BL(asmGlobal ~ "scanf"),
