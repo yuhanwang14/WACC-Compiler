@@ -263,7 +263,7 @@ object Generator:
       pushAndPopRegisters(registerMap.usedCallerRegisters.map(XRegister(_)))
     predefFuncs += (if suffix == 'i' then P_Readi else P_Readc)
     join(
-      pushCode,
+      // pushCode,
       lValue match
         case pairElem: PairElem => generateRValue(pairElem, registerMap, scope)
         case expr: Expr         => generateExpr(expr, registerMap, scope)
@@ -271,7 +271,7 @@ object Generator:
       MOV(WRegister(0), WRegister(8)),
       BL(f"_read$suffix"),
       MOV(WRegister(8), WRegister(0)),
-      popCode,
+      // popCode,
       generateLValue(lValue, registerMap, scope)
     )
 
