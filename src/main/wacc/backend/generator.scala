@@ -301,10 +301,10 @@ object Generator:
       pushCode,
       MOV(fp, sp),
       // the current scope is for parameters
-      generateBlock(func.s, registerMap, funcScope),
+      generateBlock(func.s, registerMap, funcScope.children.head),
       popCode,
       Comment("pop {fp, lr}")(4),
-      LDP(fp, lr, PreIndex(sp, ImmVal(-16))),
+      LDP(fp, lr, PostIndex(sp, ImmVal(16))),
       RET
     )
 
@@ -441,13 +441,12 @@ object Generator:
 
       case Ident(name) =>
         val location = registerMap(name)
-        val varType = scope.lookupSymbol(name).getOrElse(anyType)
         join(location._1 match
           case reg: WRegister => MOV(reg, WRegister(8))
           case reg: XRegister => MOV(reg, XRegister(8))
           case offset: Int =>
-            varType match
-              case BoolType() | CharType() =>
+            location._2 match
+              case 1 =>
                 STURB(WRegister(8), Offset(fp, ImmVal(offset)))
               case _ => STUR(XRegister(8), Offset(fp, ImmVal(offset)))
         )
@@ -815,7 +814,11 @@ object Generator:
           val dest = if paramSize > 4 then XRegister(paramCount) else WRegister(paramCount)
           if (paramCount < 8)
             paramCount += 1
-            generateExpr(expr, registerMap, scope)
+            join(
+              generateExpr(expr, registerMap, scope),
+              MOV(XRegister(paramCount - 1), XRegister(8))
+            )
+            
           else
             offset += paramSize
             join(

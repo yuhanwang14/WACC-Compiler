@@ -19,6 +19,6 @@ class LocationIterator(paramCount: Int):
       val retVal = if size <= 4 then WRegister(regs(at)) else XRegister(regs(at))
       at += 1
       retVal
-
   
-  def usedCallerRegisters: Seq[Int] = callerRegs.take(at - calleeRegs.size)
+  def usedCallerRegisters: Seq[Int] = 
+    (0 to paramCount - 1) ++ callerRegs.take(at - calleeRegs.size)
