@@ -160,9 +160,6 @@ object SemanticChecker {
           (ArrayType(t)(defaultPos), ArrayLiterP(newEs)(rVal.pos))
         case (t, newEs) => (ArrayType(t)(defaultPos), ArrayLiter(newEs)(rVal.pos))
 
-    // case Print(e) =>
-    //   verifyType(e, anyType) match
-
     case NewPair(e1, e2) => {
       val (t1, newE1) = getType(e1)
       val (t2, newE2) = getType(e2)
@@ -372,6 +369,7 @@ object SemanticChecker {
         case (CharType(), newE)              => PrintC(newE)(stmt.pos)
         case (IntType(), newE)               => PrintI(newE)(stmt.pos)
         case (StringType(), newE)            => PrintS(newE)(stmt.pos)
+        case (ArrayType(CharType()), newE)   => PrintS(newE)(stmt.pos)
         case (ArrayType(_), newE)            => PrintP(newE)(stmt.pos)
         case (NonErasedPairType(_, _), newE) => PrintP(newE)(stmt.pos)
         case _                               => stmt
@@ -382,6 +380,7 @@ object SemanticChecker {
         case (CharType(), newE)              => PrintlnC(newE)(stmt.pos)
         case (IntType(), newE)               => PrintlnI(newE)(stmt.pos)
         case (StringType(), newE)            => PrintlnS(newE)(stmt.pos)
+        case (ArrayType(CharType()), newE)   => PrintlnS(newE)(stmt.pos)
         case (ArrayType(_), newE)            => PrintlnP(newE)(stmt.pos)
         case (NonErasedPairType(_, _), newE) => PrintlnP(newE)(stmt.pos)
         case _                               => stmt
@@ -502,7 +501,7 @@ object SemanticChecker {
             )
           stmt
         case Some(returnType) =>
-          val(_, expr) = verifyType(e, returnType)
+          val (_, expr) = verifyType(e, returnType)
           Return(expr)(stmt.pos)
 
     case _ => stmt
