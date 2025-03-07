@@ -148,9 +148,18 @@ object Generator:
             case (reg: WRegister, byteSize: Int) => MOV(reg, WRegister(8))
             case (offset: Int, byteSize: Int) =>
               byteSize match
-                case 1 => STRB(WRegister(8), Offset(fp, ImmVal(offset)))
-                case 4 => STR(WRegister(8), Offset(fp, ImmVal(offset)))
-                case _ => STR(XRegister(8), Offset(fp, ImmVal(offset)))
+                case 1 =>
+                  if (-256 <= offset && offset <= 255) then
+                    STURB(WRegister(8), Offset(fp, ImmVal(offset)))
+                  else join(MOV(ip1, ImmVal(offset)), STRB(WRegister(8), RegisterAddress(fp, ip1)))
+                case 4 =>
+                  if (-256 <= offset && offset <= 255) then
+                    STUR(WRegister(8), Offset(fp, ImmVal(offset)))
+                  else join(MOV(ip1, ImmVal(offset)), STR(WRegister(8), RegisterAddress(fp, ip1)))
+                case _ =>
+                  if (-256 <= offset && offset <= 255) then
+                    STUR(XRegister(8), Offset(fp, ImmVal(offset)))
+                  else join(MOV(ip1, ImmVal(offset)), STR(XRegister(8), RegisterAddress(fp, ip1)))
         )
 
       case Assign(lValue, rValue) =>
@@ -195,7 +204,7 @@ object Generator:
         generatedCode.appendAll(
           pushCode,
           generateExpr(expr, registerMap, scope),
-          BL("free"), 
+          BL("free"),
           popCode
         )
 
