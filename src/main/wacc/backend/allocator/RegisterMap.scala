@@ -46,7 +46,7 @@ object RegisterMap:
   ): Iterable[(String, (Location, Int))] =
     val (regParams, stackParams) = params.splitAt(8)
     regParams
-      .zip(0 to 8)
+      .zipWithIndex
       .map:
         case ((id, t), i) =>
           (id, (if t.byteSize > 4 then XRegister(i) else WRegister(i), t.byteSize))
