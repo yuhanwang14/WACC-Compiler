@@ -21,7 +21,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       prog.fs
         .map:
           case f @ Func((_, Ident(name)), _, _) =>
-            generateFunc(f, symbolTable.getFuncScope(name).child)
+            generateFunc(f, symbolTable.getFuncScope(name))
         .toSeq
     val generatedCode: StringBuilder = StringBuilder()
     generatedCode.appendAll(
