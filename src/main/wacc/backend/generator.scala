@@ -8,6 +8,7 @@ import scala.collection.mutable.Map as MutableMap
 import scala.collection.mutable.Set as MutableSet
 import instructions.PredefinedFunctions.*
 import instructions.*
+import frontend.ast.TypeBridge.fromAst
 class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
   private var localLabelCount: Int = 0
   private val stringConsts: MutableMap[String, Int] = MutableMap()
@@ -16,34 +17,37 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
   private def addPredefFunc(f: PredefinedFunc) = predefFuncs.add(f)
 
   def generate: String =
-    val main = generateMain(prog.s)
-    val funcs =
+    val bodyCode: StringBuilder = StringBuilder()
+    val fullCode: StringBuilder = StringBuilder()
+    put(
+      generateMain(prog.s)(bodyCode)
+    )(bodyCode)
+    put(
       prog.fs
         .map:
           case f @ Func((_, Ident(name)), _, _) =>
-            generateFunc(f, symbolTable.getFuncScope(name))
-        .toSeq
-    val generatedCode: StringBuilder = StringBuilder()
-    generatedCode.appendAll(
+            generateFunc(f, symbolTable.getFuncScope(name))(bodyCode)
+      *
+    )(bodyCode)
+    put(
       DataHeader(),
       join(
         stringConsts
           .map: (str, index) =>
             LabelledStringConst(asmLocal ~ f".str$index", str)
           .toSeq*
-      ),
-      main,
-      join(funcs*),
-      join(
-        predefFuncs.map(f => predefinedFunctions(f)).toSeq*
-      )
-    )
-    generatedCode.toString
+      )(fullCode)
+    )(fullCode)
+    fullCode.append(bodyCode)
+    put(
+      predefFuncs.map(f => predefinedFunctions(f)).toSeq*
+    )(fullCode)
+    fullCode.toString
 
   private def generateMain(mainBlock: Stmt)(implicit
-      symbolTable: FrozenSymbolTable
-  ): StringBuilder =
-    join(
+      generatedCode: StringBuilder
+  ): () => Unit = () =>
+    put(
       TextHeader(),
       GlobalHeader("main"),
       LabelHeader("main"),
@@ -61,10 +65,10 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       block: Stmt,
       inheritedRegisterMap: RegisterMap,
       scope: Scope,
-      popCode: StringBuilder = StringBuilder()
+      popCode: AsmSnippet = EmptyAsmSnippet
   )(implicit
-      symbolTable: FrozenSymbolTable
-  ): StringBuilder =
+      generatedCode: StringBuilder
+  ): () => Unit = () =>
     val w8 = WRegister(8)
     val stmts: Seq[Stmt] = block match
       case Block(sts) => sts
@@ -79,10 +83,8 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
     val offsetAfter: Int = (15 - registerMap.stackOffset) / 16 * 16
     val extraStackSpace: Int = offsetAfter - offsetBefore
 
-    val generatedCode: StringBuilder = StringBuilder()
-
     if (extraStackSpace > 0)
-      generatedCode.appendAll(
+      put(
         SUB(sp, sp, ImmVal(extraStackSpace))
       )
 
@@ -90,27 +92,30 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       case If(cond, b2, b1) =>
         val thenLabel = asmLocal ~ localLabelCount
         val finallyLabel = asmLocal ~ (localLabelCount + 1)
-
         localLabelCount += 2
-        generatedCode.appendAll(
+
+        val thenScope = subScopes(0)
+        val elseScope = subScopes(1)
+        subScopes = subScopes.drop(2)
+
+        put(
           generateExpr(cond, registerMap, scope),
           CBNZ(w8, thenLabel),
           // generate `else` block
-          generateBlock(b2, registerMap, subScopes(0)),
+          generateBlock(b2, registerMap, elseScope),
           B(finallyLabel),
           // generate `then` block
           LabelHeader(thenLabel),
-          generateBlock(b1, registerMap, subScopes(1)),
+          generateBlock(b1, registerMap, thenScope),
           LabelHeader(finallyLabel)
         )
-        subScopes = subScopes.drop(2)
 
       case While(cond, block) =>
         val finallyLabel = asmLocal ~ localLabelCount
         val loopLabel = asmLocal ~ (localLabelCount + 1)
         localLabelCount += 2
 
-        generatedCode.appendAll(
+        put(
           B(finallyLabel),
           LabelHeader(loopLabel),
           generateBlock(block, registerMap, subScopes.head),
@@ -123,20 +128,21 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
         subScopes = subScopes.tail
 
       case Begin(block) =>
-        generatedCode.appendAll(
-          generateBlock(block, registerMap, subScopes.head)
-        )
+        val blockScope = subScopes(0)
         subScopes = subScopes.tail
+        put(
+          generateBlock(block, registerMap, blockScope)
+        )
 
       case Exit(expr) =>
-        generatedCode.appendAll(
+        put(
           generateExpr(expr, registerMap, scope),
           MOV(WRegister(0), WRegister(8)),
           BL("exit")
         )
 
       case Declare((t, Ident(name)), rvalue) =>
-        generatedCode.appendAll(
+        put(
           generateRValue(rvalue, registerMap, scope),
           registerMap(name) match
             case (reg: XRegister, byteSize: Int) => MOV(reg, XRegister(8))
@@ -158,13 +164,13 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
         )
 
       case Assign(lValue, rValue) =>
-        generatedCode.appendAll(
+        put(
           generateRValue(rValue, registerMap, scope),
           generateLValue(lValue, registerMap, scope)
         )
 
       case Return(expr) =>
-        generatedCode.appendAll(
+        put(
           generateExpr(expr, registerMap, scope),
           MOV(XRegister(0), XRegister(8)),
           MOV(sp, fp),
@@ -174,17 +180,17 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
           RET
         )
 
-      case PrintB(expr) => generatedCode ++= generatePrint(expr, registerMap, scope, 'b')
-      case PrintC(expr) => generatedCode ++= generatePrint(expr, registerMap, scope, 'c')
-      case PrintI(expr) => generatedCode ++= generatePrint(expr, registerMap, scope, 'i')
-      case PrintP(expr) => generatedCode ++= generatePrint(expr, registerMap, scope, 'p')
-      case PrintS(expr) => generatedCode ++= generatePrint(expr, registerMap, scope, 's')
+      case PrintB(expr) => put(generatePrint(expr, registerMap, scope, 'b'))
+      case PrintC(expr) => put(generatePrint(expr, registerMap, scope, 'c'))
+      case PrintI(expr) => put(generatePrint(expr, registerMap, scope, 'i'))
+      case PrintP(expr) => put(generatePrint(expr, registerMap, scope, 'p'))
+      case PrintS(expr) => put(generatePrint(expr, registerMap, scope, 's'))
 
-      case PrintlnB(expr) => generatedCode ++= generatePrint(expr, registerMap, scope, 'b', true)
-      case PrintlnC(expr) => generatedCode ++= generatePrint(expr, registerMap, scope, 'c', true)
-      case PrintlnI(expr) => generatedCode ++= generatePrint(expr, registerMap, scope, 'i', true)
-      case PrintlnP(expr) => generatedCode ++= generatePrint(expr, registerMap, scope, 'p', true)
-      case PrintlnS(expr) => generatedCode ++= generatePrint(expr, registerMap, scope, 's', true)
+      case PrintlnB(expr) => put(generatePrint(expr, registerMap, scope, 'b', true))
+      case PrintlnC(expr) => put(generatePrint(expr, registerMap, scope, 'c', true))
+      case PrintlnI(expr) => put(generatePrint(expr, registerMap, scope, 'i', true))
+      case PrintlnP(expr) => put(generatePrint(expr, registerMap, scope, 'p', true))
+      case PrintlnS(expr) => put(generatePrint(expr, registerMap, scope, 's', true))
 
       case FreeP(expr) =>
         val (pushCode, popCode) =
@@ -192,7 +198,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
         addPredefFunc(P_Freepair)
         addPredefFunc(P_ErrNull)
         addPredefFunc(P_Prints)
-        generatedCode.appendAll(
+        put(
           pushCode,
           generateExpr(expr, registerMap, scope),
           MOV(XRegister(0), XRegister(8)),
@@ -203,24 +209,22 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       case FreeA(expr) =>
         val (pushCode, popCode) =
           pushAndPopRegisters(registerMap.usedCallerRegisters.map(XRegister(_)))
-        generatedCode.appendAll(
+        put(
           pushCode,
           generateExpr(expr, registerMap, scope),
           BL("free"),
           popCode
         )
 
-      case ReadC(lValue) => generatedCode ++= generateRead(lValue, registerMap, scope, 'c')
-      case ReadI(lValue) => generatedCode ++= generateRead(lValue, registerMap, scope, 'i')
+      case ReadC(lValue) => put(generateRead(lValue, registerMap, scope, 'c'))
+      case ReadI(lValue) => put(generateRead(lValue, registerMap, scope, 'i'))
 
       case _ =>
 
     if (extraStackSpace > 0)
-      generatedCode.appendAll(
+      put(
         ADD(sp, sp, ImmVal(extraStackSpace))
       )
-
-    generatedCode
 
   private def generatePrint(
       expr: Expr,
@@ -229,8 +233,9 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       suffix: Char,
       newline: Boolean = false
   )(implicit
-      symbolTable: FrozenSymbolTable
-  ): StringBuilder =
+      generatedCode: StringBuilder
+  ): () => Unit = () =>
+    println("evaluated genP")
     val (pushCode, popCode) =
       pushAndPopRegisters(registerMap.usedCallerRegisters.map(XRegister(_)))
     if newline then predefFuncs += P_Println
@@ -242,7 +247,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       case 's' => P_Prints
       case _   => P_Printp
     predefFuncs += printFunc
-    join(
+    put(
       pushCode,
       generateExpr(expr, registerMap, scope),
       MOV(XRegister(0), XRegister(8)),
@@ -257,12 +262,12 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       scope: Scope,
       suffix: Char
   )(implicit
-      symbolTable: FrozenSymbolTable
-  ): StringBuilder =
+      generatedCode: StringBuilder
+  ): () => Unit = () =>
     val (pushCode, popCode) =
       pushAndPopRegisters(registerMap.usedCallerRegisters.map(XRegister(_)))
     predefFuncs += (if suffix == 'i' then P_Readi else P_Readc)
-    join(
+    put(
       pushCode,
       lValue match
         case pairElem: PairElem => generateRValue(pairElem, registerMap, scope)
@@ -276,8 +281,8 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
     )
 
   private def generateFunc(func: Func, funcScope: Scope)(implicit
-      symbolTable: FrozenSymbolTable
-  ): StringBuilder =
+      generatedCode: StringBuilder
+  ): () => Unit = () =>
 
     val funcName: String = func.ti._2.name
 
@@ -293,7 +298,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
     val (pushCode, popCode) = pushAndPopRegisters(calleeRegisters)
     val registerMap: RegisterMap = RegisterMap(params, numOfVariables)
 
-    join(
+    put(
       AsmBlankLine,
       LabelHeader(f"wacc_$funcName"),
       Comment("push {fp, lr}")(4),
@@ -311,31 +316,34 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       registerMap: RegisterMap,
       scope: Scope
   )(implicit
-      symbolTable: FrozenSymbolTable
-  ): StringBuilder =
-    val generatedCode: StringBuilder = StringBuilder()
+      generatedCode: StringBuilder
+  ): () => Unit = () =>
     rvalue match {
       case Call(Ident(funcName), ArgList(argList)) =>
         val (pushCode, popCode) = pushAndPopRegisters(
           registerMap.usedCallerRegisters.map(XRegister(_))
         )
-        val (argPushCode, offset) = pushArgs(funcName, argList, registerMap, scope)
-        generatedCode.appendAll(
+        val offset = (symbolTable
+          .getFuncSignature(funcName)
+          .paramTypes
+          .map(fromAst(_).byteSize)
+          .sum + 15) / 16 * 16
+        put(
           pushCode,
           if (offset > 0) then SUB(sp, sp, ImmVal(offset)) else EmptyAsmSnippet,
-          argPushCode,
+          pushArgs(funcName, argList, registerMap, scope),
           BL(asmGlobal ~ f"wacc_$funcName"),
           MOV(XRegister(8), XRegister(0)),
           if (offset > 0) then ADD(sp, sp, ImmVal(offset)) else EmptyAsmSnippet,
           popCode
         )
 
-      case ArrayLiter(exprs)  => generatedCode ++= generateArrayLiter(exprs, 0, registerMap, scope)
-      case ArrayLiterB(exprs) => generatedCode ++= generateArrayLiter(exprs, 1, registerMap, scope)
-      case ArrayLiterC(exprs) => generatedCode ++= generateArrayLiter(exprs, 1, registerMap, scope)
-      case ArrayLiterI(exprs) => generatedCode ++= generateArrayLiter(exprs, 4, registerMap, scope)
-      case ArrayLiterS(exprs) => generatedCode ++= generateArrayLiter(exprs, 8, registerMap, scope)
-      case ArrayLiterP(exprs) => generatedCode ++= generateArrayLiter(exprs, 8, registerMap, scope)
+      case ArrayLiter(exprs)  => generateArrayLiter(exprs, 0, registerMap, scope)
+      case ArrayLiterB(exprs) => generateArrayLiter(exprs, 1, registerMap, scope)
+      case ArrayLiterC(exprs) => generateArrayLiter(exprs, 1, registerMap, scope)
+      case ArrayLiterI(exprs) => generateArrayLiter(exprs, 4, registerMap, scope)
+      case ArrayLiterS(exprs) => generateArrayLiter(exprs, 8, registerMap, scope)
+      case ArrayLiterP(exprs) => generateArrayLiter(exprs, 8, registerMap, scope)
 
       case NewPair(expr1, expr2) =>
         val (pushCode, popCode) = pushAndPopRegisters(
@@ -344,7 +352,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
         addPredefFunc(P_Malloc)
         addPredefFunc(P_ErrOutOfMemory)
         addPredefFunc(P_Prints)
-        generatedCode.appendAll(
+        put(
           pushCode,
           MOV(WRegister(0), ImmVal(16)),
           BL("_malloc"),
@@ -358,17 +366,15 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
         )
 
       case First(lValue) =>
-        generatedCode ++= generatePairElemRValue(lValue, 0, registerMap, scope)
+        put(generatePairElemRValue(lValue, 0, registerMap, scope))
 
       case Second(lValue) =>
-        generatedCode ++= generatePairElemRValue(lValue, 8, registerMap, scope)
+        put(generatePairElemRValue(lValue, 8, registerMap, scope))
 
-      case expr: Expr => generatedCode ++= generateExpr(expr, registerMap, scope)
+      case expr: Expr => put(generateExpr(expr, registerMap, scope))
 
       case _ =>
     }
-
-    generatedCode
 
   private def generatePairElemRValue(
       lValue: LValue,
@@ -376,11 +382,11 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       registerMap: RegisterMap,
       scope: Scope
   )(implicit
-      symbolTable: FrozenSymbolTable
-  ): StringBuilder =
+      generatedCode: StringBuilder
+  ): () => Unit = () =>
     addPredefFunc(P_ErrNull)
     addPredefFunc(P_Prints)
-    join(
+    put(
       lValue match
         case pairElem: PairElem => generateRValue(pairElem, registerMap, scope)
         case otherwise: Expr    => generateExpr(otherwise, registerMap, scope)
@@ -396,8 +402,9 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       typeSize: Int,
       registerMap: RegisterMap,
       scope: Scope
-  )(implicit symbolTable: FrozenSymbolTable): StringBuilder =
-    val generatedCode: StringBuilder = StringBuilder()
+  )(implicit
+      generatedCode: StringBuilder
+  ): () => Unit = () =>
     val (pushCode, popCode) =
       pushAndPopRegisters(registerMap.usedCallerRegisters.map(XRegister(_)))
     val arrayLen = exprs.length
@@ -405,7 +412,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
     addPredefFunc(P_ErrOutOfMemory)
     addPredefFunc(P_Prints)
 
-    generatedCode.appendAll(
+    put(
       pushCode,
       MOV(WRegister(0), ImmVal(4 + typeSize * arrayLen)),
       BL("_malloc"),
@@ -416,13 +423,13 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       STUR(WRegister(8), Offset(ip0, ImmVal(-4)))
     )
     exprs.zipWithIndex.map: (expr, ind) =>
-      generatedCode.appendAll(
+      put(
         generateExpr(expr, registerMap, scope),
         typeSize match
           case 8 => STUR(XRegister(8), Offset(ip0, ImmVal(ind * typeSize)))
           case _ => STUR(WRegister(8), Offset(ip0, ImmVal(ind * typeSize)))
       )
-    generatedCode.appendAll(MOV(XRegister(8), ip0))
+    put(MOV(XRegister(8), ip0))
 
   /** Generate assembly code to move the content of x8 to a given location
     */
@@ -431,9 +438,9 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       registerMap: RegisterMap,
       scope: Scope
   )(implicit
-      symbolTable: FrozenSymbolTable
-  ): StringBuilder =
-    join(lValue match
+      generatedCode: StringBuilder
+  ): () => Unit = () =>
+    put(lValue match
 
       case Ident(name) =>
         val location = registerMap(name)
@@ -461,13 +468,13 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       registerMap: RegisterMap,
       scope: Scope
   )(implicit
-      symbolTable: FrozenSymbolTable
-  ): StringBuilder =
+      generatedCode: StringBuilder
+  ): () => Unit = () =>
     val x8 = XRegister(8)
     val x9 = XRegister(9)
     addPredefFunc(P_ErrNull)
     addPredefFunc(P_Prints)
-    join(
+    put(
       STP(XRegister(8), xzr, PreIndex(sp, ImmVal(-16))),
       lValue match
         case pairElem: PairElem => generateRValue(pairElem, registerMap, scope)
@@ -488,11 +495,11 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       registerMap: RegisterMap,
       scope: Scope
   )(implicit
-      symbolTable: FrozenSymbolTable
-  ): StringBuilder =
+      generatedCode: StringBuilder
+  ): () => Unit = () =>
     val x8 = XRegister(8)
     val w8 = WRegister(8)
-    join(
+    put(
       expr match
         case IntLiter(x) =>
           if ((x & 0xffff) == x) then MOV(w8, ImmVal(x))
@@ -533,16 +540,17 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       exprs: List[Expr],
       mode: String
   )(implicit
-      symbolTable: FrozenSymbolTable
-  ): StringBuilder =
+      generatedCode: StringBuilder
+  ): () => Unit = () =>
 
     // Assume that the array pointer is at x7
-    def unwrap(varType: WaccType, exprs: List[Expr]): StringBuilder =
-      val generatedCode: StringBuilder = StringBuilder()
+    def unwrap(varType: WaccType, exprs: List[Expr])(implicit
+        generatedCode: StringBuilder
+    ): () => Unit = () =>
       addPredefFunc(P_ErrOutOfBounds)
       addPredefFunc(P_Prints)
 
-      generatedCode.appendAll(
+      put(
         STP(XRegister(8), xzr, PreIndex(sp, ImmVal(-16))),
         generateExpr(exprs.head, registerMap, scope),
         MOV(ip1, XRegister(8)),
@@ -576,7 +584,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
               predefFuncs += P_ArrLoad8
               BL("_arrLoad8")
       )
-    join(
+    put(
       STP(XRegister(7), xzr, PreIndex(sp, ImmVal(-16))),
       STP(XRegister(8), xzr, PreIndex(sp, ImmVal(-16))),
       generateExpr(Ident(name)(defaultPos), registerMap, scope),
@@ -595,9 +603,9 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       registerMap: RegisterMap,
       scope: Scope
   )(implicit
-      symbolTable: FrozenSymbolTable
-  ): StringBuilder =
-    join(
+      generatedCode: StringBuilder
+  ): () => Unit = () =>
+    put(
       binaryOp match
         case Or(expr1, expr2) =>
           generateLogical(expr1, expr2, Cond.EQ, registerMap, scope)
@@ -637,13 +645,13 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       registerMap: RegisterMap,
       scope: Scope
   )(implicit
-      symbolTable: FrozenSymbolTable
-  ): StringBuilder =
+      generatedCode: StringBuilder
+  ): () => Unit = () =>
     val w8 = WRegister(8)
     val label = asmLocal ~ localLabelCount
     localLabelCount += 1
 
-    join(
+    put(
       generateExpr(expr1, registerMap, scope),
       CMP(w8, ImmVal(1)),
       BCond(label, cond),
@@ -660,11 +668,11 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       registerMap: RegisterMap,
       scope: Scope
   )(implicit
-      symbolTable: FrozenSymbolTable
-  ): StringBuilder =
+      generatedCode: StringBuilder
+  ): () => Unit = () =>
     val w8 = WRegister(8)
     val w9 = WRegister(9)
-    join(
+    put(
       generateExpr(expr1, registerMap, scope),
       MOV(w9, w8),
       generateExpr(expr2, registerMap, scope),
@@ -679,8 +687,9 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       registerMap: RegisterMap,
       scope: Scope
   )(implicit
-      symbolTable: FrozenSymbolTable
-  ): StringBuilder =
+      generatedCode: StringBuilder
+  ): () => Unit = () =>
+    println("evaluated genA1")
     addPredefFunc(P_ErrOverflow)
     addPredefFunc(P_Prints)
     val w8 = WRegister(8)
@@ -688,7 +697,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
     val w9 = WRegister(9)
     val x9 = XRegister(9)
 
-    join(
+    put(
       generateExpr(expr1, registerMap, scope),
       STP(x8, xzr, PreIndex(sp, ImmVal(-16))),
       generateExpr(expr2, registerMap, scope),
@@ -719,14 +728,15 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       registerMap: RegisterMap,
       scope: Scope
   )(implicit
-      symbolTable: FrozenSymbolTable
-  ): StringBuilder =
+      generatedCode: StringBuilder
+  ): () => Unit = () =>
+    println("evaluated genA2")
     addPredefFunc(P_ErrDivZero)
     addPredefFunc(P_Prints)
     val w8 = WRegister(8)
     val w9 = WRegister(9)
 
-    join(
+    put(
       generateExpr(expr2, registerMap, scope),
       CMP(w8, ImmVal(0)),
       BCond(asmGlobal ~ "_errDivZero", Cond.EQ),
@@ -744,15 +754,15 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       registerMap: RegisterMap,
       scope: Scope
   )(implicit
-      symbolTable: FrozenSymbolTable
-  ): StringBuilder =
+      generatedCode: StringBuilder
+  ): () => Unit = () =>
     val x1 = XRegister(1)
     val w8 = WRegister(8)
     val x8 = XRegister(8)
     val x9 = XRegister(9)
     val w9 = WRegister(9)
 
-    join(unaryOp match
+    put(unaryOp match
       case Not(e) =>
         join(
           generateExpr(e, registerMap, scope),
@@ -796,13 +806,13 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       registerMap: RegisterMap,
       scope: Scope
   )(implicit
-      symbolTable: FrozenSymbolTable
-  ): (StringBuilder, Int) =
+      generatedCode: StringBuilder
+  ): () => Unit = () =>
     val paramTypes = symbolTable.getFuncSignature(funcName).paramTypes
     var paramCount: Int = 0
     var offset: Int = 0
 
-    join(
+    put(
       argList
         .zip(paramTypes)
         .map: (expr, paramType) =>
@@ -821,14 +831,14 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
               STR(dest, Offset(sp, ImmVal(offset - paramSize)))
             )
       *
-    ) -> (offset + 15) / 16 * 16
+    )
 
   /** Generate code to push and pop all registers in `regs` to the stack. The generated code works
     * if only if the stack pointers (sp) after the push and before the pop are the same.
     */
   private def pushAndPopRegisters(
       regs: Seq[Register]
-  ): (StringBuilder, StringBuilder) =
+  ): (AsmSnippet, AsmSnippet) =
 
     val numReg: Int = regs.size
     val offset = (numReg + 1) / 2 * 16
@@ -836,11 +846,11 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
     val pushComment = Comment(s"push {${regs.mkString(", ")}}")(4)
     val popComment = Comment(s"pop {${regs.mkString(", ")}}")(4)
 
-    if (numReg == 0) (join(), join())
+    if (numReg == 0) (EmptyAsmSnippet, EmptyAsmSnippet)
     else if (numReg == 1)
       (
-        join(STP(regs(0), xzr, PreIndex(sp, ImmVal(-offset)))),
-        join(LDP(regs(0), xzr, PostIndex(sp, ImmVal(offset))))
+        STP(regs(0), xzr, PreIndex(sp, ImmVal(-offset))),
+        LDP(regs(0), xzr, PostIndex(sp, ImmVal(offset)))
       )
     else
       val firstPush = STP(regs(0), regs(1), PreIndex(sp, ImmVal(-offset)))
@@ -856,22 +866,27 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
           )
         .unzip
       (
-        join(
+        AsmFunction(
           pushComment +:
             firstPush +:
             pairedInstrs._1*
         ),
-        join(
+        AsmFunction(
           popComment +:
             pairedInstrs._2 :+
             lastPop*
         )
       )
 
-  private def join(codes: AsmSnippet | StringBuilder | String*): StringBuilder =
-    StringBuilder().appendAll(codes*)
+  private def join(codes: AsmSnippet | (() => Unit)*)(implicit
+      generatedCode: StringBuilder
+  ): () => Unit = () =>
+    codes.foreach:
+      case code: AsmSnippet  =>
+        generatedCode.append(code)
+      case action: (() => _) => 
+        action()
 
-extension (builder: StringBuilder)
-  def appendAll(codes: AsmSnippet | StringBuilder | String*): StringBuilder =
-    codes.foldLeft(builder): (_, code) =>
-      builder.append(code)
+  private def put(codes: AsmSnippet | (() => Unit)*)(implicit
+      generatedCode: StringBuilder
+  ): Unit = join(codes*).apply()
