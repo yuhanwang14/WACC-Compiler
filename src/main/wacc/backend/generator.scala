@@ -331,6 +331,8 @@ object Generator:
         val (pushCode, popCode) = pushAndPopRegisters(
           registerMap.usedCallerRegisters.map(XRegister(_))
         )
+        predefFuncs += P_Malloc
+        predefFuncs += P_ErrOutOfMemory
         generatedCode.appendAll(
           pushCode,
           MOV(WRegister(0), ImmVal(16)),
@@ -386,6 +388,8 @@ object Generator:
     val (pushCode, popCode) =
       pushAndPopRegisters(registerMap.usedCallerRegisters.map(XRegister(_)))
     val arrayLen = exprs.length
+    predefFuncs += P_Malloc
+    predefFuncs += P_ErrOutOfMemory
     generatedCode.appendAll(
       pushCode,
       MOV(WRegister(0), ImmVal(4 + typeSize * arrayLen)),
