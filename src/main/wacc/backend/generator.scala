@@ -148,9 +148,9 @@ object Generator:
             case (reg: WRegister, byteSize: Int) => MOV(reg, WRegister(8))
             case (offset: Int, byteSize: Int) =>
               byteSize match
-                case 1 => STURB(WRegister(8), Offset(fp, ImmVal(offset)))
-                case 4 => STUR(WRegister(8), Offset(fp, ImmVal(offset)))
-                case _ => STUR(XRegister(8), Offset(fp, ImmVal(offset)))
+                case 1 => STRB(WRegister(8), Offset(fp, ImmVal(offset)))
+                case 4 => STR(WRegister(8), Offset(fp, ImmVal(offset)))
+                case _ => STR(XRegister(8), Offset(fp, ImmVal(offset)))
         )
 
       case Assign(lValue, rValue) =>
