@@ -235,7 +235,6 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
   )(implicit
       generatedCode: StringBuilder
   ): () => Unit = () =>
-    println("evaluated genP")
     val (pushCode, popCode) =
       pushAndPopRegisters(registerMap.usedCallerRegisters.map(XRegister(_)))
     if newline then predefFuncs += P_Println
@@ -250,7 +249,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
     put(
       pushCode,
       generateExpr(expr, registerMap, scope),
-      MOV(XRegister(0), XRegister(8)),
+      // MOV(XRegister(0), XRegister(8)),
       BL(f"_print${suffix}"),
       if newline then BL("_println") else EmptyAsmSnippet,
       popCode
@@ -513,7 +512,6 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
         case StrLiter(s) =>
           var index = stringConsts.size
           val escapedString = s.replace("\"", "\\\"")
-          println(escapedString)
           if (stringConsts.contains(escapedString)) then index = stringConsts(escapedString)
           else stringConsts(escapedString) = index
           join(
@@ -689,7 +687,6 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
   )(implicit
       generatedCode: StringBuilder
   ): () => Unit = () =>
-    println("evaluated genA1")
     addPredefFunc(P_ErrOverflow)
     addPredefFunc(P_Prints)
     val w8 = WRegister(8)
@@ -730,7 +727,6 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
   )(implicit
       generatedCode: StringBuilder
   ): () => Unit = () =>
-    println("evaluated genA2")
     addPredefFunc(P_ErrDivZero)
     addPredefFunc(P_Prints)
     val w8 = WRegister(8)
