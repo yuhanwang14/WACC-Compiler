@@ -360,9 +360,9 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
           MOV(ip0, XRegister(0)),
           popCode,
           generateExpr(expr1, registerMap, scope),
-          STUR(XRegister(8), Offset(ip0, ImmVal(0))),
+          STR(XRegister(8), Offset(ip0, ImmVal(0))),
           generateExpr(expr2, registerMap, scope),
-          STUR(XRegister(8), Offset(ip0, ImmVal(8))),
+          STR(XRegister(8), Offset(ip0, ImmVal(8))),
           MOV(XRegister(8), ip0)
         )
 
@@ -395,7 +395,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       CMP(XRegister(8), ImmVal(0)),
       BCond("_errNull", Cond.EQ),
       MOV(ip0, XRegister(8)),
-      LDUR(XRegister(8), Offset(ip0, ImmVal(offset)))
+      LDR(XRegister(8), Offset(ip0, ImmVal(offset)))
     )
 
   private def generateArrayLiter(
