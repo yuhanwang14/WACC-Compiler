@@ -294,6 +294,7 @@ object Generator:
     val registerMap: RegisterMap = RegisterMap(params, numOfVariables)
 
     join(
+      AsmBlankLine,
       LabelHeader(f"wacc_$funcName"),
       Comment("push {fp, lr}")(4),
       STP(fp, lr, PreIndex(sp, ImmVal(-16))),

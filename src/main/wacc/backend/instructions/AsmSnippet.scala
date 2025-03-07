@@ -5,6 +5,8 @@ class AsmSnippet(code: String)(implicit indent: Int):
 
 case object EmptyAsmSnippet extends AsmSnippet("")(0)
 
+case object AsmBlankLine extends AsmSnippet("\n")(0)
+
 case class Comment(comment: String)(implicit indent: Int) extends AsmSnippet(f"// $comment\n")
 
 class MultiLineAsmSnippet(lines: AsmSnippet*)(implicit indent: Int)

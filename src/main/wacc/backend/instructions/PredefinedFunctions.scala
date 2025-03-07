@@ -16,6 +16,7 @@ sealed abstract class PredefinedFunc(val name: String):
 sealed abstract class PredefinedErrMsg(override val name: String, val errMsg: String)
     extends PredefinedFunc(name):
   override val toAsmFunc: AsmFunction = AsmFunction(
+    AsmBlankLine,
     LabelledStringConst(
       asmLocal ~ f"._${name}_str0",
       f"fatal error: $errMsg\n"
@@ -30,6 +31,7 @@ sealed abstract class PredefinedErrMsg(override val name: String, val errMsg: St
 sealed abstract class PredefinedRead(override val name: String, val fmt: String)
     extends PredefinedFunc(name):
   override val toAsmFunc: AsmFunction = AsmFunction(
+    AsmBlankLine,
     LabelledStringConst(asmLocal ~ f"._${name}_str0", fmt),
     LabelHeader(asmGlobal ~ f"_$name"),
     Comment("X0 contains the \"original\" value of the destination of the read")(4),
@@ -55,6 +57,7 @@ sealed abstract class PredefinedPrint(
   override val toAsmFunc: AsmFunction =
     val fmtStr = asmLocal ~ f"._${name}_str0"
     AsmFunction(
+      AsmBlankLine,
       LabelledStringConst(fmtStr, fmt),
       LabelHeader(asmGlobal ~ f"_$name"),
       STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
@@ -85,6 +88,7 @@ sealed abstract class PredefinedArr(
       case _ => EmptyAsmSnippet
     }
     AsmFunction(
+      AsmBlankLine,
       LabelHeader(asmGlobal ~ f"_$name"),
       STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
       CMP(WRegister(17), ImmVal(0)),
@@ -118,14 +122,15 @@ case object P_Printp extends PredefinedPrint("printp", "%p", Seq(MOV(x1, x0)))
 case object P_Println extends PredefinedPrint("println", "")
 case object P_Printi extends PredefinedPrint("printi", "%d", Seq(MOV(x1, x0)))
 case object P_Printc extends PredefinedPrint("printc", "%c", Seq(MOV(x1, x0)))
-case object P_Prints extends PredefinedPrint(
-  "prints",
-  "%.*s",
-  Seq(
-    MOV(x2, x0),
-    LDUR(w1, Offset(x0, ImmVal(-4)))
-  )
-)
+case object P_Prints
+    extends PredefinedPrint(
+      "prints",
+      "%.*s",
+      Seq(
+        MOV(x2, x0),
+        LDUR(w1, Offset(x0, ImmVal(-4)))
+      )
+    )
 case object P_Printb extends PredefinedPrint("printb", "") {
   override val toAsmFunc: AsmFunction = {
     val falseStr = asmLocal ~ "._printb_str0"
@@ -133,6 +138,7 @@ case object P_Printb extends PredefinedPrint("printb", "") {
     val fmtStr = asmLocal ~ "._printb_str2"
 
     AsmFunction(
+      AsmBlankLine,
       LabelledStringConst(falseStr, "false"),
       LabelledStringConst(trueStr, "true"),
       LabelledStringConst(fmtStr, "%.*s"),
@@ -157,6 +163,7 @@ case object P_Printb extends PredefinedPrint("printb", "") {
 }
 case object P_Freepair extends PredefinedMemory("freepair") {
   override val toAsmFunc: AsmFunction = AsmFunction(
+    AsmBlankLine,
     LabelHeader(asmGlobal ~ "_freepair"),
     STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
     CBZ(x0, asmGlobal ~ "_errNull"),
@@ -167,6 +174,7 @@ case object P_Freepair extends PredefinedMemory("freepair") {
 }
 case object P_Malloc extends PredefinedMemory("malloc") {
   override val toAsmFunc: AsmFunction = AsmFunction(
+    AsmBlankLine,
     LabelHeader(asmGlobal ~ "_malloc"),
     STP(lr, xzr, PreIndex(sp, ImmVal(-16))),
     BL(asmGlobal ~ "malloc"),
@@ -186,7 +194,6 @@ case object P_ArrStore1 extends PredefinedArr("arrStore1")
 case object P_ArrStore4 extends PredefinedArr("arrStore4")
 
 case object P_ArrStore8 extends PredefinedArr("arrStore8")
-
 
 object PredefinedFunctions {
   private val funcList: List[PredefinedFunc] = List(
@@ -208,9 +215,9 @@ object PredefinedFunctions {
     P_Printb,
     P_ArrLoad1,
     P_ArrLoad4,
-    P_ArrLoad8, 
-    P_ArrStore1, 
-    P_ArrStore4, 
+    P_ArrLoad8,
+    P_ArrStore1,
+    P_ArrStore4,
     P_ArrStore8
   )
 
@@ -218,4 +225,3 @@ object PredefinedFunctions {
 
   val predefinedFunctions: Map[PredefinedFunc, AsmFunction] = funcList.zip(asmFunclist).toMap
 }
-
