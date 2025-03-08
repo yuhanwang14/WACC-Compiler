@@ -47,7 +47,16 @@ class BackendSpec extends AnyFunSuite {
             s"$emulatorCmd -L $emulatorLibPath /workspace/$exeFile"
           )
 
-          val actualOutput = dockerCommand.!!
+          val assembleCmd = s"$assemblerCmd -o $exeFile -z noexecstack -march=armv8-a $asmFile"
+
+          if (assembleCmd.! != 0) {
+            if (!localMode)
+              FileUtil.deleteFile(asmFile)
+            assert(false, s"Assembly failed for $asmFile")
+          }
+      
+          // Run the executable in the selected emulator and capture its output
+          val actualOutput = if (localMode) dockerCommand.!! else s"$emulatorCmd -L $emulatorLibPath $exeFile".!!
           val expectedOutput = Using(Source.fromFile(expectedOutputFile)) { source =>
             source.getLines().mkString("\n")
           }.getOrElse("")
