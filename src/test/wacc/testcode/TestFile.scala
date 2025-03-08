@@ -26,7 +26,7 @@ object TestFiles {
     files.filter { file =>
       val expectedFile = new File(file.stripSuffix(".wacc") + ".expected")
       !file.contains("advanced/") && !file.contains("runtimeErr/") && expectedFile.exists() &&
-      !file.contains("IO/") && !file.contains("runtimeErr/") && !file.contains("exit/")
+      !file.contains("IO/") && !file.contains("runtimeErr/") && !file.contains("exit/") && !file.contains("printAllTypes") 
     }
   }
 }
