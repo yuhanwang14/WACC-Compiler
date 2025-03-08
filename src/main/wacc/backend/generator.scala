@@ -839,7 +839,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       /* TODO: save sp somewhere (eg x16). */
       pushCode,
       /* TODO: get sp back. */
-      action(callerSavedRegisterMap, popCode)
+      action(registerMap, popCode)
     )
 
   private def pushAndPopRegisters(
