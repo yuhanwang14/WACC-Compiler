@@ -263,8 +263,8 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
     putWithPushedArgs(registerMap): (regMap, pop) =>
       join(
         lValue match
-          case pairElem: PairElem => generateRValue(pairElem, registerMap, scope)
-          case expr: Expr         => generateExpr(expr, registerMap, scope)
+          case pairElem: PairElem => generateRValue(pairElem, regMap, scope)
+          case expr: Expr         => generateExpr(expr, regMap, scope)
         ,
         MOV(WRegister(0), WRegister(8)),
         BL(f"_read$suffix"),
@@ -837,7 +837,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       /* TODO: save sp somewhere (eg x16). */
       pushCode,
       /* TODO: get sp back. */
-      action(callerSavedRegisterMap, popCode)
+      action(registerMap, popCode)
     )
 
   private def pushAndPopRegisters(
