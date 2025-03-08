@@ -509,7 +509,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
           if (stringConsts.contains(escapedString)) then index = stringConsts(escapedString)
           else stringConsts(escapedString) = index
           join(
-            ADRP(x8, asmLocal ~ f".str$index").withComment(f"\"$s\""),
+            ADRP(x8, asmLocal ~ f".str$index").withComment(s.replace("\n", "\\n")),
             ADD(x8, x8, Lo12(asmLocal ~ f".str$index"))
           )
         case PairLiter() => join(MOV(x8, ImmVal(0)))
