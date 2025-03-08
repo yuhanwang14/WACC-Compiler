@@ -287,8 +287,8 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
         .map(x => (s"_func_${funcName}_params::" + x.i.name, TypeBridge.fromAst(x.t)))
 
     val numOfVariables = funcScope.maxConcurrentVars
-    // val calleeRegisters: Seq[Register] = (1 to numOfVariables).map(n => XRegister(19 + n - 1))
-    // val (pushCode, popCode) = pushAndPopRegisters(calleeRegisters)
+    val calleeRegisters: Seq[Register] = (1 to numOfVariables).map(n => XRegister(19 + n - 1))
+    val ((pushCode, popCode), _) = pushAndPopRegisters(calleeRegisters)
     val registerMap: GenericRegisterMap = RegisterMap(params, numOfVariables)
 
     put(
@@ -296,12 +296,10 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       LabelHeader(f"wacc_$funcName"),
       Comment("push {fp, lr}")(4),
       STP(fp, lr, PreIndex(sp, ImmVal(-16))),
-      withPushedArgs(registerMap): (regMap, pop) =>
-        join(
-          MOV(fp, sp),
-          // the current scope is for parameters
-          generateBlock(func.s, registerMap, funcScope.children.head, pop)
-        )
+      pushCode,
+      MOV(fp, sp),
+      // the current scope is for parameters
+      generateBlock(func.s, registerMap, funcScope.children.head, popCode)
     )
 
   /** Generate assembly code to evaluate the result of a rvalue.
@@ -839,7 +837,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       /* TODO: save sp somewhere (eg x16). */
       pushCode,
       /* TODO: get sp back. */
-      action(registerMap, popCode)
+      action(callerSavedRegisterMap, popCode)
     )
 
   private def pushAndPopRegisters(
