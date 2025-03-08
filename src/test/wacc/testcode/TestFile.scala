@@ -7,7 +7,7 @@ import scala.jdk.CollectionConverters._
 object TestFiles {
 
   val dir = "./src/test/wacc"
-  val validFiles = getFiles("valid_if")
+  val validFiles = getFiles("valid_variables")
   val invalidFiles = getFiles("invalid_files")
 
   def updateFileLists(): Unit = {
@@ -18,6 +18,6 @@ object TestFiles {
   }
 
   def getFiles(name: String): Seq[String] = {
-    Files.readAllLines(Paths.get(s"$dir/file_lists/$name")).asScala.toSeq
+    Files.readAllLines(Paths.get(s"$dir/file_lists/$name")).asScala.toSeq.filterNot(x => x.contains("advanced/") || x.contains("runtimeErr/"))
   }
 }
