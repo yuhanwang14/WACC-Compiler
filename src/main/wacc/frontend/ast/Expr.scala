@@ -8,6 +8,12 @@ abstract trait Expr extends RValue
 // Binary Operations
 sealed trait BinaryOp extends Expr
 
+sealed trait ArithOp extends BinaryOp
+
+sealed trait ArithOp1 extends ArithOp
+
+sealed trait ArithOp2 extends ArithOp
+
 case class Or(x: Expr, y: Expr)(val pos: (Int, Int)) extends BinaryOp
 
 case class And(x: Expr, y: Expr)(val pos: (Int, Int)) extends BinaryOp
@@ -20,12 +26,12 @@ case class LessEqual(x: Expr, y: Expr)(val pos: (Int, Int)) extends BinaryOp
 case class Greater(x: Expr, y: Expr)(val pos: (Int, Int)) extends BinaryOp
 case class GreaterEqual(x: Expr, y: Expr)(val pos: (Int, Int)) extends BinaryOp
 
-case class Add(x: Expr, y: Expr)(val pos: (Int, Int)) extends BinaryOp
-case class Sub(x: Expr, y: Expr)(val pos: (Int, Int)) extends BinaryOp
+case class Add(x: Expr, y: Expr)(val pos: (Int, Int)) extends ArithOp1
+case class Sub(x: Expr, y: Expr)(val pos: (Int, Int)) extends ArithOp1
 
-case class Mul(x: Expr, y: Expr)(val pos: (Int, Int)) extends BinaryOp
-case class Div(x: Expr, y: Expr)(val pos: (Int, Int)) extends BinaryOp
-case class Mod(x: Expr, y: Expr)(val pos: (Int, Int)) extends BinaryOp
+case class Mul(x: Expr, y: Expr)(val pos: (Int, Int)) extends ArithOp1
+case class Div(x: Expr, y: Expr)(val pos: (Int, Int)) extends ArithOp2
+case class Mod(x: Expr, y: Expr)(val pos: (Int, Int)) extends ArithOp2
 
 // Unary Operations
 sealed trait UnaryOp extends Expr
