@@ -1,0 +1,12 @@
+( [1, 2, 3] , [a, b, c] )
+[ 0xaaaaaaac1350 = (a, true), 0xaaaaaaac1370 = (b, false) ]
+1, 2
+array, of, strings
+true, false, true
+xyz
+1, 2, 3
+this is a string
+true
+x
+5
+

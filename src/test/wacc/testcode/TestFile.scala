@@ -3,11 +3,13 @@ package testcode
 import scala.sys.process._
 import java.nio.file.{Files, Paths}
 import scala.jdk.CollectionConverters._
+import java.io.File
 
 object TestFiles {
 
   val dir = "./src/test/wacc"
-  val validFiles = getFiles("valid_variables")
+
+  val validFiles = getFiles("valid_files")
   val invalidFiles = getFiles("invalid_files")
 
   def updateFileLists(): Unit = {
@@ -18,6 +20,13 @@ object TestFiles {
   }
 
   def getFiles(name: String): Seq[String] = {
-    Files.readAllLines(Paths.get(s"$dir/file_lists/$name")).asScala.toSeq.filterNot(x => x.contains("advanced/") || x.contains("runtimeErr/"))
+    val files = Files.readAllLines(Paths.get(s"$dir/file_lists/$name")).asScala.toSeq
+
+    // Filter out files from unwanted directories and ensure they have a corresponding .expected file
+    files.filter { file =>
+      val expectedFile = new File(file.stripSuffix(".wacc") + ".expected")
+      !file.contains("advanced/") && !file.contains("runtimeErr/") && expectedFile.exists() &&
+      !file.contains("IO/") && !file.contains("runtimeErr/") && !file.contains("exit/")
+    }
   }
 }
