@@ -28,31 +28,26 @@ class BackendSpec extends AnyFunSuite {
     if (isValid) {
       compileResult match {
         case Right(asmString) =>
-          // Write the assembly file using our utility
+          // Write the assembly file
           FileUtil.writeFile(asmFile, asmString) match {
             case scala.util.Success(_) =>
             case scala.util.Failure(ex) =>
               fail(s"Failed to write assembly file: ${ex.getMessage}")
           }
 
-          // The assembly file should be generated
           assert(new File(asmFile).exists(), s"Missing assembly file: $asmFile")
 
-          // Assemble the generated assembly file using the selected assembler command
-          // val assembleCmd = s"clang -target aarch64-linux-gnu -o $exeFile $asmFile"
-          val assembleCmd = s"$assemblerCmd -o $exeFile -z noexecstack -march=armv8-a $asmFile"
-          
+          // Run everything inside Docker to avoid macOS issues
+          val dockerCommand = Seq(
+            "docker", "run", "--rm",
+            "-v", s"${System.getProperty("user.dir")}:/workspace",
+            "wacc-tester",
+            "sh", "-c",
+            s"$assemblerCmd -o /workspace/$exeFile -z noexecstack -march=armv8-a /workspace/$asmFile && " +
+            s"$emulatorCmd -L $emulatorLibPath /workspace/$exeFile"
+          )
 
-          if (assembleCmd.! != 0) {
-            if (!localMode)
-              FileUtil.deleteFile(asmFile)
-              FileUtil.deleteFile(exeFile)
-            assert(false, s"Assembly failed for $asmFile")
-          }
-          
-
-          // Run the executable in the selected emulator and capture its output
-          val actualOutput = s"$emulatorCmd -L $emulatorLibPath $exeFile".!!
+          val actualOutput = dockerCommand.!!
           val expectedOutput = Using(Source.fromFile(expectedOutputFile)) { source =>
             source.getLines().mkString("\n")
           }.getOrElse("")
@@ -63,12 +58,10 @@ class BackendSpec extends AnyFunSuite {
           fail(s"Expected valid compilation, but got exit code $exitCode for $fileName")
       }
 
-      // Clean up generated files only in lab mode
-      if (!localMode) {
-        FileUtil.deleteFile(asmFile)
-        FileUtil.deleteFile(exeFile)
-      }
-    
+      // Cleanup files
+      FileUtil.deleteFile(asmFile)
+      FileUtil.deleteFile(exeFile)
+
     } else {
       // For invalid files, we expect a failure exit code.
       compileResult match {

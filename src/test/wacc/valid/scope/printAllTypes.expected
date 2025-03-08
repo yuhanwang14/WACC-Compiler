@@ -1,5 +1,5 @@
 ( [1, 2, 3] , [a, b, c] )
-[ #addrs# = (a, true), #addrs# = (b, false) ]
+[ 0xaaaaaaac1350 = (a, true), 0xaaaaaaac1370 = (b, false) ]
 1, 2
 array, of, strings
 true, false, true
