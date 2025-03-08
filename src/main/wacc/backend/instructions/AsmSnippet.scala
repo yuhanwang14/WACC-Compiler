@@ -2,6 +2,10 @@ package backend.instructions
 
 class AsmSnippet(code: String)(implicit indent: Int):
   override def toString: String = " " * indent + code
+  def withComment(comment: String) = CommentedAsmSnippet(code, comment)
+
+class CommentedAsmSnippet(code: String, comment: String)(implicit indent: Int)
+    extends AsmSnippet(code.dropRight(1) + f" // $comment\n")
 
 case object EmptyAsmSnippet extends AsmSnippet("")(0)
 

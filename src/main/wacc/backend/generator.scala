@@ -85,6 +85,8 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
     val offsetAfter: Int = (15 - registerMap.stackOffset) / 16 * 16
     val extraStackSpace: Int = offsetAfter - offsetBefore
 
+    put(Comment("Entering new scope")(4))
+
     if (extraStackSpace > 0)
       put(
         SUB(sp, sp, ImmVal(extraStackSpace))
@@ -223,6 +225,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       put(
         ADD(sp, sp, ImmVal(extraStackSpace))
       )
+    put(Comment("Exiting scope")(4))
 
   private def generatePrint(
       expr: Expr,
@@ -336,6 +339,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       case ArrayLiterP(exprs) => put(generateArrayLiter(exprs, 8, registerMap, scope))
 
       case NewPair(expr1, expr2) =>
+        put(Comment("newpair( , )")(4))
         addPredefFunc(P_Malloc)
         addPredefFunc(P_ErrOutOfMemory)
         addPredefFunc(P_Prints)
@@ -498,7 +502,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
             join(MOV(w8, ImmVal(low16)), MOVK(w8, ImmVal(high16), Some(LSL(ImmVal(16)))))
           }
         case BoolLiter(x) => MOV(w8, ImmVal(if (x) then 1 else 0))
-        case CharLiter(c) => MOV(w8, ImmVal(c))
+        case CharLiter(c) => MOV(w8, ImmVal(c)).withComment(f"'$c'")
         case StrLiter(s) =>
           var index = stringConsts.size
           val escapedString = s.replace("\"", "\\\"")
