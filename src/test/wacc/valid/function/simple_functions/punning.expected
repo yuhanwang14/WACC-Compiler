@@ -1,0 +1,11 @@
+0
+
+
+begin
+    int inc(int x) is
+        return x + 1
+    end
+    int inc = 0;
+    int tmp = call inc(inc);
+    println inc
+end

@@ -618,17 +618,17 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
         case GreaterEqual(expr1, expr2) =>
           generateComp(expr1, expr2, Cond.GE, registerMap, scope)
 
-        case Add(expr1, expr2) =>
-          generateArithmetic1(expr1, expr2, "ADD", registerMap, scope)
-        case Sub(expr1, expr2) =>
-          generateArithmetic1(expr1, expr2, "SUB", registerMap, scope)
-        case Mul(expr1, expr2) =>
-          generateArithmetic1(expr1, expr2, "MUL", registerMap, scope)
+        case a@Add(expr1, expr2) =>
+          generateArithmetic1(expr1, expr2, a, registerMap, scope)
+        case a@Sub(expr1, expr2) =>
+          generateArithmetic1(expr1, expr2, a, registerMap, scope)
+        case a@Mul(expr1, expr2) =>
+          generateArithmetic1(expr1, expr2, a, registerMap, scope)
 
-        case Div(expr1, expr2) =>
-          generateArithmetic2(expr1, expr2, "DIV", registerMap, scope)
-        case Mod(expr1, expr2) =>
-          generateArithmetic2(expr1, expr2, "MOD", registerMap, scope)
+        case a@Div(expr1, expr2) =>
+          generateArithmetic2(expr1, expr2, a, registerMap, scope)
+        case a@Mod(expr1, expr2) =>
+          generateArithmetic2(expr1, expr2, a, registerMap, scope)
     )
 
   private def generateLogical(
@@ -672,11 +672,12 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       CMP(w9, w8),
       CSET(w8, cond)
     )
+    
 
   private def generateArithmetic1(
       expr1: Expr,
       expr2: Expr,
-      operation: String,
+      operation: ArithOp1,
       registerMap: GenericRegisterMap,
       scope: Scope
   )(implicit
@@ -695,17 +696,17 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       generateExpr(expr2, registerMap, scope),
       LDP(x9, xzr, PostIndex(sp, ImmVal(16))),
       operation match
-        case "ADD" =>
+        case a: Add =>
           join(
             ADDS(w8, w9, w8),
             BCond(asmGlobal ~ "_errOverflow", Cond.VS)
           )
-        case "SUB" =>
+        case a: Sub =>
           join(
             SUBS(w8, w9, w8),
             BCond(asmGlobal ~ "_errOverflow", Cond.VS)
           )
-        case "MUL" =>
+        case a: Mul =>
           join(
             SMULL(x8, w9, w8),
             CMP(x8, w8, Some(SXTW())),
@@ -716,7 +717,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
   private def generateArithmetic2(
       expr1: Expr,
       expr2: Expr,
-      operation: String,
+      operation: ArithOp2,
       registerMap: GenericRegisterMap,
       scope: Scope
   )(implicit
@@ -737,9 +738,9 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       generateExpr(expr1, registerMap, scope),
       LDP(x9, xzr, PostIndex(sp, ImmVal(16))),
       operation match
-        case "DIV" =>
+        case a: Div =>
           SDIV(w8, w8, w9)
-        case "MOD" =>
+        case a: Mod =>
           join(SDIV(ip1.asW, w8, w9), MSUB(w8, ip1.asW, w9, w8))
     )
 

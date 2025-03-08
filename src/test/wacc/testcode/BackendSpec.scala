@@ -39,12 +39,9 @@ class BackendSpec extends AnyFunSuite {
           assert(new File(asmFile).exists(), s"Missing assembly file: $asmFile")
 
           // Assemble the generated assembly file using the selected assembler command
-          val assembleCmd = s"clang -target aarch64-linux-gnu -o $exeFile $asmFile"
+          // val assembleCmd = s"clang -target aarch64-linux-gnu -o $exeFile $asmFile"
+          val assembleCmd = s"$assemblerCmd -o $exeFile -z noexecstack -march=armv8-a $asmFile"
           
-          // if (localMode)
-          //   assembleCmd = s"clang -target aarch64-linux-gnu -o $exeFile $asmFile"
-          // else
-          //   assembleCmd = s"$assemblerCmd -o $exeFile -z noexecstack -march=armv8-a $asmFile"
 
           if (assembleCmd.! != 0) {
             if (!localMode)
