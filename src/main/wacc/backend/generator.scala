@@ -856,7 +856,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
         STP(regs(0), xzr, PreIndex(sp, ImmVal(-offset))),
         LDP(regs(0), xzr, PostIndex(sp, ImmVal(offset)))
       )
-        -> Seq((0, (sp, 0)))
+        -> Seq((0, (sp, -offset)))
     else
       val firstPush = STP(regs(0), regs(1), PreIndex(sp, ImmVal(-offset)))
       val lastPop = LDP(regs(0), regs(1), PostIndex(sp, ImmVal(offset)))
