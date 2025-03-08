@@ -834,9 +834,9 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       pushAndPopRegisters(registerMap.usedCallerRegisters.map(XRegister(_)))
     val callerSavedRegisterMap = registerMap.savingRegs(savedRegs)
     put(
+      Comment("Set up X16 as a temporary second base pointer for the caller saved things")(4),
       MOV(ip0, sp),
       pushCode,
-      MOV(sp, ip0),
       action(callerSavedRegisterMap, popCode)
     )
 
@@ -856,7 +856,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
         STP(regs(0), xzr, PreIndex(sp, ImmVal(-offset))),
         LDP(regs(0), xzr, PostIndex(sp, ImmVal(offset)))
       )
-        -> Seq((0, (sp, -offset)))
+        -> Seq((0, (ip0, -offset)))
     else
       val firstPush = STP(regs(0), regs(1), PreIndex(sp, ImmVal(-offset)))
       val lastPop = LDP(regs(0), regs(1), PostIndex(sp, ImmVal(offset)))
@@ -882,7 +882,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
             lastPop*
         )
       ) ->
-        regs.map(reg => (reg.number, (sp, -offset + reg.number * 8)))
+        regs.map(reg => (reg.number, (ip0, -offset + reg.number * 8)))
 
   private def join(codes: AsmSnippet | (() => Unit)*)(implicit
       generatedCode: StringBuilder
