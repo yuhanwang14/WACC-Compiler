@@ -882,7 +882,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
             lastPop*
         )
       ) ->
-        regs.map(reg => (reg.number, (sp, reg.number * 8)))
+        regs.map(reg => (reg.number, (sp, -offset + reg.number * 8)))
 
   private def join(codes: AsmSnippet | (() => Unit)*)(implicit
       generatedCode: StringBuilder
