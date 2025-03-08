@@ -19,10 +19,18 @@ import common.types.WaccType
 
 type Location = Register | Int
 
+trait GenericRegisterMap:
+  def apply(identifier: String): (Location, Int)
+  def <~(vars: Iterable[(String, WaccType)]): GenericRegisterMap
+  def usedCallerRegisters: Seq[Int]
+  def stackOffset: Int
+  def savingRegs(regToOffsets: Iterable[(Int, Int)]): CallerSavedRegisterMap
+
 class RegisterMap private (
     vars: Iterable[(String, WaccType)],
     inheritedMap: Iterable[(String, (Location, Int))]
-)(implicit locationIterator: LocationIterator):
+)(implicit locationIterator: LocationIterator)
+    extends GenericRegisterMap:
   val varMap: MutableMap[String, (Location, Int)] = MutableMap.from(inheritedMap)
   vars.foreach((name, t) => varMap(name) = (locationIterator.next(t.byteSize), t.byteSize))
 
@@ -32,27 +40,40 @@ class RegisterMap private (
       RegisterMap.mapParams(params, (calleeRegisterCount + 1) / 2 * 16)
     )(LocationIterator(params.size))
 
-  def :+(vars: Iterable[(String, WaccType)]): RegisterMap = RegisterMap(vars, varMap)
+  def <~(vars: Iterable[(String, WaccType)]): GenericRegisterMap = RegisterMap(vars, varMap)
+
+  def savingRegs(regToOffsets: Iterable[(Int, Int)]): CallerSavedRegisterMap =
+    CallerSavedRegisterMap(this, Map.from(regToOffsets))
 
   export varMap.apply
 
   export locationIterator.usedCallerRegisters
   export locationIterator.stackOffset
+
+class CallerSavedRegisterMap(original: RegisterMap, savedRegs: Map[Int, Int])
+    extends GenericRegisterMap:
+  val usedCallerRegisters: Seq[Int] = Nil
+  export original.<~
+  export original.stackOffset
+  def apply(identifier: String): (Location, Int) =
+    original.apply(identifier) match
+      case (reg: Register, size) => (savedRegs.get(reg.number).getOrElse(reg), size)
+      case loc                   => loc
+  def savingRegs(regToOffsets: Iterable[(Int, Int)]): CallerSavedRegisterMap = throw Exception()
+
 object RegisterMap:
   private def mapParams(
       params: Iterable[(String, WaccType)],
       start: Int
   ): Iterable[(String, (Location, Int))] =
     val (regParams, stackParams) = params.splitAt(8)
-    regParams
-      .zipWithIndex
+    regParams.zipWithIndex
       .map:
         case ((id, t), i) =>
           (id, (if t.byteSize > 4 then XRegister(i) else WRegister(i), t.byteSize))
       ++
         (if !stackParams.isEmpty then
-           stackParams
-             .tail
+           stackParams.tail
              .foldRight(
                stackParams.head match
                  case (id, t) => List((id, (start: Location) -> t.byteSize)) -> t.byteSize

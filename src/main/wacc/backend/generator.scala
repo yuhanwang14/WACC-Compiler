@@ -65,7 +65,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
 
   private def generateBlock(
       block: Stmt,
-      inheritedRegisterMap: RegisterMap,
+      inheritedRegisterMap: GenericRegisterMap,
       scope: Scope,
       popCode: AsmSnippet = EmptyAsmSnippet
   )(implicit
@@ -81,7 +81,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
     // calculate the extra stack space needed for local variables within current scope
     // allocate register or stack space for locak variables within currentScope
     val offsetBefore: Int = (15 - inheritedRegisterMap.stackOffset) / 16 * 16
-    val registerMap: RegisterMap = inheritedRegisterMap :+ scope.localVars
+    val registerMap: GenericRegisterMap = inheritedRegisterMap <~ scope.localVars
     val offsetAfter: Int = (15 - registerMap.stackOffset) / 16 * 16
     val extraStackSpace: Int = offsetAfter - offsetBefore
 
@@ -195,28 +195,24 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       case PrintlnS(expr) => put(generatePrint(expr, registerMap, scope, 's', true))
 
       case FreeP(expr) =>
-        val (pushCode, popCode) =
-          pushAndPopRegisters(registerMap.usedCallerRegisters.map(XRegister(_)))
         addPredefFunc(P_Freepair)
         addPredefFunc(P_ErrNull)
         addPredefFunc(P_Prints)
-        put(
-          pushCode,
-          generateExpr(expr, registerMap, scope),
-          MOV(XRegister(0), XRegister(8)),
-          BL("_freepair"),
-          popCode
-        )
+        putWithPushedArgs(registerMap): (regMap, pop) =>
+          join(
+            generateExpr(expr, regMap, scope),
+            MOV(XRegister(0), XRegister(8)),
+            BL("_freepair"),
+            pop
+          )
 
       case FreeA(expr) =>
-        val (pushCode, popCode) =
-          pushAndPopRegisters(registerMap.usedCallerRegisters.map(XRegister(_)))
-        put(
-          pushCode,
-          generateExpr(expr, registerMap, scope),
-          BL("free"),
-          popCode
-        )
+        putWithPushedArgs(registerMap): (regMap, pop) =>
+          join(
+            generateExpr(expr, regMap, scope),
+            BL("free"),
+            pop
+          )
 
       case ReadC(lValue) => put(generateRead(lValue, registerMap, scope, 'c'))
       case ReadI(lValue) => put(generateRead(lValue, registerMap, scope, 'i'))
@@ -230,15 +226,13 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
 
   private def generatePrint(
       expr: Expr,
-      registerMap: RegisterMap,
+      registerMap: GenericRegisterMap,
       scope: Scope,
       suffix: Char,
       newline: Boolean = false
   )(implicit
       generatedCode: StringBuilder
   ): () => Unit = () =>
-    val (pushCode, popCode) =
-      pushAndPopRegisters(registerMap.usedCallerRegisters.map(XRegister(_)))
     if newline then predefFuncs += P_Println
     val printFunc = suffix match
       case 'b' => P_Printb
@@ -248,38 +242,36 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       case 's' => P_Prints
       case _   => P_Printp
     predefFuncs += printFunc
-    put(
-      pushCode,
-      generateExpr(expr, registerMap, scope),
-      MOV(XRegister(0), XRegister(8)),
-      BL(f"_print${suffix}"),
-      if newline then BL("_println") else EmptyAsmSnippet,
-      popCode
-    )
+    putWithPushedArgs(registerMap): (regMap, pop) =>
+      join(
+        generateExpr(expr, regMap, scope),
+        MOV(XRegister(0), XRegister(8)),
+        BL(f"_print${suffix}"),
+        if newline then BL("_println") else EmptyAsmSnippet,
+        pop
+      )
 
   private def generateRead(
       lValue: LValue,
-      registerMap: RegisterMap,
+      registerMap: GenericRegisterMap,
       scope: Scope,
       suffix: Char
   )(implicit
       generatedCode: StringBuilder
   ): () => Unit = () =>
-    val (pushCode, popCode) =
-      pushAndPopRegisters(registerMap.usedCallerRegisters.map(XRegister(_)))
     predefFuncs += (if suffix == 'i' then P_Readi else P_Readc)
-    put(
-      pushCode,
-      lValue match
-        case pairElem: PairElem => generateRValue(pairElem, registerMap, scope)
-        case expr: Expr         => generateExpr(expr, registerMap, scope)
-      ,
-      MOV(WRegister(0), WRegister(8)),
-      BL(f"_read$suffix"),
-      MOV(WRegister(8), WRegister(0)),
-      popCode,
-      generateLValue(lValue, registerMap, scope)
-    )
+    putWithPushedArgs(registerMap): (regMap, pop) =>
+      join(
+        lValue match
+          case pairElem: PairElem => generateRValue(pairElem, registerMap, scope)
+          case expr: Expr         => generateExpr(expr, registerMap, scope)
+        ,
+        MOV(WRegister(0), WRegister(8)),
+        BL(f"_read$suffix"),
+        MOV(WRegister(8), WRegister(0)),
+        pop,
+        generateLValue(lValue, registerMap, scope)
+      )
 
   private def generateFunc(func: Func, funcScope: Scope)(implicit
       generatedCode: StringBuilder
@@ -295,49 +287,48 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
         .map(x => (s"_func_${funcName}_params::" + x.i.name, TypeBridge.fromAst(x.t)))
 
     val numOfVariables = funcScope.maxConcurrentVars
-    val calleeRegisters: Seq[Register] = (1 to numOfVariables).map(n => XRegister(19 + n - 1))
-    val (pushCode, popCode) = pushAndPopRegisters(calleeRegisters)
-    val registerMap: RegisterMap = RegisterMap(params, numOfVariables)
+    // val calleeRegisters: Seq[Register] = (1 to numOfVariables).map(n => XRegister(19 + n - 1))
+    // val (pushCode, popCode) = pushAndPopRegisters(calleeRegisters)
+    val registerMap: GenericRegisterMap = RegisterMap(params, numOfVariables)
 
     put(
       AsmBlankLine,
       LabelHeader(f"wacc_$funcName"),
       Comment("push {fp, lr}")(4),
       STP(fp, lr, PreIndex(sp, ImmVal(-16))),
-      pushCode,
-      MOV(fp, sp),
-      // the current scope is for parameters
-      generateBlock(func.s, registerMap, funcScope.children.head, popCode)
+      withPushedArgs(registerMap): (regMap, pop) =>
+        join(
+          MOV(fp, sp),
+          // the current scope is for parameters
+          generateBlock(func.s, registerMap, funcScope.children.head, pop)
+        )
     )
 
   /** Generate assembly code to evaluate the result of a rvalue.
     */
   private def generateRValue(
       rvalue: RValue,
-      registerMap: RegisterMap,
+      registerMap: GenericRegisterMap,
       scope: Scope
   )(implicit
       generatedCode: StringBuilder
   ): () => Unit = () =>
     rvalue match {
       case Call(Ident(funcName), ArgList(argList)) =>
-        val (pushCode, popCode) = pushAndPopRegisters(
-          registerMap.usedCallerRegisters.map(XRegister(_))
-        )
         val offset = (symbolTable
           .getFuncSignature(funcName)
           .paramTypes
           .map(fromAst(_).byteSize)
           .sum + 15) / 16 * 16
-        put(
-          pushCode,
-          if (offset > 0) then SUB(sp, sp, ImmVal(offset)) else EmptyAsmSnippet,
-          pushArgs(funcName, argList, registerMap, scope),
-          BL(asmGlobal ~ f"wacc_$funcName"),
-          MOV(XRegister(8), XRegister(0)),
-          if (offset > 0) then ADD(sp, sp, ImmVal(offset)) else EmptyAsmSnippet,
-          popCode
-        )
+        putWithPushedArgs(registerMap): (regMap, pop) =>
+          join(
+            if (offset > 0) then SUB(sp, sp, ImmVal(offset)) else EmptyAsmSnippet,
+            pushArgs(funcName, argList, regMap, scope),
+            BL(asmGlobal ~ f"wacc_$funcName"),
+            MOV(XRegister(8), XRegister(0)),
+            if (offset > 0) then ADD(sp, sp, ImmVal(offset)) else EmptyAsmSnippet,
+            pop
+          )
 
       case ArrayLiter(exprs)  => put(generateArrayLiter(exprs, 0, registerMap, scope))
       case ArrayLiterB(exprs) => put(generateArrayLiter(exprs, 1, registerMap, scope))
@@ -347,18 +338,17 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       case ArrayLiterP(exprs) => put(generateArrayLiter(exprs, 8, registerMap, scope))
 
       case NewPair(expr1, expr2) =>
-        val (pushCode, popCode) = pushAndPopRegisters(
-          registerMap.usedCallerRegisters.map(XRegister(_))
-        )
         addPredefFunc(P_Malloc)
         addPredefFunc(P_ErrOutOfMemory)
         addPredefFunc(P_Prints)
+        putWithPushedArgs(registerMap): (regMap, pop) =>
+          join(
+            MOV(WRegister(0), ImmVal(16)),
+            BL("_malloc"),
+            MOV(ip0, XRegister(0)),
+            pop
+          )
         put(
-          pushCode,
-          MOV(WRegister(0), ImmVal(16)),
-          BL("_malloc"),
-          MOV(ip0, XRegister(0)),
-          popCode,
           generateExpr(expr1, registerMap, scope),
           STR(XRegister(8), Offset(ip0, ImmVal(0))),
           generateExpr(expr2, registerMap, scope),
@@ -380,7 +370,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
   private def generatePairElemRValue(
       lValue: LValue,
       offset: Int,
-      registerMap: RegisterMap,
+      registerMap: GenericRegisterMap,
       scope: Scope
   )(implicit
       generatedCode: StringBuilder
@@ -401,7 +391,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
   private def generateArrayLiter(
       exprs: List[Expr],
       typeSize: Int,
-      registerMap: RegisterMap,
+      registerMap: GenericRegisterMap,
       scope: Scope
   )(implicit
       generatedCode: StringBuilder
@@ -413,16 +403,16 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
     addPredefFunc(P_ErrOutOfMemory)
     addPredefFunc(P_Prints)
 
-    put(
-      pushCode,
-      MOV(WRegister(0), ImmVal(4 + typeSize * arrayLen)),
-      BL("_malloc"),
-      MOV(ip0, XRegister(0)),
-      popCode,
-      ADD(ip0, ip0, ImmVal(4)),
-      MOV(WRegister(8), ImmVal(arrayLen)),
-      STUR(WRegister(8), Offset(ip0, ImmVal(-4)))
-    )
+    putWithPushedArgs(registerMap): (regMap, pop) =>
+      join(
+        MOV(WRegister(0), ImmVal(4 + typeSize * arrayLen)),
+        BL("_malloc"),
+        MOV(ip0, XRegister(0)),
+        pop,
+        ADD(ip0, ip0, ImmVal(4)),
+        MOV(WRegister(8), ImmVal(arrayLen)),
+        STUR(WRegister(8), Offset(ip0, ImmVal(-4)))
+      )
     exprs.zipWithIndex.map: (expr, ind) =>
       put(
         generateExpr(expr, registerMap, scope),
@@ -436,7 +426,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
     */
   private def generateLValue(
       lValue: LValue,
-      registerMap: RegisterMap,
+      registerMap: GenericRegisterMap,
       scope: Scope
   )(implicit
       generatedCode: StringBuilder
@@ -466,7 +456,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
   private def generatePairElemLValue(
       lValue: LValue,
       offset: Int,
-      registerMap: RegisterMap,
+      registerMap: GenericRegisterMap,
       scope: Scope
   )(implicit
       generatedCode: StringBuilder
@@ -493,7 +483,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
     */
   private def generateExpr(
       expr: Expr,
-      registerMap: RegisterMap,
+      registerMap: GenericRegisterMap,
       scope: Scope
   )(implicit
       generatedCode: StringBuilder
@@ -534,7 +524,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
     )
 
   private def generateArrayElem(
-      registerMap: RegisterMap,
+      registerMap: GenericRegisterMap,
       scope: Scope,
       name: String,
       exprs: List[Expr],
@@ -600,7 +590,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
 
   private def generateBinary(
       binaryOp: BinaryOp,
-      registerMap: RegisterMap,
+      registerMap: GenericRegisterMap,
       scope: Scope
   )(implicit
       generatedCode: StringBuilder
@@ -642,7 +632,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       expr1: Expr,
       expr2: Expr,
       cond: Cond,
-      registerMap: RegisterMap,
+      registerMap: GenericRegisterMap,
       scope: Scope
   )(implicit
       generatedCode: StringBuilder
@@ -665,7 +655,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       expr1: Expr,
       expr2: Expr,
       cond: Cond,
-      registerMap: RegisterMap,
+      registerMap: GenericRegisterMap,
       scope: Scope
   )(implicit
       generatedCode: StringBuilder
@@ -684,7 +674,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       expr1: Expr,
       expr2: Expr,
       operation: String,
-      registerMap: RegisterMap,
+      registerMap: GenericRegisterMap,
       scope: Scope
   )(implicit
       generatedCode: StringBuilder
@@ -724,7 +714,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       expr1: Expr,
       expr2: Expr,
       operation: String,
-      registerMap: RegisterMap,
+      registerMap: GenericRegisterMap,
       scope: Scope
   )(implicit
       generatedCode: StringBuilder
@@ -752,7 +742,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
 
   private def generateUnary(
       unaryOp: UnaryOp,
-      registerMap: RegisterMap,
+      registerMap: GenericRegisterMap,
       scope: Scope
   )(implicit
       generatedCode: StringBuilder
@@ -798,13 +788,10 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
         )
     )
 
-  /** Generate assemply code to calculate a list of expr and push them into the stack. Return a list
-    * of code string and an offset indicating the amount of stack space needed
-    */
   private def pushArgs(
       funcName: String,
       argList: List[Expr],
-      registerMap: RegisterMap,
+      registerMap: GenericRegisterMap,
       scope: Scope
   )(implicit
       generatedCode: StringBuilder
@@ -834,12 +821,30 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       *
     )
 
-  /** Generate code to push and pop all registers in `regs` to the stack. The generated code works
-    * if only if the stack pointers (sp) after the push and before the pop are the same.
-    */
+  private def putWithPushedArgs(registerMap: GenericRegisterMap)(
+      action: (GenericRegisterMap, AsmSnippet) => (() => Unit)
+  )(implicit
+      generatedCode: StringBuilder
+  ): Unit = withPushedArgs(registerMap)(action).apply()
+
+  private def withPushedArgs(registerMap: GenericRegisterMap)(
+      action: (GenericRegisterMap, AsmSnippet) => (() => Unit)
+  )(implicit
+      generatedCode: StringBuilder
+  ): () => Unit = () =>
+    val ((pushCode, popCode), savedRegs) =
+      pushAndPopRegisters(registerMap.usedCallerRegisters.map(XRegister(_)))
+    val callerSavedRegisterMap = registerMap.savingRegs(savedRegs)
+    put(
+      /* TODO: save sp somewhere (eg x16). */
+      pushCode,
+      /* TODO: get sp back. */
+      action(callerSavedRegisterMap, popCode)
+    )
+
   private def pushAndPopRegisters(
       regs: Seq[Register]
-  ): (AsmSnippet, AsmSnippet) =
+  ): ((AsmSnippet, AsmSnippet), Iterable[(Int, Int)]) =
 
     val numReg: Int = regs.size
     val offset = (numReg + 1) / 2 * 16
@@ -847,12 +852,13 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
     val pushComment = Comment(s"push {${regs.mkString(", ")}}")(4)
     val popComment = Comment(s"pop {${regs.mkString(", ")}}")(4)
 
-    if (numReg == 0) (EmptyAsmSnippet, EmptyAsmSnippet)
+    if (numReg == 0) (EmptyAsmSnippet, EmptyAsmSnippet) -> Nil
     else if (numReg == 1)
       (
         STP(regs(0), xzr, PreIndex(sp, ImmVal(-offset))),
         LDP(regs(0), xzr, PostIndex(sp, ImmVal(offset)))
       )
+        -> Seq((0, 0))
     else
       val firstPush = STP(regs(0), regs(1), PreIndex(sp, ImmVal(-offset)))
       val lastPop = LDP(regs(0), regs(1), PostIndex(sp, ImmVal(offset)))
@@ -877,15 +883,16 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
             pairedInstrs._2 :+
             lastPop*
         )
-      )
+      ) ->
+        regs.map(reg => (reg.number, reg.number * 8))
 
   private def join(codes: AsmSnippet | (() => Unit)*)(implicit
       generatedCode: StringBuilder
   ): () => Unit = () =>
     codes.foreach:
-      case code: AsmSnippet  =>
+      case code: AsmSnippet =>
         generatedCode.append(code)
-      case action: (() => _) => 
+      case action: (() => _) =>
         action()
 
   private def put(codes: AsmSnippet | (() => Unit)*)(implicit
