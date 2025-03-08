@@ -17,14 +17,16 @@ import common.types.WaccType
    offset to retrieve function params and negative offset to retrieve local variables
  */
 
-type Location = Register | Int
+type Location = Register | StackLocation
+
+type StackLocation = (Register, Int)
 
 trait GenericRegisterMap:
   def apply(identifier: String): (Location, Int)
   def <~(vars: Iterable[(String, WaccType)]): GenericRegisterMap
   def usedCallerRegisters: Seq[Int]
   def stackOffset: Int
-  def savingRegs(regToOffsets: Iterable[(Int, Int)]): CallerSavedRegisterMap
+  def savingRegs(regToOffsets: Iterable[(Int, Location)]): CallerSavedRegisterMap
 
 class RegisterMap private (
     vars: Iterable[(String, WaccType)],
@@ -42,7 +44,7 @@ class RegisterMap private (
 
   def <~(vars: Iterable[(String, WaccType)]): GenericRegisterMap = RegisterMap(vars, varMap)
 
-  def savingRegs(regToOffsets: Iterable[(Int, Int)]): CallerSavedRegisterMap =
+  def savingRegs(regToOffsets: Iterable[(Int, Location)]): CallerSavedRegisterMap =
     CallerSavedRegisterMap(this, Map.from(regToOffsets))
 
   export varMap.apply
@@ -50,7 +52,7 @@ class RegisterMap private (
   export locationIterator.usedCallerRegisters
   export locationIterator.stackOffset
 
-class CallerSavedRegisterMap(original: RegisterMap, savedRegs: Map[Int, Int])
+class CallerSavedRegisterMap(original: RegisterMap, savedRegs: Map[Int, Location])
     extends GenericRegisterMap:
   val usedCallerRegisters: Seq[Int] = Nil
   export original.<~
@@ -59,7 +61,7 @@ class CallerSavedRegisterMap(original: RegisterMap, savedRegs: Map[Int, Int])
     original.apply(identifier) match
       case (reg: Register, size) => (savedRegs.get(reg.number).getOrElse(reg), size)
       case loc                   => loc
-  def savingRegs(regToOffsets: Iterable[(Int, Int)]): CallerSavedRegisterMap = throw Exception()
+  def savingRegs(regToOffsets: Iterable[(Int, Location)]): CallerSavedRegisterMap = throw Exception()
 
 object RegisterMap:
   private def mapParams(
@@ -76,9 +78,9 @@ object RegisterMap:
            stackParams.tail
              .foldRight(
                stackParams.head match
-                 case (id, t) => List((id, (start: Location) -> t.byteSize)) -> t.byteSize
+                 case (id, t) => List((id, (sp, start) -> t.byteSize)) -> t.byteSize
              ) { case ((id, t), (unpacked, offset)) =>
-               (unpacked :+ (id, offset -> t.byteSize)) -> (offset + t.byteSize)
+               (unpacked :+ (id, (sp, offset) -> t.byteSize)) -> (offset + t.byteSize)
              }
              ._1
          else Nil)

@@ -149,20 +149,20 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
           registerMap(name) match
             case (reg: XRegister, byteSize: Int) => MOV(reg, XRegister(8))
             case (reg: WRegister, byteSize: Int) => MOV(reg, WRegister(8))
-            case (offset: Int, byteSize: Int) =>
+            case ((reg, offset), byteSize: Int) =>
               byteSize match
                 case 1 =>
                   if (-256 <= offset && offset <= 255) then
                     STURB(WRegister(8), Offset(fp, ImmVal(offset)))
-                  else join(MOV(ip1, ImmVal(offset)), STRB(WRegister(8), RegisterAddress(fp, ip1)))
+                  else join(MOV(ip1, ImmVal(offset)), STRB(WRegister(8), RegisterAddress(reg, ip1)))
                 case 4 =>
                   if (-256 <= offset && offset <= 255) then
                     STUR(WRegister(8), Offset(fp, ImmVal(offset)))
-                  else join(MOV(ip1, ImmVal(offset)), STR(WRegister(8), RegisterAddress(fp, ip1)))
+                  else join(MOV(ip1, ImmVal(offset)), STR(WRegister(8), RegisterAddress(reg, ip1)))
                 case _ =>
                   if (-256 <= offset && offset <= 255) then
                     STUR(XRegister(8), Offset(fp, ImmVal(offset)))
-                  else join(MOV(ip1, ImmVal(offset)), STR(XRegister(8), RegisterAddress(fp, ip1)))
+                  else join(MOV(ip1, ImmVal(offset)), STR(XRegister(8), RegisterAddress(reg, ip1)))
         )
 
       case Assign(lValue, rValue) =>
@@ -436,11 +436,11 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
         join(location._1 match
           case reg: WRegister => MOV(reg, WRegister(8))
           case reg: XRegister => MOV(reg, XRegister(8))
-          case offset: Int =>
+          case (reg, offset) =>
             location._2 match
               case 1 =>
-                STURB(WRegister(8), Offset(fp, ImmVal(offset)))
-              case _ => STUR(XRegister(8), Offset(fp, ImmVal(offset)))
+                STURB(WRegister(8), Offset(reg, ImmVal(offset)))
+              case _ => STUR(XRegister(8), Offset(reg, ImmVal(offset)))
         )
 
       case ArrayElem(Ident(name), exprs) =>
@@ -513,7 +513,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
           registerMap(name) match
             case (reg: XRegister, _) => MOV(x8, reg)
             case (reg: WRegister, _) => MOV(w8, reg)
-            case (offset: Int, _)    => LDUR(x8, Offset(fp, ImmVal(offset)))
+            case ((reg, offset), _)  => LDUR(x8, Offset(reg, ImmVal(offset)))
         case ArrayElem(Ident(name), exprs) =>
           generateArrayElem(registerMap, scope, name, exprs, "Load")
         case Paren(e)    => generateExpr(e, registerMap, scope)
@@ -834,15 +834,15 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
       pushAndPopRegisters(registerMap.usedCallerRegisters.map(XRegister(_)))
     val callerSavedRegisterMap = registerMap.savingRegs(savedRegs)
     put(
-      /* TODO: save sp somewhere (eg x16). */
+      MOV(ip0, sp),
       pushCode,
-      /* TODO: get sp back. */
-      action(registerMap, popCode)
+      MOV(sp, ip0),
+      action(callerSavedRegisterMap, popCode)
     )
 
   private def pushAndPopRegisters(
       regs: Seq[Register]
-  ): ((AsmSnippet, AsmSnippet), Iterable[(Int, Int)]) =
+  ): ((AsmSnippet, AsmSnippet), Iterable[(Int, StackLocation)]) =
 
     val numReg: Int = regs.size
     val offset = (numReg + 1) / 2 * 16
@@ -856,7 +856,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
         STP(regs(0), xzr, PreIndex(sp, ImmVal(-offset))),
         LDP(regs(0), xzr, PostIndex(sp, ImmVal(offset)))
       )
-        -> Seq((0, 0))
+        -> Seq((0, (sp, 0)))
     else
       val firstPush = STP(regs(0), regs(1), PreIndex(sp, ImmVal(-offset)))
       val lastPop = LDP(regs(0), regs(1), PostIndex(sp, ImmVal(offset)))
@@ -882,7 +882,7 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
             lastPop*
         )
       ) ->
-        regs.map(reg => (reg.number, reg.number * 8))
+        regs.map(reg => (reg.number, (sp, reg.number * 8)))
 
   private def join(codes: AsmSnippet | (() => Unit)*)(implicit
       generatedCode: StringBuilder
