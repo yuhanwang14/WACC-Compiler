@@ -517,7 +517,8 @@ class Generator(prog: Program)(implicit symbolTable: FrozenSymbolTable):
           registerMap(name) match
             case (reg: XRegister, _) => MOV(x8, reg)
             case (reg: WRegister, _) => MOV(w8, reg)
-            case ((reg, offset), _)  => LDUR(x8, Offset(reg, ImmVal(offset)))
+            case ((reg, offset), 1)  => LDURB(w8, Offset(reg, ImmVal(offset)))
+            case ((reg, offset), _) => LDUR(x8, Offset(reg, ImmVal(offset)))
         case ArrayElem(Ident(name), exprs) =>
           generateArrayElem(registerMap, scope, name, exprs, "Load")
         case Paren(e)    => generateExpr(e, registerMap, scope)
