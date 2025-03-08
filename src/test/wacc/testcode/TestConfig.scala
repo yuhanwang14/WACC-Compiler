@@ -4,7 +4,7 @@ object TestConfig {
   // Set this flag to true when running locally (on macOS), false when on the lab machines.
   val localMode: Boolean = false
   // Set to true when testing valid files
-  val testValid: Boolean = false
+  val testValid: Boolean = true
   // Set to true when testing invalid files
   val testInvalid: Boolean = false
 
