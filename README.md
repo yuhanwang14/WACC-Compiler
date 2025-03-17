@@ -1,35 +1,23 @@
-This is the provided git repository for the WACC compilers lab. You should work
-in this repository regularly committing and pushing your work back to GitLab.
+# WACC Compiler (AArch64 Backend)  
 
-# Provided files/directories
+This project implements a full compiler for the **WACC** programming language, targeting the **AArch64** (ARMv8-A) architecture. The compiler follows a standard four-stage process:  
 
-## src/main
+1. **Lexical Analysis** - Tokenizing the input source code.  
+2. **Syntactic Analysis** - Parsing tokens into an abstract syntax tree (AST).  
+3. **Semantic Analysis** - Checking for type and scoping errors.  
+4. **Code Generation** - Producing AArch64 assembly code.  
 
-The src/main directory is where you code for your compiler should go, and just
-contains a stub hello world file with a simple calculator inside.
+The front-end ensures syntactic and semantic correctness, while the back-end generates assembly code that can be assembled and executed using GCC and QEMU. The compiler correctly handles variables, expressions, conditionals, loops, functions, and memory management (heap and stack).  
 
-## src/test
-The src/test directory is where you should put the code for your tests, which
-can be ran via `scala-cli test .`. The suggested framework is `scalatest`, the dependency
-for which has already been included.
+**Features:**  
+- Error detection with meaningful diagnostics.  
+- Fully functional assembler output for AArch64.  
+- Automated testing via CI and LabTS integration.  
 
-## project.scala
-The `project.scala` is the definition of your project's build requirements. By default,
-this skeleton has added the latest stable versions of both `scalatest` and `parsley`
-to the build: you should check **regularly** to see if your `parsley` needs updating
-during the course of WACC!
-
-## compile
-
-The compile script can be edited to change the frontend interface to your WACC
-compiler. You are free to change the language used in this script, but do not
-change its name.
-
-## Makefile
-
-Your Makefile should be edited so that running 'make' in the root directory
-builds your WACC compiler. Currently running 'make' will call
-`scala --power package . --server=false --jvm system --graalvm-jvm-id graalvm-java21 --native-image --force -o wacc-compiler`, producing a file called
-`wacc-compiler`
-in the root directory of the project. If this doesn't work for whatever reason, there are a few
-different alternatives you can try in the makefile. **Do not use the makefile as you're working, it's for labts/CI!**
+To compile and run WACC programs:  
+```sh
+make  
+./compile program.wacc  
+aarch64-linux-gnu-gcc -o program program.s  
+qemu-aarch64 -L /usr/aarch64-linux-gnu/ program  
+```  
